@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Outfox, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Suffix.JSON
 import io.outfoxx.sunday.MediaType.Suffix.XML
@@ -33,74 +49,86 @@ class MediaTypeTest {
     ) { "Test compatibility" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Image,
-          Vendor,
-          "plain",
-          JSON,
-          mapOf("a" to "b")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Image,
+            Vendor,
+            "plain",
+            JSON,
+            mapOf("a" to "b")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in types" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Text,
-          Personal,
-          "plain",
-          JSON,
-          mapOf("a" to "b")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Text,
+            Personal,
+            "plain",
+            JSON,
+            mapOf("a" to "b")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in trees" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Text,
-          Vendor,
-          "html",
-          JSON,
-          mapOf("a" to "b")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Text,
+            Vendor,
+            "html",
+            JSON,
+            mapOf("a" to "b")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in subtypes" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Text,
-          Vendor,
-          "plain",
-          XML,
-          mapOf("a" to "b")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Text,
+            Vendor,
+            "plain",
+            XML,
+            mapOf("a" to "b")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in suffixes" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Text,
-          Vendor,
-          "plain",
-          JSON,
-          mapOf("a" to "c")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Text,
+            Vendor,
+            "plain",
+            JSON,
+            mapOf("a" to "c")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in parmeter values" }
 
     assertTrue(
-      !(MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-        MediaType(
-          Text,
-          Vendor,
-          "plain",
-          parameters = mapOf("a" to "c")
+      !(
+        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+          MediaType(
+            Text,
+            Vendor,
+            "plain",
+            parameters = mapOf("a" to "c")
+          )
         )
-      ))
+        )
     ) { "Test incompatibility in parmeter values" }
 
     assertTrue(
@@ -140,15 +168,17 @@ class MediaTypeTest {
     ) { "Test compatibility with different parameters" }
 
     assertTrue(
-      !(MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
-        MediaType(
-          Text,
-          subtype = "html",
-          parameters = mapOf(
-            "charset" to "utf-16"
+      !(
+        MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
+          MediaType(
+            Text,
+            subtype = "html",
+            parameters = mapOf(
+              "charset" to "utf-16"
+            )
           )
         )
-      ))
+        )
     ) { "Test compatibility with different parameter values" }
 
     assertTrue(
@@ -177,7 +207,6 @@ class MediaTypeTest {
         )
       )
     ) { "Test compatibility with wildcard subtype" }
-
   }
 
   @Test
@@ -241,26 +270,26 @@ class MediaTypeTest {
         Application,
         Vendor,
         "yaml",
-        parameters = mapOf("charset" to "utf-8", "something" to "else")
-      ).value, "application/vnd.yaml;charset=utf-8;something=else"
+        parameters = mapOf("charset" to "utf-8", "something" to "else"),
+      ).value,
+      "application/vnd.yaml;charset=utf-8;something=else"
     )
   }
 
   @Test
   fun `test sanity`() {
-    val jsonWithCharset = MediaType.JSON.with(parameters = mapOf("charset" to  "utf-8"))
+    val jsonWithCharset = MediaType.JSON.with(parameters = mapOf("charset" to "utf-8"))
 
     assertTrue(jsonWithCharset.compatible(MediaType.JSON))
     assertFalse(jsonWithCharset.compatible(MediaType.JSONStructured))
     assertFalse(jsonWithCharset.compatible(MediaType.HTML))
     assertTrue(jsonWithCharset.compatible(MediaType.Any))
 
-    val htmlWithCharset = MediaType.HTML.with(parameters = mapOf("charset" to  "utf-8"))
+    val htmlWithCharset = MediaType.HTML.with(parameters = mapOf("charset" to "utf-8"))
 
     assertTrue(htmlWithCharset.compatible(MediaType.HTML))
     assertFalse(htmlWithCharset.compatible(MediaType.JSON))
     assertFalse(htmlWithCharset.compatible(MediaType.JSONStructured))
     assertTrue(htmlWithCharset.compatible(MediaType.Any))
   }
-
 }

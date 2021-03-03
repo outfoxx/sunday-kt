@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday
 
-import com.github.hal4j.uritemplate.URIBuilder
 import io.outfoxx.sunday.MediaType.Companion.AnyText
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
@@ -56,13 +55,14 @@ import kotlin.reflect.KClass
 import kotlin.reflect.cast
 
 class NetworkRequestFactory(
-  private val baseURI: URIBuilder,
+  private val baseURI: URITemplate,
   private val httpClient: OkHttpClient,
   private val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   private val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
 ) : RequestFactory {
 
   companion object {
+
     private val logger = LoggerFactory.getLogger(NetworkRequestFactory::class.java)
 
     private val unacceptableStatusCodes = 400 until 600
@@ -82,7 +82,7 @@ class NetworkRequestFactory(
   ): Request {
     logger.trace("Building request")
 
-    val urlBuilder = baseURI.resolve(pathTemplate).expand(pathParameters).toBuilder()
+    val urlBuilder = baseURI.resolve(pathTemplate, pathParameters)
 
     if (!queryParameters.isNullOrEmpty()) {
 

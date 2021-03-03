@@ -189,6 +189,7 @@ class MediaType(
     val Plain = MediaType(Type.Text, subtype = "plain")
     val HTML = MediaType(Type.Text, subtype = "html")
     val JSON = MediaType(Type.Application, subtype = "json")
+    val YAML = MediaType(Type.Application, subtype = "yaml")
     val CBOR = MediaType(Type.Application, subtype = "cbor")
     val EventStream = MediaType(Type.Text, subtype = "event-stream")
     val OctetStream = MediaType(Type.Application, subtype = "octet-stream")

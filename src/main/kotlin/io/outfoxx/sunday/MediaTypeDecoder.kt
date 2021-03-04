@@ -16,9 +16,11 @@
 
 package io.outfoxx.sunday
 
-import kotlin.reflect.KClass
+import kotlin.reflect.KType
 
 interface MediaTypeDecoder {
 
-  fun <T : Any> decode(data: ByteArray, type: KClass<T>): T
+  fun <T : Any> decode(data: ByteArray, type: KType): T
 }
+
+inline fun <reified T : Any> MediaTypeDecoder.decode(data: ByteArray): T = decode(data, typeOf<T>())

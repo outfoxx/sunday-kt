@@ -16,22 +16,13 @@
 
 package io.outfoxx.sunday
 
-import okio.ByteString
-import okio.ByteString.Companion.toByteString
-import okio.Source
-import okio.source
-import java.io.InputStream
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import kotlin.reflect.KType
+import kotlin.reflect.jvm.javaType
 
-class BinaryDecoder : MediaTypeDecoder {
+class JSONDecoder(jsonMapper: JsonMapper) : ObjectMapperDecoder(jsonMapper), TextMediaTypeDecoder {
 
-  override fun <T : Any> decode(data: ByteArray, type: KType): T =
-    @Suppress("UNCHECKED_CAST")
-    when (type.classifier) {
-      ByteArray::class -> data as T
-      ByteString::class -> data.toByteString(0, data.size) as T
-      InputStream::class -> data.inputStream() as T
-      Source::class -> data.inputStream().source() as T
-      else -> error("Unsupported type for binary decode")
-    }
+  override fun <T : Any> decode(data: String, type: KType): T =
+    objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
 }

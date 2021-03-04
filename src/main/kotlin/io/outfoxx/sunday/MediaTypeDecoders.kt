@@ -49,7 +49,7 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
       )
 
     fun registerJSON(mapper: JsonMapper) =
-      register(JsonDecoder(mapper), JSON, JSONStructured)
+      register(JSONDecoder(mapper), JSON, JSONStructured)
 
     fun registerCBOR() =
       registerCBOR(
@@ -60,7 +60,7 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
       )
 
     fun registerCBOR(mapper: CBORMapper) =
-      register(ObjectMapperDecoder(mapper), CBOR)
+      register(CBORDecoder(mapper), CBOR)
 
     fun register(decoder: MediaTypeDecoder, vararg types: MediaType) =
       Builder(registered.plus(types.map { it to decoder }))

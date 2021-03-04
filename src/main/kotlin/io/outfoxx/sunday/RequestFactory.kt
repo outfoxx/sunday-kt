@@ -19,58 +19,280 @@ package io.outfoxx.sunday
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import kotlinx.coroutines.flow.Flow
-import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
+import org.zalando.problem.Problem
 import kotlin.reflect.KClass
+import kotlin.reflect.KType
 
-interface RequestFactory {
+abstract class RequestFactory {
 
-  suspend fun <B : Any> request(
+  abstract fun registerProblem(typeId: String, problemType: KClass<out Problem>)
+
+  suspend inline fun <reified B : Any> request(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
     queryParameters: Parameters? = null,
     body: B? = null,
-    bodyType: KClass<B>? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Headers? = null
+    headers: Parameters? = null
+  ) = request(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    body,
+    typeOf<B>(),
+    contentTypes,
+    acceptTypes,
+    headers
+  )
+
+  suspend inline fun request(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
+  ) = request(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    null as Unit?,
+    typeOf<Unit>(),
+    contentTypes,
+    acceptTypes,
+    headers
+  )
+
+  abstract suspend fun <B : Any> request(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    bodyType: KType? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
   ): Request
 
-  suspend fun response(request: Request): Response
+  abstract suspend fun response(request: Request): Response
 
-  suspend fun <B : Any> response(
+  suspend inline fun <reified B : Any> response(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
     queryParameters: Parameters? = null,
     body: B? = null,
-    bodyType: KClass<B>?,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Headers? = null
+    headers: Parameters? = null
+  ) = response(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    body,
+    typeOf<B>(),
+    contentTypes,
+    acceptTypes,
+    headers
+  )
+
+  suspend inline fun response(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
+  ) = response(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    null as Unit?,
+    typeOf<Unit>(),
+    contentTypes,
+    acceptTypes,
+    headers
+  )
+
+  abstract suspend fun <B : Any> response(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    bodyType: KType?,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
   ): Response
 
-  suspend fun <B : Any, R : Any> result(
+  suspend inline fun <reified B : Any, reified R : Any> result(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
     queryParameters: Parameters? = null,
     body: B? = null,
-    bodyType: KClass<B>?,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Headers? = null,
-    resultType: KClass<R>
+    headers: Parameters? = null,
+  ): R = result(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    body,
+    typeOf<B>(),
+    contentTypes,
+    acceptTypes,
+    headers,
+    typeOf<R>()
+  )
+
+  suspend inline fun <reified R : Any> result(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+  ): R = result(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    null as Unit?,
+    typeOf<Unit>(),
+    contentTypes,
+    acceptTypes,
+    headers,
+    typeOf<R>()
+  )
+
+  abstract suspend fun <B : Any, R : Any> result(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    bodyType: KType,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    resultType: KType
   ): R
 
-  fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource
+  fun <B : Any> eventSource(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    bodyType: KType? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
+  ): EventSource = eventSource {
+    request(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      bodyType,
+      contentTypes,
+      acceptTypes,
+      headers
+    )
+  }
+
+  fun eventSource(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null
+  ): EventSource = eventSource {
+    request(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      null as Unit?,
+      typeOf<Unit>(),
+      contentTypes,
+      acceptTypes,
+      headers
+    )
+  }
+
+  abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
+
+  fun <B : Any, D : Any> eventStream(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    bodyType: KType? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    eventTypes: Map<String, KType>
+  ): Flow<D> = eventStream(eventTypes) {
+    request(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      bodyType,
+      contentTypes,
+      acceptTypes,
+      headers
+    )
+  }
 
   fun <D : Any> eventStream(
-    eventTypes: Map<String, KClass<out D>>,
-    requestSupplier: suspend (Headers) -> Request
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    eventTypes: Map<String, KType>
+  ): Flow<D> = eventStream(eventTypes) {
+    request(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      null as Unit?,
+      typeOf<Unit>(),
+      contentTypes,
+      acceptTypes,
+      headers
+    )
+  }
+
+  abstract fun <D : Any> eventStream(
+    eventTypes: Map<String, KType>,
+    requestSupplier: suspend () -> Request
   ): Flow<D>
 
-  fun close(cancelOutstandingRequests: Boolean)
+  abstract fun close(cancelOutstandingRequests: Boolean)
 }

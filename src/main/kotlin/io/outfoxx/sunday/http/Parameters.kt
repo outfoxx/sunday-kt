@@ -16,4 +16,4 @@
 
 package io.outfoxx.sunday.http
 
-typealias Parameters = Map<String, Any>
+typealias Parameters = Map<String, Any?>

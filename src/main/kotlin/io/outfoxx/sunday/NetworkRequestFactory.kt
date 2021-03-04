@@ -46,20 +46,22 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
 import org.slf4j.LoggerFactory
+import org.zalando.problem.DefaultProblem
 import org.zalando.problem.Problem
 import org.zalando.problem.Status
 import org.zalando.problem.ThrowableProblem
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.reflect.KClass
-import kotlin.reflect.cast
+import kotlin.reflect.KType
+import kotlin.reflect.full.createType
 
 class NetworkRequestFactory(
   private val baseURI: URITemplate,
   private val httpClient: OkHttpClient,
   private val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   private val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
-) : RequestFactory {
+) : RequestFactory() {
 
   companion object {
 
@@ -69,16 +71,22 @@ class NetworkRequestFactory(
     private val emptyDataStatusCodes = setOf(204, 205)
   }
 
+  private val problemTypes = mutableMapOf<String, KClass<out Problem>>()
+
+  override fun registerProblem(typeId: String, problemType: KClass<out Problem>) {
+    problemTypes[typeId] = problemType
+  }
+
   override suspend fun <B : Any> request(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters?,
     queryParameters: Parameters?,
     body: B?,
-    bodyType: KClass<B>?,
+    bodyType: KType?,
     contentTypes: List<MediaType>?,
     acceptTypes: List<MediaType>?,
-    headers: Headers?
+    headers: Parameters?
   ): Request {
     logger.trace("Building request")
 
@@ -88,14 +96,20 @@ class NetworkRequestFactory(
 
       // Encode & add query parameters to url
 
-      val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded) as URLEncoder
+      val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded)
+        ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
+
+      urlQueryEncoder as? URLQueryEncoder
+        ?: throw SundayError(NoDecoder, "'$WWWFormUrlEncoded' decoder must support query encoding")
 
       urlBuilder.query().join(urlQueryEncoder.encodeQueryString(queryParameters))
     }
 
     val requestBuilder = Request.Builder().url(urlBuilder.toURI().toString())
 
-    headers?.let { requestBuilder.headers(headers) }
+    headers?.forEach { (headerName, headerValue) ->
+      requestBuilder.addHeader(headerName, "$headerValue")
+    }
 
     // Add `Accept` header based on accept types
     if (acceptTypes != null) {
@@ -157,10 +171,10 @@ class NetworkRequestFactory(
     pathParameters: Parameters?,
     queryParameters: Parameters?,
     body: B?,
-    bodyType: KClass<B>?,
+    bodyType: KType?,
     contentTypes: List<MediaType>?,
     acceptTypes: List<MediaType>?,
-    headers: Headers?
+    headers: Parameters?
   ): Response {
     val request =
       request(method, pathTemplate, pathParameters, queryParameters, body, bodyType, contentTypes, acceptTypes, headers)
@@ -168,18 +182,18 @@ class NetworkRequestFactory(
     return response(request)
   }
 
-  override suspend fun <B : Any, D : Any> result(
+  override suspend fun <B : Any, R : Any> result(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters?,
     queryParameters: Parameters?,
     body: B?,
-    bodyType: KClass<B>?,
+    bodyType: KType,
     contentTypes: List<MediaType>?,
     acceptTypes: List<MediaType>?,
-    headers: Headers?,
-    resultType: KClass<D>
-  ): D {
+    headers: Parameters?,
+    resultType: KType
+  ): R {
 
     val response =
       response(
@@ -198,13 +212,14 @@ class NetworkRequestFactory(
       throw parseFailure(response)
     }
 
+    @Suppress("UNCHECKED_CAST")
     return parseSuccess(response, resultType)
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
+  override fun eventSource(requestSupplier: suspend () -> Request): EventSource {
 
     val callSupplier: suspend (Headers) -> Call = { headers ->
-      val request = requestSupplier(headers).newBuilder()
+      val request = requestSupplier().newBuilder()
       headers.forEach { (name, value) -> request.header(name, value) }
       httpClient.newCall(request.build())
     }
@@ -214,8 +229,8 @@ class NetworkRequestFactory(
 
   @ExperimentalCoroutinesApi
   override fun <D : Any> eventStream(
-    eventTypes: Map<String, KClass<out D>>,
-    requestSupplier: suspend (Headers) -> Request
+    eventTypes: Map<String, KType>,
+    requestSupplier: suspend () -> Request
   ): Flow<D> = callbackFlow {
 
     val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
@@ -227,7 +242,7 @@ class NetworkRequestFactory(
       eventSource.addEventListener(event) { _, _, data ->
         try {
 
-          val decodedEvent = jsonDecoder.decode(data ?: "", type)
+          val decodedEvent = jsonDecoder.decode<D>(data ?: "", type)
 
           sendBlocking(decodedEvent)
         } catch (x: Throwable) {
@@ -251,7 +266,7 @@ class NetworkRequestFactory(
     }
   }
 
-  private fun <T : Any> parseSuccess(response: Response, resultType: KClass<T>): T {
+  private fun <T : Any> parseSuccess(response: Response, resultType: KType): T {
     logger.trace("Parsing success response")
 
     val body = response.body
@@ -259,7 +274,8 @@ class NetworkRequestFactory(
       if (resultType != Unit::class) {
         throw SundayError(UnexpectedEmptyResponse)
       }
-      return resultType.cast(Unit)
+      @Suppress("UNCHECKED_CAST")
+      return Unit as T
     }
 
     val contentType =
@@ -308,11 +324,19 @@ class NetworkRequestFactory(
           .build()
       } else {
 
-        val mediaType =
+        val problemDecoder =
           mediaTypeDecoders.find(ProblemJSON)
             ?: throw SundayError(NoDecoder, ProblemJSON.value)
 
-        mediaType.decode(body.bytes(), ThrowableProblem::class)
+        problemDecoder as? StructuredMediaTypeDecoder
+          ?: throw SundayError(NoDecoder, "'$ProblemJSON' decoder must support structured decoding")
+
+        val decoded: Map<String, Any> = problemDecoder.decode(body.bytes())
+
+        val typeId = decoded["type"]?.toString() ?: ""
+        val problemType = (problemTypes[typeId] ?: DefaultProblem::class).createType()
+
+        problemDecoder.decode(decoded, problemType)
       }
     } else {
       Problem.valueOf(status)

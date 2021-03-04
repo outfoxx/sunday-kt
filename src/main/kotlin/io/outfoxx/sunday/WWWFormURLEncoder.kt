@@ -24,12 +24,12 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter.ISO_INSTANT
 import kotlin.text.Charsets.US_ASCII
 
-class URLEncoder(
+class WWWFormURLEncoder(
   private val arrayEncoding: ArrayEncoding = ArrayEncoding.Bracketed,
   private val boolEncoding: BoolEncoding = BoolEncoding.Numeric,
   private val dateEncoding: DateEncoding = DateEncoding.ISO8601,
   private val mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
-) : MediaTypeEncoder {
+) : URLQueryEncoder {
 
   enum class ArrayEncoding(val encode: (String) -> String) {
     Bracketed({ "$it[]" }),
@@ -54,7 +54,7 @@ class URLEncoder(
     return encodeQueryString(parameters).toByteArray(US_ASCII)
   }
 
-  fun encodeQueryString(parameters: Parameters): String =
+  override fun encodeQueryString(parameters: Parameters): String =
     parameters.keys.sorted()
       .flatMap { key ->
         encodeQueryComponent(key, parameters[key]!!)

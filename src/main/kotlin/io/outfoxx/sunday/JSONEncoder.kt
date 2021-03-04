@@ -16,22 +16,6 @@
 
 package io.outfoxx.sunday
 
-import okio.ByteString
-import okio.ByteString.Companion.toByteString
-import okio.Source
-import okio.source
-import java.io.InputStream
-import kotlin.reflect.KType
+import com.fasterxml.jackson.databind.json.JsonMapper
 
-class BinaryDecoder : MediaTypeDecoder {
-
-  override fun <T : Any> decode(data: ByteArray, type: KType): T =
-    @Suppress("UNCHECKED_CAST")
-    when (type.classifier) {
-      ByteArray::class -> data as T
-      ByteString::class -> data.toByteString(0, data.size) as T
-      InputStream::class -> data.inputStream() as T
-      Source::class -> data.inputStream().source() as T
-      else -> error("Unsupported type for binary decode")
-    }
-}
+class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper)

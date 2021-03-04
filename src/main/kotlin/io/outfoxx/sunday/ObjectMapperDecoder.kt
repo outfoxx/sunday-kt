@@ -17,10 +17,15 @@
 package io.outfoxx.sunday
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kotlin.reflect.KClass
+import com.fasterxml.jackson.databind.type.TypeFactory
+import kotlin.reflect.KType
+import kotlin.reflect.jvm.javaType
 
-open class ObjectMapperDecoder(val objectMapper: ObjectMapper) : MediaTypeDecoder {
+open class ObjectMapperDecoder(val objectMapper: ObjectMapper) : MediaTypeDecoder, StructuredMediaTypeDecoder {
 
-  override fun <T : Any> decode(data: ByteArray, type: KClass<T>): T =
-    objectMapper.readValue(data, type.java)
+  override fun <T : Any> decode(data: ByteArray, type: KType): T =
+    objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
+
+  override fun <T : Any> decode(data: Map<String, Any>, type: KType): T =
+    objectMapper.convertValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
 }

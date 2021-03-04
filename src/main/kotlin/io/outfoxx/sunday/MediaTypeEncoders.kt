@@ -36,12 +36,12 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
     fun registerDefaults() = registerURL().registerJSON().registerCBOR().registerData()
 
     fun registerURL(
-      arrayEncoding: URLEncoder.ArrayEncoding = URLEncoder.ArrayEncoding.Bracketed,
-      boolEncoding: URLEncoder.BoolEncoding = URLEncoder.BoolEncoding.Numeric,
-      dateEncoding: URLEncoder.DateEncoding = URLEncoder.DateEncoding.MillisecondsSince1970,
+      arrayEncoding: WWWFormURLEncoder.ArrayEncoding = WWWFormURLEncoder.ArrayEncoding.Bracketed,
+      boolEncoding: WWWFormURLEncoder.BoolEncoding = WWWFormURLEncoder.BoolEncoding.Numeric,
+      dateEncoding: WWWFormURLEncoder.DateEncoding = WWWFormURLEncoder.DateEncoding.MillisecondsSince1970,
       mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
     ): Builder =
-      register(URLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper), WWWFormUrlEncoded)
+      register(WWWFormURLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper), WWWFormUrlEncoded)
 
     fun registerData() =
       register(BinaryEncoder(), MediaType.OctetStream)
@@ -55,7 +55,7 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       )
 
     fun registerJSON(mapper: JsonMapper) =
-      register(ObjectMapperEncoder(mapper), MediaType.JSON, MediaType.JSONStructured)
+      register(JSONEncoder(mapper), MediaType.JSON, MediaType.JSONStructured)
 
     fun registerCBOR() =
       registerCBOR(
@@ -66,7 +66,7 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       )
 
     fun registerCBOR(mapper: CBORMapper) =
-      register(ObjectMapperEncoder(mapper), MediaType.CBOR)
+      register(CBOREncoder(mapper), MediaType.CBOR)
 
     fun register(decoder: MediaTypeEncoder, vararg types: MediaType) =
       Builder(registered.plus(types.map { it to decoder }))

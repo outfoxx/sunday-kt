@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import io.outfoxx.sunday.http.Parameters
+import com.fasterxml.jackson.databind.json.JsonMapper
 
-interface URLQueryEncoder : MediaTypeEncoder {
-
-  fun encodeQueryString(parameters: Parameters): String
-}
+class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper)

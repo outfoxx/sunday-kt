@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
+import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 
 class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>) {

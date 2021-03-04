@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import kotlin.reflect.KType
+import kotlin.reflect.jvm.javaType
 
-interface MediaTypeDecoder {
+class JSONDecoder(jsonMapper: JsonMapper) : ObjectMapperDecoder(jsonMapper), TextMediaTypeDecoder {
 
-  fun <T : Any> decode(data: ByteArray, type: KType): T
+  override fun <T : Any> decode(data: String, type: KType): T =
+    objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
 }
-
-inline fun <reified T : Any> MediaTypeDecoder.decode(data: ByteArray): T = decode(data, typeOf<T>())

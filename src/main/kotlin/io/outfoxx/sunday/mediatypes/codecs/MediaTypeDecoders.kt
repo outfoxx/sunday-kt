@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
 import com.fasterxml.jackson.databind.DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
+import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.CBOR
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.JSONStructured

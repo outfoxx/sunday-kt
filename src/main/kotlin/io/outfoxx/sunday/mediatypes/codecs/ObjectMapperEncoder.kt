@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 
-class CBORDecoder(cborMapper: CBORMapper) : ObjectMapperDecoder(cborMapper)
+open class ObjectMapperEncoder(private val objectMapper: ObjectMapper) : MediaTypeEncoder {
+
+  override fun <B> encode(value: B): ByteArray =
+    objectMapper.writeValueAsBytes(value)
+}

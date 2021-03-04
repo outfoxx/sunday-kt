@@ -14,21 +14,9 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.Source
-import okio.buffer
-import java.io.InputStream
-import kotlin.reflect.jvm.internal.impl.protobuf.ByteString
+interface MediaTypeEncoder {
 
-class BinaryEncoder : MediaTypeEncoder {
-
-  override fun <B> encode(value: B): ByteArray =
-    when (value) {
-      is ByteArray -> value
-      is ByteString -> value.toByteArray()
-      is InputStream -> value.use { it.readAllBytes() }
-      is Source -> value.use { it.buffer().readByteArray() }
-      else -> error("Unsupported value for binary encode")
-    }
+  fun <T> encode(value: T): ByteArray
 }

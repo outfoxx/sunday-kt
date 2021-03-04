@@ -14,24 +14,14 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.ByteString
-import okio.ByteString.Companion.toByteString
-import okio.Source
-import okio.source
-import java.io.InputStream
+import io.outfoxx.sunday.typeOf
 import kotlin.reflect.KType
 
-class BinaryDecoder : MediaTypeDecoder {
+interface TextMediaTypeDecoder : MediaTypeDecoder {
 
-  override fun <T : Any> decode(data: ByteArray, type: KType): T =
-    @Suppress("UNCHECKED_CAST")
-    when (type.classifier) {
-      ByteArray::class -> data as T
-      ByteString::class -> data.toByteString(0, data.size) as T
-      InputStream::class -> data.inputStream() as T
-      Source::class -> data.inputStream().source() as T
-      else -> error("Unsupported type for binary decode")
-    }
+  fun <T : Any> decode(data: String, type: KType): T
 }
+
+inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T = decode(data, typeOf<T>())

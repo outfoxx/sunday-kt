@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import kotlin.reflect.KType
+import io.outfoxx.sunday.http.Parameters
 
-interface TextMediaTypeDecoder : MediaTypeDecoder {
+interface URLQueryEncoder : MediaTypeEncoder {
 
-  fun <T : Any> decode(data: String, type: KType): T
+  fun encodeQueryString(parameters: Parameters): String
 }
-
-inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T = decode(data, typeOf<T>())

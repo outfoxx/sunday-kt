@@ -14,13 +14,8 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday
+package io.outfoxx.sunday.mediatypes.codecs
 
-import kotlin.reflect.KType
+import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 
-interface StructuredMediaTypeDecoder : MediaTypeDecoder {
-
-  fun <T : Any> decode(data: Map<String, Any>, type: KType): T
-}
-
-inline fun <reified T : Any> StructuredMediaTypeDecoder.decode(data: Map<String, Any>): T = decode(data, typeOf<T>())
+class CBORDecoder(cborMapper: CBORMapper) : ObjectMapperDecoder(cborMapper)

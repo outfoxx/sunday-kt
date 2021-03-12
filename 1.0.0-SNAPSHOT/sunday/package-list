@@ -1,0 +1,7 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+io.outfoxx.sunday
+io.outfoxx.sunday.http
+io.outfoxx.sunday.mediatypes.codecs
+

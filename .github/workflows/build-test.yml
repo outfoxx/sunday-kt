@@ -24,6 +24,7 @@ jobs:
 
     - name: Updload Reports
       uses: actions/upload-artifact@v2
+      if: always()
       with:
         name: reports
         path: build/reports

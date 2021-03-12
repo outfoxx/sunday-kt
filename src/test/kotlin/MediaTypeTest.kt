@@ -48,91 +48,79 @@ class MediaTypeTest {
       )
     ) { "Test compatibility" }
 
-    assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Image,
-            Vendor,
-            "plain",
-            JSON,
-            mapOf("a" to "b")
-          )
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Image,
+          Vendor,
+          "plain",
+          JSON,
+          mapOf("a" to "b")
         )
-        )
+      )
     ) { "Test incompatibility in types" }
 
-    assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Text,
-            Personal,
-            "plain",
-            JSON,
-            mapOf("a" to "b")
-          )
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Text,
+          Personal,
+          "plain",
+          JSON,
+          mapOf("a" to "b")
         )
-        )
+      )
     ) { "Test incompatibility in trees" }
 
-    assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Text,
-            Vendor,
-            "html",
-            JSON,
-            mapOf("a" to "b")
-          )
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Text,
+          Vendor,
+          "html",
+          JSON,
+          mapOf("a" to "b")
         )
-        )
+      )
     ) { "Test incompatibility in subtypes" }
 
-    assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Text,
-            Vendor,
-            "plain",
-            XML,
-            mapOf("a" to "b")
-          )
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Text,
+          Vendor,
+          "plain",
+          XML,
+          mapOf("a" to "b")
         )
-        )
+      )
     ) { "Test incompatibility in suffixes" }
 
-    assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Text,
-            Vendor,
-            "plain",
-            JSON,
-            mapOf("a" to "c")
-          )
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Text,
+          Vendor,
+          "plain",
+          JSON,
+          mapOf("a" to "c")
         )
+      )
+    ) { "Test incompatibility in parameter values" }
+
+    assertFalse(
+      MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
+        MediaType(
+          Text,
+          Vendor,
+          "plain",
+          parameters = mapOf("a" to "c")
         )
-    ) { "Test incompatibility in parmeter values" }
+      )
+    ) { "Test incompatibility in parameter values missing suffix" }
 
     assertTrue(
-      !(
-        MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
-          MediaType(
-            Text,
-            Vendor,
-            "plain",
-            parameters = mapOf("a" to "c")
-          )
-        )
-        )
-    ) { "Test incompatibility in parmeter values" }
-
-    assertTrue(
-      MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
+      MediaType(Text, subtype = "html", parameters = mapOf("custom-charset" to "utf-8")).compatible(
         MediaType(
           Text,
           subtype = "html",
@@ -167,18 +155,16 @@ class MediaTypeTest {
       )
     ) { "Test compatibility with different parameters" }
 
-    assertTrue(
-      !(
-        MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
-          MediaType(
-            Text,
-            subtype = "html",
-            parameters = mapOf(
-              "charset" to "utf-16"
-            )
+    assertFalse(
+      MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
+        MediaType(
+          Text,
+          subtype = "html",
+          parameters = mapOf(
+            "charset" to "utf-16"
           )
         )
-        )
+      )
     ) { "Test compatibility with different parameter values" }
 
     assertTrue(

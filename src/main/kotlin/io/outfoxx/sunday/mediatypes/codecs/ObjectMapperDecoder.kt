@@ -16,16 +16,42 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.type.TypeFactory
+import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
+import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
+import org.zalando.problem.AbstractThrowableProblem
+import org.zalando.problem.Problem
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
-open class ObjectMapperDecoder(val objectMapper: ObjectMapper) : MediaTypeDecoder, StructuredMediaTypeDecoder {
+open class ObjectMapperDecoder(objectMapper: ObjectMapper) : MediaTypeDecoder, StructuredMediaTypeDecoder {
+
+  class CustomDeserializationProblemHandler : DeserializationProblemHandler() {
+    override fun handleUnknownTypeId(
+      ctxt: DeserializationContext?,
+      baseType: JavaType?,
+      subTypeId: String?,
+      idResolver: TypeIdResolver?,
+      failureMsg: String?
+    ): JavaType? {
+      // Ensure deserialization of Problem subclasses can be done explicitly without
+      // registration
+      if (baseType?.isTypeOrSubTypeOf(AbstractThrowableProblem::class.java) == true) {
+        return baseType
+      }
+      return super.handleUnknownTypeId(ctxt, baseType, subTypeId, idResolver, failureMsg)
+    }
+  }
+
+  val objectMapper: ObjectMapper =
+    objectMapper.copy()
+      .addHandler(CustomDeserializationProblemHandler())
 
   override fun <T : Any> decode(data: ByteArray, type: KType): T =
-    objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
+    objectMapper.readValue(data, objectMapper.typeFactory.constructType(type.javaType))
 
   override fun <T : Any> decode(data: Map<String, Any>, type: KType): T =
-    objectMapper.convertValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
+    objectMapper.convertValue(data, objectMapper.typeFactory.constructType(type.javaType))
 }

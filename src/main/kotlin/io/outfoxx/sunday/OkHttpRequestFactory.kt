@@ -313,7 +313,7 @@ class OkHttpRequestFactory(
           ?: throw SundayError(InvalidContentType, body.contentType()?.toString() ?: "")
 
       if (!contentType.compatible(ProblemJSON)) {
-        val (detail, responseData) =
+        val (responseText, responseData) =
           if (contentType.compatible(AnyText))
             body.string() to null
           else
@@ -321,10 +321,12 @@ class OkHttpRequestFactory(
 
         Problem.builder()
           .withStatus(status)
-          .withDetail(detail)
           .apply {
+            if (responseText != null) {
+              with("responseText", responseText)
+            }
             if (responseData != null) {
-              with("data", responseData)
+              with("responseData", responseData)
             }
           }
           .build()
@@ -339,10 +341,10 @@ class OkHttpRequestFactory(
 
         val decoded: Map<String, Any> = problemDecoder.decode(body.bytes())
 
-        val typeId = decoded["type"]?.toString() ?: ""
-        val problemType = (problemTypes[typeId] ?: DefaultProblem::class).createType()
+        val problemType = decoded["type"]?.toString() ?: ""
+        val problemClass = (problemTypes[problemType] ?: DefaultProblem::class).createType()
 
-        problemDecoder.decode(decoded, problemType)
+        problemDecoder.decode(decoded, problemClass)
       }
     } else {
       Problem.valueOf(status)

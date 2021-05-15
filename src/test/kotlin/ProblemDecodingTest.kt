@@ -17,7 +17,7 @@
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeName
 import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
-import io.outfoxx.sunday.NetworkRequestFactory
+import io.outfoxx.sunday.OkHttpRequestFactory
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.ContentType
 import io.outfoxx.sunday.http.Method
@@ -59,7 +59,7 @@ class ProblemDecodingTest {
     val httpClient = OkHttpClient.Builder().build()
 
     val requestFactory =
-      NetworkRequestFactory(
+      OkHttpRequestFactory(
         URITemplate(server.url("/test").toString(), mapOf()),
         httpClient,
       )

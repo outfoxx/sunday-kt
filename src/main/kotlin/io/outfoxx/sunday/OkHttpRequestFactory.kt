@@ -62,7 +62,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
 
-class NetworkRequestFactory(
+class OkHttpRequestFactory(
   private val baseURI: URITemplate,
   private val httpClient: OkHttpClient,
   private val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
@@ -71,7 +71,7 @@ class NetworkRequestFactory(
 
   companion object {
 
-    private val logger = LoggerFactory.getLogger(NetworkRequestFactory::class.java)
+    private val logger = LoggerFactory.getLogger(OkHttpRequestFactory::class.java)
 
     private val unacceptableStatusCodes = 400 until 600
     private val emptyDataStatusCodes = setOf(204, 205)

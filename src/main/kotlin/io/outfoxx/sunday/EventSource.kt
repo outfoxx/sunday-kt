@@ -257,7 +257,7 @@ class EventSource(
   private fun receivedEvent(id: String?, event: String?, data: String?) {
 
     if (event != null) {
-      eventListeners[id]?.invoke(id, event, data)
+      eventListeners[event]?.invoke(id, event, data)
     }
 
     messageHandler?.invoke(this, id, event, data)

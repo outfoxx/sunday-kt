@@ -104,7 +104,7 @@ tasks {
 //
 
 jacoco {
-  toolVersion = "0.8.5"
+  toolVersion = "0.8.7"
 }
 
 tasks {

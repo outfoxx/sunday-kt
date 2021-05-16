@@ -103,8 +103,8 @@ class WWWFormURLEncoderTest {
   }
 
 
-  val date1 = Instant.parse("2017-05-15T08:30:00Z")
-  val date2 = OffsetDateTime.parse("2018-06-16T09:40:10+07:00").toInstant();
+  val date1 = Instant.parse("2017-05-15T08:30:00.123456789Z")
+  val date2 = OffsetDateTime.parse("2018-06-16T09:40:10.123456789+07:00").toInstant();
 
   @Test
   fun `encodes date values in ISO form`() {
@@ -116,7 +116,7 @@ class WWWFormURLEncoderTest {
 
     assertThat(
       encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=${encodeURIComponent(date1.toString())}&test=${encodeURIComponent(date2.toString())}")
+      equalTo("test=2017-05-15T08%3A30%3A00.123456789Z&test=2018-06-16T02%3A40%3A10.123456789Z")
     )
   }
 
@@ -130,7 +130,7 @@ class WWWFormURLEncoderTest {
 
     assertThat(
       encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=${encodeURIComponent(date1.toEpochMilli() / 1000.0)}&test=${encodeURIComponent(date2.toEpochMilli() / 1000.0)}")
+      equalTo("test=1494837000.1234567&test=1529116810.1234567")
     )
   }
 
@@ -144,7 +144,7 @@ class WWWFormURLEncoderTest {
 
     assertThat(
       encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=${encodeURIComponent(date1.toEpochMilli())}&test=${encodeURIComponent(date2.toEpochMilli())}")
+      equalTo("test=1494837000123&test=1529116810123")
     )
   }
 

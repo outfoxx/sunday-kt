@@ -69,8 +69,8 @@ class WWWFormURLEncoder(
   }
 
   enum class DateEncoding(val encode: (Instant) -> String) {
-    SecondsSince1970({ "${it.epochSecond + (it.nano / 1_000_000_000.0)}" }),
-    MillisecondsSince1970({ "${it.toEpochMilli()}" }),
+    SecondsSince1970({ (it.epochSecond + (it.nano / 1_000_000_000.0)).toBigDecimal().toPlainString() }),
+    MillisecondsSince1970({ it.toEpochMilli().toString() }),
     ISO8601({ ISO_INSTANT.format(it) })
   }
 
@@ -90,7 +90,7 @@ class WWWFormURLEncoder(
 
   private fun encodeQueryComponent(key: String, value: Any): List<Pair<String, String>> =
     when (value) {
-      is Map<*, *> -> value.flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
+      is Map<*, *> -> value.toSortedMap(compareBy { it.toString() }).flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
       is List<*> -> value.flatMap { element -> encodeQueryComponent(arrayEncoding.encode(key), element as Any) }
       is Instant -> listOf(encodeURIComponent(key) to encodeURIComponent(dateEncoding.encode(value)))
       is Boolean -> listOf(encodeURIComponent(key) to encodeURIComponent(boolEncoding.encode(value)))

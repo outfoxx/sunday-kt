@@ -21,8 +21,11 @@ import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
+import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.InvalidContentType
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
+import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
+import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
 import io.outfoxx.sunday.SundayError.Reason.ResponseDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.UnexpectedEmptyResponse
 import io.outfoxx.sunday.http.HeaderNames.Accept
@@ -33,7 +36,7 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
-import io.outfoxx.sunday.mediatypes.codecs.URLQueryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -45,6 +48,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -55,6 +59,7 @@ import org.slf4j.LoggerFactory
 import org.zalando.problem.DefaultProblem
 import org.zalando.problem.Problem
 import org.zalando.problem.Status
+import org.zalando.problem.StatusType
 import org.zalando.problem.ThrowableProblem
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -64,9 +69,9 @@ import kotlin.reflect.full.createType
 
 class OkHttpRequestFactory(
   private val baseURI: URITemplate,
-  private val httpClient: OkHttpClient,
-  private val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
-  private val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
+  val httpClient: OkHttpClient,
+  val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
+  val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
 ) : RequestFactory() {
 
   companion object {
@@ -96,7 +101,9 @@ class OkHttpRequestFactory(
   ): Request {
     logger.trace("Building request")
 
-    val urlBuilder = baseURI.resolve(pathTemplate, pathParameters)
+    val urlBuilder =
+      baseURI.resolve(pathTemplate, pathParameters).toURI().toHttpUrlOrNull()?.newBuilder()
+        ?: throw SundayError(InvalidBaseUri)
 
     if (!queryParameters.isNullOrEmpty()) {
 
@@ -105,13 +112,16 @@ class OkHttpRequestFactory(
       val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded)
         ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
 
-      urlQueryEncoder as? URLQueryEncoder
-        ?: throw SundayError(NoDecoder, "'$WWWFormUrlEncoded' decoder must support query encoding")
+      urlQueryEncoder as? URLQueryParamsEncoder
+        ?: throw SundayError(
+          NoDecoder,
+          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}"
+        )
 
-      urlBuilder.query().join(urlQueryEncoder.encodeQueryString(queryParameters))
+      urlBuilder.encodedQuery(urlQueryEncoder.encodeQueryString(queryParameters))
     }
 
-    val requestBuilder = Request.Builder().url(urlBuilder.toURI().toString())
+    val requestBuilder = Request.Builder().url(urlBuilder.build())
 
     headers?.forEach { (headerName, headerValue) ->
       requestBuilder.addHeader(headerName, "$headerValue")
@@ -119,10 +129,11 @@ class OkHttpRequestFactory(
 
     // Add `Accept` header based on accept types
     if (acceptTypes != null) {
-      val supportedAcceptTypes = acceptTypes.filter(mediaTypeEncoders::supports)
+      val supportedAcceptTypes = acceptTypes.filter(mediaTypeDecoders::supports)
       if (supportedAcceptTypes.isEmpty()) {
-        throw IllegalArgumentException("Unsupported Accept header media types: $acceptTypes")
+        throw SundayError(NoSupportedAcceptTypes)
       }
+
       val accept = supportedAcceptTypes.joinToString(" , ") { it.toString() }
 
       requestBuilder.header(Accept, accept)
@@ -134,10 +145,12 @@ class OkHttpRequestFactory(
     contentType?.let { requestBuilder.addHeader(ContentType, contentType.toString()) }
 
     val requestBody = body?.let {
-      requireNotNull(contentType) { "No supported Content-Type for request with body value" }
+      contentType ?: throw SundayError(NoSupportedContentTypes)
 
-      val encodedBody = mediaTypeEncoders.find(contentType)?.encode(body)
-        ?: throw IllegalArgumentException("No registered encoder for Content-Type $contentType")
+      val mediaTypeEncoder = mediaTypeEncoders.find(contentType)
+        ?: error("Cannot find encoder that was reported as supported")
+
+      val encodedBody = mediaTypeEncoder.encode(body)
 
       encodedBody.toRequestBody(contentType.value.toMediaType())
     }
@@ -302,15 +315,23 @@ class OkHttpRequestFactory(
   private fun parseFailure(response: Response): ThrowableProblem {
     logger.trace("Parsing failure response")
 
-    val status = Status.valueOf(response.code)
+    val status =
+      try {
+        Status.valueOf(response.code)
+      } catch (x: IllegalArgumentException) {
+        object : StatusType {
+          override fun getStatusCode() = response.code
+          override fun getReasonPhrase() = "Unknown"
+        }
+      }
 
     val body = response.body
 
-    return if (body != null) {
+    return if (body != null && body.contentLength() != 0L) {
 
       val contentType =
         body.contentType()?.let { MediaType.from(it.toString()) }
-          ?: throw SundayError(InvalidContentType, body.contentType()?.toString() ?: "")
+          ?: MediaType.OctetStream
 
       if (!contentType.compatible(ProblemJSON)) {
         val (responseText, responseData) =
@@ -321,6 +342,7 @@ class OkHttpRequestFactory(
 
         Problem.builder()
           .withStatus(status)
+          .withTitle(status.reasonPhrase)
           .apply {
             if (responseText != null) {
               with("responseText", responseText)

@@ -239,7 +239,7 @@ abstract class RequestFactory {
     )
   }
 
-  abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
+  protected abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
 
   fun <B : Any, D : Any> eventStream(
     method: Method,
@@ -289,9 +289,9 @@ abstract class RequestFactory {
     )
   }
 
-  abstract fun <D : Any> eventStream(
+  protected abstract fun <D : Any> eventStream(
     eventTypes: Map<String, KType>,
-    requestSupplier: suspend () -> Request
+    requestSupplier: suspend () -> Request,
   ): Flow<D>
 
   abstract fun close(cancelOutstandingRequests: Boolean)

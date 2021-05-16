@@ -18,7 +18,7 @@ package io.outfoxx.sunday.mediatypes.codecs
 
 import io.outfoxx.sunday.http.Parameters
 
-interface URLQueryEncoder : MediaTypeEncoder {
+interface URLQueryParamsEncoder : MediaTypeEncoder {
 
   fun encodeQueryString(parameters: Parameters): String
 }

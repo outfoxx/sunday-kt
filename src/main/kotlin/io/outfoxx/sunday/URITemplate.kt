@@ -24,7 +24,7 @@ class URITemplate(
   private val parameters: Parameters
 ) {
 
-  constructor(template: String, parameters: Parameters) :
+  constructor(template: String, parameters: Parameters = mapOf()) :
     this(URIBuilder.basedOn(template), parameters)
 
   fun resolve(relative: String? = null, parameters: Parameters? = null): URIBuilder {

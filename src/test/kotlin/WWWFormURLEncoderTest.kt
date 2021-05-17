@@ -1,5 +1,4 @@
 import io.outfoxx.sunday.mediatypes.codecs.WWWFormURLEncoder
-import io.outfoxx.sunday.mediatypes.codecs.WWWFormURLEncoder.Companion.encodeURIComponent
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
@@ -125,7 +124,7 @@ class WWWFormURLEncoderTest {
     val encoder = WWWFormURLEncoder(
       WWWFormURLEncoder.ArrayEncoding.Unbracketed,
       WWWFormURLEncoder.BoolEncoding.Numeric,
-      WWWFormURLEncoder.DateEncoding.SecondsSince1970
+      WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch
     )
 
     assertThat(
@@ -139,7 +138,7 @@ class WWWFormURLEncoderTest {
     val encoder = WWWFormURLEncoder(
       WWWFormURLEncoder.ArrayEncoding.Unbracketed,
       WWWFormURLEncoder.BoolEncoding.Numeric,
-      WWWFormURLEncoder.DateEncoding.MillisecondsSince1970
+      WWWFormURLEncoder.DateEncoding.MillisecondsSinceEpoch
     )
 
     assertThat(

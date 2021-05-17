@@ -37,9 +37,9 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
     fun registerDefaults() = registerURL().registerJSON().registerCBOR().registerData()
 
     fun registerURL(
-      arrayEncoding: WWWFormURLEncoder.ArrayEncoding = WWWFormURLEncoder.ArrayEncoding.Bracketed,
-      boolEncoding: WWWFormURLEncoder.BoolEncoding = WWWFormURLEncoder.BoolEncoding.Numeric,
-      dateEncoding: WWWFormURLEncoder.DateEncoding = WWWFormURLEncoder.DateEncoding.MillisecondsSince1970,
+      arrayEncoding: WWWFormURLEncoder.ArrayEncoding = WWWFormURLEncoder.ArrayEncoding.Unbracketed,
+      boolEncoding: WWWFormURLEncoder.BoolEncoding = WWWFormURLEncoder.BoolEncoding.Literal,
+      dateEncoding: WWWFormURLEncoder.DateEncoding = WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch,
       mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
     ): Builder =
       register(WWWFormURLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper), WWWFormUrlEncoded)

@@ -69,8 +69,8 @@ class WWWFormURLEncoder(
   }
 
   enum class DateEncoding(val encode: (Instant) -> String) {
-    SecondsSince1970({ (it.epochSecond + (it.nano / 1_000_000_000.0)).toBigDecimal().toPlainString() }),
-    MillisecondsSince1970({ it.toEpochMilli().toString() }),
+    FractionalSecondsSinceEpoch({ (it.epochSecond + (it.nano / 1_000_000_000.0)).toBigDecimal().toPlainString() }),
+    MillisecondsSinceEpoch({ it.toEpochMilli().toString() }),
     ISO8601({ ISO_INSTANT.format(it) })
   }
 

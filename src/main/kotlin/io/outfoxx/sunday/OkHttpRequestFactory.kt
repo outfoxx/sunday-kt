@@ -271,7 +271,7 @@ class OkHttpRequestFactory(
     }
 
     eventSource.onerror = { _, error ->
-      cancel("EventSource error encountered", error)
+      logger.warn("EventSource error encountered", error)
     }
 
     eventSource.connect()

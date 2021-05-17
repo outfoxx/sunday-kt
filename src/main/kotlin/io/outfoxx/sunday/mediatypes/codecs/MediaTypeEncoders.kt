@@ -51,8 +51,8 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       registerJSON(
         JsonMapper()
           .findAndRegisterModules()
-          .disable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
       )
 
     fun registerJSON(mapper: JsonMapper) =
@@ -62,8 +62,8 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       registerCBOR(
         CBORMapper()
           .findAndRegisterModules()
-          .disable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
       )
 
     fun registerCBOR(mapper: CBORMapper) =

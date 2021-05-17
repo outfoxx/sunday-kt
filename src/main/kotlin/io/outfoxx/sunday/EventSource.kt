@@ -232,16 +232,17 @@ class EventSource(
     if (elapsed > eventTimeout) {
       logger.debug("Event timeout reached")
 
-      this.internalClose()
-
-      this.scheduleReconnect()
+      internalClose()
+      scheduleReconnect()
     }
   }
 
   private fun receivedOpen() {
     if (readyStateValue !== Connecting) {
-      close()
-      error("Invalid readyState")
+      logger.warn("Invalid Ready State for Open")
+
+      internalClose()
+      scheduleReconnect()
     }
 
     logger.debug("Connected")

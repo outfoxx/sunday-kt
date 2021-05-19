@@ -34,6 +34,7 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.typeOf
 import kotlinx.coroutines.flow.first
@@ -49,10 +50,13 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.anEmptyMap
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
+import org.hamcrest.Matchers.empty
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasEntry
+import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.zalando.problem.AbstractThrowableProblem
 import org.zalando.problem.DefaultProblem
@@ -68,6 +72,10 @@ class OkHttpRequestFactoryTest {
       ObjectMapper()
         .findAndRegisterModules()
   }
+
+  /**
+   * General
+   */
 
   @Test
   fun `allows overriding defaults constructor`() {
@@ -88,6 +96,11 @@ class OkHttpRequestFactoryTest {
     assertThat(requestFactory.mediaTypeEncoders, equalTo(specialEncoders))
     assertThat(requestFactory.mediaTypeDecoders, equalTo(specialDecoders))
   }
+
+
+  /**
+   * Request Building
+   */
 
   @Test
   fun `encodes query parameters`() {
@@ -295,6 +308,10 @@ class OkHttpRequestFactoryTest {
     assertThat(request.headers, contains(ContentType to "application/json"))
   }
 
+  /**
+   * Response/Result Building
+   */
+
   @Test
   fun `fetches typed results`() {
 
@@ -329,16 +346,12 @@ class OkHttpRequestFactoryTest {
   }
 
   @Test
-  fun `builds event sources`() {
-
-    val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
+  fun `executes requests with empty responses`() {
 
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
+        .setResponseCode(204)
     )
     server.start()
 
@@ -348,31 +361,48 @@ class OkHttpRequestFactoryTest {
         OkHttpClient.Builder().build(),
       )
 
-    runBlocking {
-      withTimeout(5000) {
-        val eventSource = requestFactory.eventSource(Method.Get, "")
-
-        suspendCancellableCoroutine<Unit> { continuation ->
-          eventSource.onmessage = { _, _, _, _ ->
-            continuation.resume(Unit)
-          }
-          eventSource.connect()
-        }
+    assertDoesNotThrow {
+      runBlocking {
+        requestFactory.result(Method.Post, "") as Unit
       }
     }
   }
 
   @Test
-  fun `builds event streams`() {
-
-    val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+  fun `executes manual requests for responses`() {
 
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
+        .setHeader(ContentType, JSON)
+        .setBody("[]")
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val response =
+      runBlocking {
+        requestFactory.response(Method.Get, "")
+      }
+
+    assertThat(response.body?.bytes(), equalTo("[]".encodeToByteArray()))
+  }
+
+  @Test
+  fun `supports non standard status codes`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setStatus("HTTP/1.1 284 Special Status")
+        .setHeader(ContentType, JSON)
+        .setBody("[]")
     )
     server.start()
 
@@ -384,20 +414,179 @@ class OkHttpRequestFactoryTest {
 
     val result =
       runBlocking {
-        withTimeout(50000) {
-          val eventStream = requestFactory.eventStream<Map<String, Any>>(
-            Method.Get,
-            "",
-            eventTypes = mapOf(
-            "hello" to typeOf<Map<String, Any>>()
-          ))
+        requestFactory.result(Method.Get, "") as List<String>
+      }
 
-          eventStream.first()
+    assertThat(result, empty())
+  }
+
+  @Test
+  fun `fails when no data and non empty result types`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(204)
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking {
+          requestFactory.result(Method.Get, "") as Array<String>
         }
       }
 
-    assertThat(result, hasEntry("target", "world"))
+    assertThat(error.reason, equalTo(SundayError.Reason.UnexpectedEmptyResponse))
   }
+
+  @Test
+  fun `fails when a result is expected and no data is returned in response`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking {
+          requestFactory.result(Method.Get, "") as Array<String>
+        }
+      }
+
+    assertThat(error.reason, equalTo(SundayError.Reason.NoData))
+  }
+
+  @Test
+  fun `fails when response content-type is invalid`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setHeader(ContentType, "bad/x-unknown")
+        .setBody("some stuff")
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking {
+          requestFactory.result(Method.Get, "") as Array<String>
+        }
+      }
+
+    assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
+  }
+
+  @Test
+  fun `fails when response content-type is unsupported`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setHeader(ContentType, "application/x-unknown")
+        .setBody("some data")
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking {
+          requestFactory.result(Method.Get, "") as Array<String>
+        }
+      }
+
+    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+  }
+
+  @Test
+  fun `test decoding fails when no decoder for content-type`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, "application/x-unknown-type")
+        .setBody("<test>Test</Test>")
+    )
+    server.start()
+
+    val httpClient = OkHttpClient.Builder().build()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        httpClient,
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+      }
+
+    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+  }
+
+  @Test
+  fun `test decoding errors are translated to SundayError`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, JSON)
+        .setBody("<test>Test</Test>")
+    )
+    server.start()
+
+    val httpClient = OkHttpClient.Builder().build()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        httpClient,
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+      }
+
+    assertThat(error.reason, equalTo(SundayError.Reason.ResponseDecodingFailed))
+  }
+
+  /**
+   * Problem Building/Handling
+   */
 
   @Test
   fun `test registered problems decode as typed problems`() {
@@ -534,7 +723,6 @@ class OkHttpRequestFactoryTest {
     assertThat(error.parameters, anEmptyMap())
   }
 
-
   @Test
   fun `test problem responses fail with SundayError when no JSON decoder`() {
 
@@ -563,16 +751,15 @@ class OkHttpRequestFactoryTest {
 
     assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
   }
-
   @Test
-  fun `test decoding fails when no decoder for content-type`() {
+  fun `test problem responses fail when registered JSON decoder is not a structured decoder`() {
 
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, "application/x-unknown-type")
-        .setBody("<test>Test</Test>")
+        .setResponseCode(TestProblem.STATUS.statusCode)
+        .addHeader(ContentType, ProblemJSON)
+        .setBody(objectMapper.writeValueAsString(TestProblem("test")))
     )
     server.start()
 
@@ -582,6 +769,7 @@ class OkHttpRequestFactoryTest {
       OkHttpRequestFactory(
         URITemplate(server.url("/").toString(), mapOf()),
         httpClient,
+        mediaTypeDecoders = MediaTypeDecoders.Builder().register(TextDecoder(), JSON).build()
       )
 
     val error =
@@ -592,32 +780,80 @@ class OkHttpRequestFactoryTest {
     assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
   }
 
+
+  /**
+   * Event Source/Stream Building
+   */
+
   @Test
-  fun `test decoding errors are translated to SundayError`() {
+  fun `builds event sources`() {
+
+    val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, JSON)
-        .setBody("<test>Test</Test>")
+        .addHeader(ContentType, EventStream)
+        .setBody(encodedEvent),
     )
     server.start()
-
-    val httpClient = OkHttpClient.Builder().build()
 
     val requestFactory =
       OkHttpRequestFactory(
         URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
+        OkHttpClient.Builder().build(),
       )
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+    runBlocking {
+      withTimeout(5000) {
+        val eventSource = requestFactory.eventSource(Method.Get, "")
+
+        suspendCancellableCoroutine<Unit> { continuation ->
+          eventSource.onmessage = { _, _, _, _ ->
+            continuation.resume(Unit)
+          }
+          eventSource.connect()
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `builds event streams`() {
+
+    val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, EventStream)
+        .setBody(encodedEvent),
+    )
+    server.start()
+
+    val requestFactory =
+      OkHttpRequestFactory(
+        URITemplate(server.url("/").toString(), mapOf()),
+        OkHttpClient.Builder().build(),
+      )
+
+    val result =
+      runBlocking {
+        withTimeout(50000) {
+          val eventStream = requestFactory.eventStream<Map<String, Any>>(
+            Method.Get,
+            "",
+            eventTypes = mapOf(
+              "hello" to typeOf<Map<String, Any>>()
+            ))
+
+          eventStream.first()
+        }
       }
 
-    assertThat(error.reason, equalTo(SundayError.Reason.ResponseDecodingFailed))
+    assertThat(result, hasEntry("target", "world"))
   }
 
   class TestProblem(

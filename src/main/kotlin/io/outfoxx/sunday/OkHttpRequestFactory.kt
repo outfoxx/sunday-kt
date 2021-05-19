@@ -23,6 +23,7 @@ import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.InvalidContentType
+import io.outfoxx.sunday.SundayError.Reason.NoData
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
@@ -289,12 +290,16 @@ class OkHttpRequestFactory(
     logger.trace("Parsing success response")
 
     val body = response.body
-    if (emptyDataStatusCodes.contains(response.code) || body == null) {
-      if (resultType != Unit::class) {
+    if (emptyDataStatusCodes.contains(response.code)) {
+      if (resultType != typeOf<Unit>()) {
         throw SundayError(UnexpectedEmptyResponse)
       }
       @Suppress("UNCHECKED_CAST")
       return Unit as T
+    }
+
+    if (body == null || body.contentLength() == 0L) {
+      throw SundayError(NoData)
     }
 
     val contentType =
@@ -319,10 +324,7 @@ class OkHttpRequestFactory(
       try {
         Status.valueOf(response.code)
       } catch (x: IllegalArgumentException) {
-        object : StatusType {
-          override fun getStatusCode() = response.code
-          override fun getReasonPhrase() = "Unknown"
-        }
+        NonStandardStatus(response)
       }
 
     val body = response.body
@@ -372,4 +374,10 @@ class OkHttpRequestFactory(
       Problem.valueOf(status)
     }
   }
+
+  data class NonStandardStatus(val response: Response) : StatusType {
+    override fun getStatusCode() = response.code
+    override fun getReasonPhrase() = response.message
+  }
+
 }

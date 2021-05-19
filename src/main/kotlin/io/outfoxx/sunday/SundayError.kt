@@ -21,8 +21,10 @@ class SundayError(message: String, val reason: Reason? = null, cause: Throwable?
 
   enum class Reason(val message: String) {
     UnexpectedEmptyResponse("Unexpected empty reason"),
+    NoData("No data in response when method requires it"),
     InvalidContentType("Invalid Content-Type"),
     NoDecoder("No decoder registered for MediaType"),
+    NoEncoder("No encoder registered for MediaType"),
     ResponseDecodingFailed("Response decoding failed"),
     EventDecodingFailed("Event decoding failed"),
     InvalidBaseUri("Base URL is invalid after expanding template"),

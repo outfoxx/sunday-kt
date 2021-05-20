@@ -46,8 +46,9 @@ dependencies {
   api("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
   api("com.github.hal4j:uritemplate:$uriTemplateVersion")
 
-  api("com.squareup.okhttp3:okhttp:$okHttpVersion")
+  api("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okhttp3:okhttp-sse")
+  implementation("com.squareup.okio:okio:2.10.0")
 
   implementation(kotlin("stdlib"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")

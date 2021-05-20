@@ -1,0 +1,7 @@
+build:
+  maxIssues: 20
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+

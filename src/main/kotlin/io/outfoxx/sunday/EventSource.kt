@@ -54,9 +54,9 @@ import kotlin.math.pow
 
 class EventSource(
   private val callSupplier: suspend (Headers) -> Call,
-  retryTime: Duration = Duration.of(500, MILLIS),
-  eventTimeout: Duration = Duration.of(75, SECONDS),
-  eventTimeoutCheckInterval: Duration = Duration.of(2, SECONDS),
+  retryTime: Duration = RetryTimeDefault,
+  eventTimeout: Duration = EventTimeoutDefault,
+  eventTimeoutCheckInterval: Duration = EventTimeoutCheckIntervalDefault,
   private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java)
 ) : Closeable {
 
@@ -68,6 +68,9 @@ class EventSource(
   )
 
   companion object {
+    private val RetryTimeDefault = Duration.of(500, MILLIS)
+    private val EventTimeoutDefault = Duration.of(75, SECONDS)
+    private val EventTimeoutCheckIntervalDefault = Duration.of(2, SECONDS)
     private const val MaxRetryTimeMultiple = 30.0
   }
 
@@ -421,7 +424,7 @@ class EventSource(
     val retry = info.retry
     if (retry != null) {
 
-      val retryTime = retry.trim().toLongOrNull(10)
+      val retryTime = retry.trim().toLongOrNull(radix = 10)
       if (retryTime != null) {
 
         logger.debug("update retry timeout: retryTime=$retryTime")

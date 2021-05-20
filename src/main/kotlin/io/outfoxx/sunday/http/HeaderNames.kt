@@ -18,18 +18,18 @@ package io.outfoxx.sunday.http
 
 object HeaderNames {
 
-  val Accept = "accept"
-  val Authorization = "authorization"
-  val Connection = "connection"
-  val ContentLength = "content-length"
-  val ContentType = "content-type"
-  val Location = "location"
-  val Server = "server"
-  val TransferEncoding = "transfer-encoding"
-  val UserAgent = "user-agent"
-  val Cookie = "cookie"
-  val SetCookie = "set-cookie"
-  val Expect = "expect"
+  const val Accept = "accept"
+  const val Authorization = "authorization"
+  const val Connection = "connection"
+  const val ContentLength = "content-length"
+  const val ContentType = "content-type"
+  const val Location = "location"
+  const val Server = "server"
+  const val TransferEncoding = "transfer-encoding"
+  const val UserAgent = "user-agent"
+  const val Cookie = "cookie"
+  const val SetCookie = "set-cookie"
+  const val Expect = "expect"
 
-  val LastEventId = "last-event-id"
+  const val LastEventId = "last-event-id"
 }

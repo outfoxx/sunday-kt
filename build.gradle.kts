@@ -1,3 +1,4 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -11,6 +12,7 @@ plugins {
 
   id("net.minecrell.licenser")
   id("org.jmailen.kotlinter")
+  id("io.gitlab.arturbosch.detekt")
 }
 
 val mavenGroup: String by project
@@ -148,6 +150,18 @@ kotlinter {
 license {
   header = file("HEADER.txt")
   include("**/*.kt")
+}
+
+detekt {
+  input = files("src/main/kotlin")
+
+  config = files("src/main/detekt/detekt.yml")
+  buildUponDefaultConfig = true
+  baseline = file("src/main/detekt/detekt-baseline.xml")
+}
+
+tasks.withType<Detekt>().configureEach {
+  jvmTarget = "11"
 }
 
 

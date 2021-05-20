@@ -94,8 +94,19 @@ class MediaType(
     return parameters[name.code]
   }
 
-  fun with(type: Type? = null, tree: Tree? = null, subtype: String? = null, parameters: Map<String, String>? = null) =
-    MediaType(type ?: this.type, tree ?: this.tree, subtype ?: this.subtype, suffix, parameters ?: this.parameters)
+  fun with(
+    type: Type? = null,
+    tree: Tree? = null,
+    subtype: String? = null,
+    parameters: Map<String, String>? = null
+  ) =
+    MediaType(
+      type ?: this.type,
+      tree ?: this.tree,
+      subtype ?: this.subtype,
+      suffix,
+      parameters ?: this.parameters
+    )
 
   fun with(parameter: StandardParameterName, value: String) =
     with(parameters = mapOf(parameter.code to value))
@@ -122,7 +133,8 @@ class MediaType(
     if (this.suffix != other.suffix) {
       return false
     }
-    return this.parameters.keys.intersect(other.parameters.keys).all { this.parameters[it] == other.parameters[it] }
+    return this.parameters.keys.intersect(other.parameters.keys)
+      .all { this.parameters[it] == other.parameters[it] }
   }
 
   override fun equals(other: Any?): Boolean {
@@ -160,9 +172,11 @@ class MediaType(
     fun from(string: String): MediaType? {
       val match = fullRegex.matchEntire(string) ?: return null
 
-      val type = match.groupValues.getOrNull(1)?.toLowerCase()?.let { Type.fromCode(it) } ?: return null
+      val type =
+        match.groupValues.getOrNull(1)?.toLowerCase()?.let { Type.fromCode(it) } ?: return null
 
-      val tree = match.groupValues.getOrNull(2)?.toLowerCase()?.let { Tree.fromCode(it) } ?: Tree.Standard
+      val tree =
+        match.groupValues.getOrNull(2)?.toLowerCase()?.let { Tree.fromCode(it) } ?: Tree.Standard
 
       val subType = match.groupValues.getOrNull(3)?.toLowerCase() ?: return null
 
@@ -180,10 +194,10 @@ class MediaType(
       return MediaType(type, tree, subType, suffix, parameters)
     }
 
+
     private val fullRegex =
-      """^((?:[a-z]+|\*))/(x(?:-|\\.)|(?:(?:vnd|prs)\.)|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *(?:(?:[\w.-]+) *= *(?:[\w.-]+)) *)*)$""".toRegex(
-        option = IGNORE_CASE
-      )
+      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$""" // ktlint-disable max-line-length
+        .toRegex(option = IGNORE_CASE)
     private val paramRegex = """ *; *([\w.-]+) *= *([\w.-]+)""".toRegex(option = IGNORE_CASE)
 
     val Plain = MediaType(Type.Text, subtype = "plain")
@@ -193,7 +207,8 @@ class MediaType(
     val CBOR = MediaType(Type.Application, subtype = "cbor")
     val EventStream = MediaType(Type.Text, subtype = "event-stream")
     val OctetStream = MediaType(Type.Application, subtype = "octet-stream")
-    val WWWFormUrlEncoded = MediaType(Type.Application, Tree.Obsolete, subtype = "www-form-urlencoded")
+    val WWWFormUrlEncoded =
+      MediaType(Type.Application, Tree.Obsolete, subtype = "www-form-urlencoded")
 
     val Any = MediaType(Type.Any, subtype = "*")
     val AnyText = MediaType(Type.Text, subtype = "*")

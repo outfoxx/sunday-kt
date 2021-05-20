@@ -127,7 +127,10 @@ class OkHttpRequestFactoryTest {
           )
         }
 
-      assertThat(request.url, equalTo("http://example.com/encode-query-params?limit=5&search=1%20%26%202".toHttpUrl()))
+      assertThat(
+        request.url,
+        equalTo("http://example.com/encode-query-params?limit=5&search=1%20%26%202".toHttpUrl())
+      )
     }
   }
 
@@ -164,7 +167,8 @@ class OkHttpRequestFactoryTest {
       OkHttpRequestFactory(
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
-        mediaTypeEncoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build()
+        mediaTypeEncoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded)
+          .build()
       )
     requestFactory.use {
 
@@ -226,7 +230,10 @@ class OkHttpRequestFactoryTest {
           )
         }
 
-      assertThat(request.headers, contains(HeaderNames.Accept to "application/json , application/cbor"))
+      assertThat(
+        request.headers,
+        contains(HeaderNames.Accept to "application/json , application/cbor")
+      )
     }
   }
 
@@ -971,7 +978,8 @@ class OkHttpRequestFactoryTest {
   }
 
   class TestProblem(
-    @JsonProperty("extra") val extra: String, instance: URI? = null
+    @JsonProperty("extra") val extra: String,
+    instance: URI? = null
   ) : AbstractThrowableProblem(
     URI.create(TYPE),
     TITLE,

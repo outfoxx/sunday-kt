@@ -162,8 +162,8 @@ class EventSource(
     var headers = mapOf(
       Accept to EventStream.value,
     )
-    lastEventId?.let { headers =
-      headers.plus(LastEventId to it)
+    lastEventId?.let {
+      headers = headers.plus(LastEventId to it)
     }
 
     connectionAttemptTime = Instant.now()
@@ -424,12 +424,12 @@ class EventSource(
       val retryTime = retry.trim().toLongOrNull(10)
       if (retryTime != null) {
 
-        logger.debug("update retry timeout: retryTime=${retryTime}")
+        logger.debug("update retry timeout: retryTime=$retryTime")
 
         this.retryTimeValue = Duration.ofMillis(retryTime)
 
       } else {
-        logger.debug("ignoring invalid retry timeout message: retry=${retry}")
+        logger.debug("ignoring invalid retry timeout message: retry=$retry")
       }
 
     }

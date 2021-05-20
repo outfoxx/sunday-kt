@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.ByteString.Companion.toByteString
 import java.lang.IllegalArgumentException
 import kotlin.reflect.KType
 

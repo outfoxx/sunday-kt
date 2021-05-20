@@ -66,14 +66,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       val completed = CountDownLatch(1)
 
@@ -119,14 +121,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       var event: EventSource.Event? = null
       val completed = CountDownLatch(1)
@@ -174,14 +178,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       var event: EventSource.Event? = null
       val completed = CountDownLatch(1)
@@ -286,14 +292,16 @@ class EventSourceTest {
     val httpClient = OkHttpClient.Builder().build()
 
     val eventSource =
-      EventSource({ headers ->
-                    httpClient.newCall(
-                      Request.Builder()
-                        .url("http://example.com")
-                        .headers(headers)
-                        .build()
-                    )
-                  })
+      EventSource(
+        { headers ->
+          httpClient.newCall(
+            Request.Builder()
+              .url("http://example.com")
+              .headers(headers)
+              .build()
+          )
+        }
+      )
 
     eventSource.addEventListener("test") { }
     eventSource.removeEventListener("test")
@@ -324,14 +332,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       val completed = CountDownLatch(1)
 
@@ -372,14 +382,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       val completed = CountDownLatch(1)
 
@@ -424,14 +436,16 @@ class EventSourceTest {
       val httpClient = OkHttpClient.Builder().build()
 
       val eventSource =
-        EventSource({ headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    })
+        EventSource(
+          { headers ->
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          }
+        )
 
       eventSource.use {
 
@@ -489,13 +503,13 @@ class EventSourceTest {
       val eventSource =
         EventSource(
           { headers ->
-                      httpClient.newCall(
-                        Request.Builder()
-                          .url(server.url("/test"))
-                          .headers(headers)
-                          .build()
-                      )
-                    },
+            httpClient.newCall(
+              Request.Builder()
+                .url(server.url("/test"))
+                .headers(headers)
+                .build()
+            )
+          },
           retryTime = Duration.ofMillis(100)
         )
 

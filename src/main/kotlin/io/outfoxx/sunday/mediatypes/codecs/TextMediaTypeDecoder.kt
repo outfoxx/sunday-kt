@@ -24,4 +24,5 @@ interface TextMediaTypeDecoder : MediaTypeDecoder {
   fun <T : Any> decode(data: String, type: KType): T
 }
 
-inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T = decode(data, typeOf<T>())
+inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T =
+  decode(data, typeOf<T>())

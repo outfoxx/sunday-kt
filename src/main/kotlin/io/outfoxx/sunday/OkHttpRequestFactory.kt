@@ -198,7 +198,17 @@ class OkHttpRequestFactory(
     headers: Parameters?
   ): Response {
     val request =
-      request(method, pathTemplate, pathParameters, queryParameters, body, bodyType, contentTypes, acceptTypes, headers)
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        body,
+        bodyType,
+        contentTypes,
+        acceptTypes,
+        headers
+      )
 
     return response(request)
   }
@@ -260,7 +270,7 @@ class OkHttpRequestFactory(
     val eventSource = eventSource(requestSupplier)
 
     eventTypes.forEach { (event, type) ->
-      eventSource.addEventListener(event) {( _, _, data) ->
+      eventSource.addEventListener(event) { (_, _, data) ->
         try {
 
           val decodedEvent = jsonDecoder.decode<D>(data ?: "", type)
@@ -381,6 +391,7 @@ class OkHttpRequestFactory(
   }
 
   data class NonStandardStatus(val response: Response) : StatusType {
+
     override fun getStatusCode() = response.code
     override fun getReasonPhrase() = response.message
   }

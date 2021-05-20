@@ -251,7 +251,10 @@ class EventParser {
       return null
     }
 
-    private fun parseAndDispatchEvents(eventStrings: List<String>, dispatcher: (EventInfo) -> Unit) {
+    private fun parseAndDispatchEvents(
+      eventStrings: List<String>,
+      dispatcher: (EventInfo) -> Unit
+    ) {
 
       for (eventString in eventStrings) {
         parseAndDispatchEvent(eventString, dispatcher)
@@ -303,7 +306,7 @@ class EventParser {
             }
           }
 
-          //Ignore comments
+          // Ignore comments
           "" -> continue
 
           else -> continue

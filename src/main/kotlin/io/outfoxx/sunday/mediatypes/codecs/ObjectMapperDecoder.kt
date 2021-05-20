@@ -22,13 +22,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
 import org.zalando.problem.AbstractThrowableProblem
-import org.zalando.problem.Problem
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
-open class ObjectMapperDecoder(objectMapper: ObjectMapper) : MediaTypeDecoder, StructuredMediaTypeDecoder {
+open class ObjectMapperDecoder(objectMapper: ObjectMapper) :
+  MediaTypeDecoder, StructuredMediaTypeDecoder {
 
   class CustomDeserializationProblemHandler : DeserializationProblemHandler() {
+
     override fun handleUnknownTypeId(
       ctxt: DeserializationContext?,
       baseType: JavaType?,

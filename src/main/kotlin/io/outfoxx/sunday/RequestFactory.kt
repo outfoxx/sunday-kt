@@ -22,10 +22,11 @@ import kotlinx.coroutines.flow.Flow
 import okhttp3.Request
 import okhttp3.Response
 import org.zalando.problem.Problem
+import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 
-abstract class RequestFactory {
+abstract class RequestFactory : Closeable {
 
   abstract fun registerProblem(typeId: String, problemType: KClass<out Problem>)
 

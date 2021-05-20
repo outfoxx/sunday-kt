@@ -62,6 +62,7 @@ import org.zalando.problem.Problem
 import org.zalando.problem.Status
 import org.zalando.problem.StatusType
 import org.zalando.problem.ThrowableProblem
+import java.io.Closeable
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.reflect.KClass
@@ -73,7 +74,7 @@ class OkHttpRequestFactory(
   val httpClient: OkHttpClient,
   val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
-) : RequestFactory() {
+) : RequestFactory(), Closeable {
 
   companion object {
 
@@ -278,6 +279,10 @@ class OkHttpRequestFactory(
     eventSource.connect()
 
     awaitClose { eventSource.close() }
+  }
+
+  override fun close() {
+    close(true)
   }
 
   override fun close(cancelOutstandingRequests: Boolean) {

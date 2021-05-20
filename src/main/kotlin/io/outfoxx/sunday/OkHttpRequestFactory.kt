@@ -260,7 +260,7 @@ class OkHttpRequestFactory(
     val eventSource = eventSource(requestSupplier)
 
     eventTypes.forEach { (event, type) ->
-      eventSource.addEventListener(event) { _, _, data ->
+      eventSource.addEventListener(event) {( _, _, data) ->
         try {
 
           val decodedEvent = jsonDecoder.decode<D>(data ?: "", type)
@@ -272,7 +272,7 @@ class OkHttpRequestFactory(
       }
     }
 
-    eventSource.onerror = { _, error ->
+    eventSource.onError = { error ->
       logger.warn("EventSource error encountered", error)
     }
 

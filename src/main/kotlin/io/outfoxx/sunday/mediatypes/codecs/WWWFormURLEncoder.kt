@@ -87,14 +87,16 @@ class WWWFormURLEncoder(
   }
 
   override fun encodeQueryString(parameters: Parameters): String =
-    parameters.keys.sorted()
-      .flatMap { key ->
-        encodeQueryComponent(key, parameters[key]!!)
+    parameters.toSortedMap(compareBy { it })
+      .flatMap { (key, value) ->
+        encodeQueryComponent(key, value)
       }
-      .joinToString("&") { "${it.first}=${it.second}" }
+      .joinToString("&")
 
-  private fun encodeQueryComponent(key: String, value: Any): List<Pair<String, String>> =
+  private fun encodeQueryComponent(key: String, value: Any?): List<String> =
     when (value) {
+      null -> listOf(encodeURIComponent(key))
+
       is Map<*, *> -> value.toSortedMap(compareBy { it.toString() })
         .flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
 
@@ -106,12 +108,12 @@ class WWWFormURLEncoder(
       }
 
       is Instant ->
-        listOf(encodeURIComponent(key) to encodeURIComponent(dateEncoding.encode(value)))
+        listOf(encodeURIComponent(key) + "=" + encodeURIComponent(dateEncoding.encode(value)))
 
       is Boolean ->
-        listOf(encodeURIComponent(key) to encodeURIComponent(boolEncoding.encode(value)))
+        listOf(encodeURIComponent(key) + "=" + encodeURIComponent(boolEncoding.encode(value)))
 
-      else -> listOf(encodeURIComponent(key) to encodeURIComponent("$value"))
+      else -> listOf(encodeURIComponent(key) + "=" + encodeURIComponent("$value"))
     }
 
 }

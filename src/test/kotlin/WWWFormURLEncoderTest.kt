@@ -164,6 +164,16 @@ class WWWFormURLEncoderTest {
   }
 
   @Test
+  fun `encodes null values as flags`() {
+    val encoder = WWWFormURLEncoder()
+
+    assertThat(
+      encoder.encodeQueryString(mapOf("flagged" to null)),
+      equalTo("flagged")
+    )
+  }
+
+  @Test
   fun `encodes to byte arrays`() {
     val encoder = WWWFormURLEncoder()
 

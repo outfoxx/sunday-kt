@@ -50,10 +50,8 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.anEmptyMap
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.empty
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.hasEntry
-import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -61,6 +59,7 @@ import org.junit.jupiter.api.assertThrows
 import org.zalando.problem.AbstractThrowableProblem
 import org.zalando.problem.DefaultProblem
 import org.zalando.problem.Status
+import org.zalando.problem.ThrowableProblem
 import java.net.URI
 import kotlin.coroutines.resume
 
@@ -92,9 +91,11 @@ class OkHttpRequestFactoryTest {
         specialEncoders,
         specialDecoders
       )
+    requestFactory.use {
 
-    assertThat(requestFactory.mediaTypeEncoders, equalTo(specialEncoders))
-    assertThat(requestFactory.mediaTypeDecoders, equalTo(specialDecoders))
+      assertThat(requestFactory.mediaTypeEncoders, equalTo(specialEncoders))
+      assertThat(requestFactory.mediaTypeDecoders, equalTo(specialDecoders))
+    }
   }
 
 
@@ -110,17 +111,24 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val request =
-      runBlocking {
-        requestFactory.request(
-          Method.Get,
-          "/encode-query-params",
-          queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
-        )
-      }
+      val request =
+        runBlocking {
+          requestFactory.request(
+            Method.Get,
+            "/encode-query-params",
+            pathParameters = null,
+            queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+            body = null,
+            contentTypes = null,
+            acceptTypes = null,
+            headers = null
+          )
+        }
 
-    assertThat(request.url, equalTo("http://example.com/encode-query-params?limit=5&search=1%20%26%202".toHttpUrl()))
+      assertThat(request.url, equalTo("http://example.com/encode-query-params?limit=5&search=1%20%26%202".toHttpUrl()))
+    }
   }
 
   @Test
@@ -132,19 +140,21 @@ class OkHttpRequestFactoryTest {
         OkHttpClient.Builder().build(),
         mediaTypeEncoders = MediaTypeEncoders.Builder().build()
       )
+    requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.request(
-            Method.Get,
-            "/encode-query-params",
-            queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
-          )
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/encode-query-params",
+              queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
+            )
+          }
         }
-      }
 
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+      assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
   }
 
   @Test
@@ -156,20 +166,22 @@ class OkHttpRequestFactoryTest {
         OkHttpClient.Builder().build(),
         mediaTypeEncoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build()
       )
+    requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.request(
-            Method.Get,
-            "/encode-query-params",
-            queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
-          )
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/encode-query-params",
+              queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
+            )
+          }
         }
-      }
 
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
-    assertThat(error.message, containsString(URLQueryParamsEncoder::class.simpleName))
+      assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+      assertThat(error.message, containsString(URLQueryParamsEncoder::class.simpleName))
+    }
   }
 
   @Test
@@ -180,17 +192,19 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val request =
-      runBlocking {
-        requestFactory.request(
-          Method.Get,
-          "/add-custom-headers",
-          headers = mapOf(HeaderNames.Authorization to "Bearer 12345")
-        )
-      }
+      val request =
+        runBlocking {
+          requestFactory.request(
+            Method.Get,
+            "/add-custom-headers",
+            headers = mapOf(HeaderNames.Authorization to "Bearer 12345")
+          )
+        }
 
-    assertThat(request.headers, contains(HeaderNames.Authorization to "Bearer 12345"))
+      assertThat(request.headers, contains(HeaderNames.Authorization to "Bearer 12345"))
+    }
   }
 
   @Test
@@ -201,17 +215,19 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val request =
-      runBlocking {
-        requestFactory.request(
-          Method.Get,
-          "/add-accept-headers",
-          acceptTypes = listOf(JSON, CBOR)
-        )
-      }
+      val request =
+        runBlocking {
+          requestFactory.request(
+            Method.Get,
+            "/add-accept-headers",
+            acceptTypes = listOf(JSON, CBOR)
+          )
+        }
 
-    assertThat(request.headers, contains(HeaderNames.Accept to "application/json , application/cbor"))
+      assertThat(request.headers, contains(HeaderNames.Accept to "application/json , application/cbor"))
+    }
   }
 
   @Test
@@ -223,19 +239,21 @@ class OkHttpRequestFactoryTest {
         OkHttpClient.Builder().build(),
         mediaTypeDecoders = MediaTypeDecoders.Builder().build()
       )
+    requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.request(
-            Method.Get,
-            "/add-accept-headers",
-            acceptTypes = listOf(JSON, CBOR)
-          )
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/add-accept-headers",
+              acceptTypes = listOf(JSON, CBOR)
+            )
+          }
         }
-      }
 
-    assertThat(error.reason, equalTo(NoSupportedAcceptTypes))
+      assertThat(error.reason, equalTo(NoSupportedAcceptTypes))
+    }
   }
 
   @Test
@@ -246,20 +264,22 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.request(
-            Method.Post,
-            "/add-accept-headers",
-            body = "a body",
-            contentTypes = listOf(MediaType.from("application/x-unknown")!!)
-          )
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Post,
+              "/add-accept-headers",
+              body = "a body",
+              contentTypes = listOf(MediaType.from("application/x-unknown")!!)
+            )
+          }
         }
-      }
 
-    assertThat(error.reason, equalTo(NoSupportedContentTypes))
+      assertThat(error.reason, equalTo(NoSupportedContentTypes))
+    }
   }
 
   @Test
@@ -270,21 +290,23 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val request =
-      runBlocking {
-        requestFactory.request(
-          Method.Post,
-          "/attach-body",
-          body = mapOf("a" to 5),
-          contentTypes = listOf(JSON)
-        )
-      }
+      val request =
+        runBlocking {
+          requestFactory.request(
+            Method.Post,
+            "/attach-body",
+            body = mapOf("a" to 5),
+            contentTypes = listOf(JSON)
+          )
+        }
 
-    val buffer = Buffer()
-    request.body?.writeTo(buffer)
+      val buffer = Buffer()
+      request.body?.writeTo(buffer)
 
-    assertThat(buffer.readByteArray(), equalTo("""{"a":5}""".encodeToByteArray()))
+      assertThat(buffer.readByteArray(), equalTo("""{"a":5}""".encodeToByteArray()))
+    }
   }
 
   @Test
@@ -295,17 +317,19 @@ class OkHttpRequestFactoryTest {
         URITemplate("http://example.com", mapOf()),
         OkHttpClient.Builder().build(),
       )
+    requestFactory.use {
 
-    val request =
-      runBlocking {
-        requestFactory.request(
-          Method.Post,
-          "/attach-body",
-          contentTypes = listOf(JSON)
-        )
-      }
+      val request =
+        runBlocking {
+          requestFactory.request(
+            Method.Post,
+            "/attach-body",
+            contentTypes = listOf(JSON)
+          )
+        }
 
-    assertThat(request.headers, contains(ContentType to "application/json"))
+      assertThat(request.headers, contains(ContentType to "application/json"))
+    }
   }
 
   /**
@@ -330,19 +354,32 @@ class OkHttpRequestFactoryTest {
         .setBody(objectMapper.writeValueAsString(tester))
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val result =
-      runBlocking {
-        requestFactory.result(Method.Get, "") as Tester
+        val result =
+          runBlocking {
+            requestFactory.result<Void, Tester>(
+              Method.Get,
+              "",
+              pathParameters = null,
+              queryParameters = null,
+              body = null,
+              contentTypes = null,
+              acceptTypes = null,
+              headers = null
+            )
+          }
+
+        assertThat(result, equalTo(tester))
       }
-
-    assertThat(result, equalTo(tester))
+    }
   }
 
   @Test
@@ -354,16 +391,20 @@ class OkHttpRequestFactoryTest {
         .setResponseCode(204)
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    assertDoesNotThrow {
-      runBlocking {
-        requestFactory.result(Method.Post, "") as Unit
+        assertDoesNotThrow {
+          runBlocking {
+            requestFactory.result(Method.Post, "") as Unit
+          }
+        }
       }
     }
   }
@@ -379,45 +420,57 @@ class OkHttpRequestFactoryTest {
         .setBody("[]")
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val response =
-      runBlocking {
-        requestFactory.response(Method.Get, "")
+        val response =
+          runBlocking {
+            requestFactory.response(Method.Get, "")
+          }
+
+        assertThat(response.body?.bytes(), equalTo("[]".encodeToByteArray()))
       }
-
-    assertThat(response.body?.bytes(), equalTo("[]".encodeToByteArray()))
+    }
   }
 
   @Test
-  fun `supports non standard status codes`() {
+  fun `error responses with non standard status codes are handled`() {
 
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setStatus("HTTP/1.1 284 Special Status")
+        .setStatus("HTTP/1.1 484 Special Status")
         .setHeader(ContentType, JSON)
         .setBody("[]")
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val result =
-      runBlocking {
-        requestFactory.result(Method.Get, "") as List<String>
+        val problem =
+          assertThrows<ThrowableProblem> {
+            runBlocking {
+              requestFactory.result(Method.Get, "") as List<String>
+            }
+          }
+
+        assertThat(problem.status?.statusCode, equalTo(484))
+        assertThat(problem.status?.reasonPhrase, equalTo("Special Status"))
+        assertThat(problem.title, equalTo(problem.status?.reasonPhrase))
       }
-
-    assertThat(result, empty())
+    }
   }
 
   @Test
@@ -429,21 +482,25 @@ class OkHttpRequestFactoryTest {
         .setResponseCode(204)
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.result(Method.Get, "") as Array<String>
-        }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking {
+              requestFactory.result(Method.Get, "") as Array<String>
+            }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.UnexpectedEmptyResponse))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.UnexpectedEmptyResponse))
+    }
   }
 
   @Test
@@ -455,21 +512,25 @@ class OkHttpRequestFactoryTest {
         .setResponseCode(200)
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.result(Method.Get, "") as Array<String>
-        }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking {
+              requestFactory.result(Method.Get, "") as Array<String>
+            }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.NoData))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.NoData))
+    }
   }
 
   @Test
@@ -483,21 +544,25 @@ class OkHttpRequestFactoryTest {
         .setBody("some stuff")
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.result(Method.Get, "") as Array<String>
-        }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking {
+              requestFactory.result(Method.Get, "") as Array<String>
+            }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
+    }
   }
 
   @Test
@@ -511,21 +576,25 @@ class OkHttpRequestFactoryTest {
         .setBody("some data")
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking {
-          requestFactory.result(Method.Get, "") as Array<String>
-        }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking {
+              requestFactory.result(Method.Get, "") as Array<String>
+            }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
   }
 
   @Test
@@ -539,21 +608,25 @@ class OkHttpRequestFactoryTest {
         .setBody("<test>Test</Test>")
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
   }
 
   @Test
@@ -567,21 +640,25 @@ class OkHttpRequestFactoryTest {
         .setBody("<test>Test</Test>")
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.ResponseDecodingFailed))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.ResponseDecodingFailed))
+    }
   }
 
   /**
@@ -601,26 +678,30 @@ class OkHttpRequestFactoryTest {
         .setBody(objectMapper.writeValueAsString(testProblem))
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
-    requestFactory.registerProblem(TestProblem.TYPE, TestProblem::class)
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.registerProblem(TestProblem.TYPE, TestProblem::class)
+      requestFactory.use {
 
-    val error =
-      assertThrows<TestProblem> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<TestProblem> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.type, equalTo(testProblem.type))
+        assertThat(error.title, equalTo(testProblem.title))
+        assertThat(error.status, equalTo(testProblem.status))
+        assertThat(error.detail, equalTo(testProblem.detail))
+        assertThat(error.instance, equalTo(testProblem.instance))
+        assertThat(error.parameters, equalTo(testProblem.parameters))
+        assertThat(error.extra, equalTo(testProblem.extra))
       }
-
-    assertThat(error.type, equalTo(testProblem.type))
-    assertThat(error.title, equalTo(testProblem.title))
-    assertThat(error.status, equalTo(testProblem.status))
-    assertThat(error.detail, equalTo(testProblem.detail))
-    assertThat(error.instance, equalTo(testProblem.instance))
-    assertThat(error.parameters, equalTo(testProblem.parameters))
-    assertThat(error.extra, equalTo(testProblem.extra))
+    }
   }
 
   @Test
@@ -636,26 +717,30 @@ class OkHttpRequestFactoryTest {
         .setBody(objectMapper.writeValueAsString(testProblem))
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<DefaultProblem> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<DefaultProblem> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.type, equalTo(testProblem.type))
+        assertThat(error.title, equalTo(testProblem.title))
+        assertThat(error.status, equalTo(testProblem.status))
+        assertThat(error.detail, equalTo(testProblem.detail))
+        assertThat(error.instance, equalTo(testProblem.instance))
+        assertThat(error.parameters, hasEntry("extra", testProblem.extra))
       }
-
-    assertThat(error.type, equalTo(testProblem.type))
-    assertThat(error.title, equalTo(testProblem.title))
-    assertThat(error.status, equalTo(testProblem.status))
-    assertThat(error.detail, equalTo(testProblem.detail))
-    assertThat(error.instance, equalTo(testProblem.instance))
-    assertThat(error.parameters, hasEntry("extra", testProblem.extra))
+    }
   }
 
   @Test
@@ -669,26 +754,30 @@ class OkHttpRequestFactoryTest {
         .setBody("<error>An Error Occurred</error>")
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<DefaultProblem> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<DefaultProblem> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.type, equalTo(URI("about:blank")))
+        assertThat(error.title, equalTo("Bad Request"))
+        assertThat(error.status, equalTo(Status.BAD_REQUEST))
+        assertThat(error.detail, nullValue())
+        assertThat(error.instance, nullValue())
+        assertThat(error.parameters, hasEntry("responseText", "<error>An Error Occurred</error>"))
       }
-
-    assertThat(error.type, equalTo(URI("about:blank")))
-    assertThat(error.title, equalTo("Bad Request"))
-    assertThat(error.status, equalTo(Status.BAD_REQUEST))
-    assertThat(error.detail, nullValue())
-    assertThat(error.instance, nullValue())
-    assertThat(error.parameters, hasEntry("responseText", "<error>An Error Occurred</error>"))
+    }
   }
 
   @Test
@@ -701,26 +790,30 @@ class OkHttpRequestFactoryTest {
         .addHeader(ContentType, ProblemJSON)
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<DefaultProblem> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<DefaultProblem> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.type, equalTo(URI("about:blank")))
+        assertThat(error.title, equalTo("Bad Request"))
+        assertThat(error.status, equalTo(Status.BAD_REQUEST))
+        assertThat(error.detail, nullValue())
+        assertThat(error.instance, nullValue())
+        assertThat(error.parameters, anEmptyMap())
       }
-
-    assertThat(error.type, equalTo(URI("about:blank")))
-    assertThat(error.title, equalTo("Bad Request"))
-    assertThat(error.status, equalTo(Status.BAD_REQUEST))
-    assertThat(error.detail, nullValue())
-    assertThat(error.instance, nullValue())
-    assertThat(error.parameters, anEmptyMap())
+    }
   }
 
   @Test
@@ -734,23 +827,28 @@ class OkHttpRequestFactoryTest {
         .setBody(objectMapper.writeValueAsString(TestProblem("test")))
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-        mediaTypeDecoders = MediaTypeDecoders.Builder().build()
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+          mediaTypeDecoders = MediaTypeDecoders.Builder().build()
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
   }
+
   @Test
   fun `test problem responses fail when registered JSON decoder is not a structured decoder`() {
 
@@ -762,22 +860,26 @@ class OkHttpRequestFactoryTest {
         .setBody(objectMapper.writeValueAsString(TestProblem("test")))
     )
     server.start()
+    server.use {
 
-    val httpClient = OkHttpClient.Builder().build()
+      val httpClient = OkHttpClient.Builder().build()
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        httpClient,
-        mediaTypeDecoders = MediaTypeDecoders.Builder().register(TextDecoder(), JSON).build()
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          httpClient,
+          mediaTypeDecoders = MediaTypeDecoders.Builder().register(TextDecoder(), JSON).build()
+        )
+      requestFactory.use {
 
-    val error =
-      assertThrows<SundayError> {
-        runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
+
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
       }
-
-    assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
   }
 
 
@@ -798,22 +900,29 @@ class OkHttpRequestFactoryTest {
         .setBody(encodedEvent),
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    runBlocking {
-      withTimeout(5000) {
-        val eventSource = requestFactory.eventSource(Method.Get, "")
+        runBlocking {
+          withTimeout(5000) {
+            val eventSource = requestFactory.eventSource(Method.Get, "")
+            eventSource.use {
 
-        suspendCancellableCoroutine<Unit> { continuation ->
-          eventSource.onmessage = { _, _, _, _ ->
-            continuation.resume(Unit)
+              suspendCancellableCoroutine<Unit> { continuation ->
+                eventSource.onMessage = { _ ->
+                  continuation.resume(Unit)
+                }
+                eventSource.connect()
+              }
+
+            }
           }
-          eventSource.connect()
         }
       }
     }
@@ -832,28 +941,33 @@ class OkHttpRequestFactoryTest {
         .setBody(encodedEvent),
     )
     server.start()
+    server.use {
 
-    val requestFactory =
-      OkHttpRequestFactory(
-        URITemplate(server.url("/").toString(), mapOf()),
-        OkHttpClient.Builder().build(),
-      )
+      val requestFactory =
+        OkHttpRequestFactory(
+          URITemplate(server.url("/").toString(), mapOf()),
+          OkHttpClient.Builder().build(),
+        )
+      requestFactory.use {
 
-    val result =
-      runBlocking {
-        withTimeout(50000) {
-          val eventStream = requestFactory.eventStream<Map<String, Any>>(
-            Method.Get,
-            "",
-            eventTypes = mapOf(
-              "hello" to typeOf<Map<String, Any>>()
-            ))
+        val result =
+          runBlocking {
+            withTimeout(50000) {
+              val eventStream = requestFactory.eventStream<Map<String, Any>>(
+                Method.Get,
+                "",
+                eventTypes = mapOf(
+                  "hello" to typeOf<Map<String, Any>>()
+                )
+              )
 
-          eventStream.first()
-        }
+              eventStream.first()
+            }
+          }
+
+        assertThat(result, hasEntry("target", "world"))
       }
-
-    assertThat(result, hasEntry("target", "world"))
+    }
   }
 
   class TestProblem(

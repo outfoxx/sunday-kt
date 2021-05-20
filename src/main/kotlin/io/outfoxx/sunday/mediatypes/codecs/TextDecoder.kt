@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.mediatypes.codecs
 
 import okio.ByteString.Companion.toByteString
+import java.lang.IllegalArgumentException
 import kotlin.reflect.KType
 
 class TextDecoder : MediaTypeDecoder {
@@ -26,8 +27,7 @@ class TextDecoder : MediaTypeDecoder {
   override fun <T : Any> decode(data: ByteArray, type: KType): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
-      String::class -> String(data, charSet) as T
-      CharSequence::class -> data.toByteString(0, data.size) as T
-      else -> error("Unsupported type for text decode")
+      String::class, CharSequence::class -> String(data, charSet) as T
+      else -> throw IllegalArgumentException("Unsupported type for text decode")
     }
 }

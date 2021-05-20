@@ -23,7 +23,7 @@ class TextEncoder : MediaTypeEncoder {
   override fun <B> encode(value: B): ByteArray =
     when (value) {
       is String -> value.toByteArray(charSet)
-      is CharSequence -> value.toString().toByteArray()
-      else -> error("Unsupported value for text encode")
+      is CharSequence -> value.toString().toByteArray(charSet)
+      else -> throw IllegalArgumentException("Unsupported value for text encode")
     }
 }

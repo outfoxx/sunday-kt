@@ -147,4 +147,11 @@ class WWWFormURLEncoderTest {
     )
   }
 
+  @Test
+  fun `encodes to byte arrays`() {
+    val encoder = WWWFormURLEncoder()
+
+    assertThat(encoder.encode(mapOf("test" to 10)), equalTo("test=10".encodeToByteArray()))
+  }
+
 }

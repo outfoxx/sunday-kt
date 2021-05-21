@@ -98,6 +98,10 @@ class MediaType(
     return parameters[name.code]
   }
 
+  fun parameter(name: String): String? {
+    return parameters[name]
+  }
+
   fun with(
     type: Type? = null,
     tree: Tree? = null,
@@ -113,7 +117,10 @@ class MediaType(
     )
 
   fun with(parameter: StandardParameterName, value: String) =
-    with(parameters = mapOf(parameter.code to value))
+    with(parameters = parameters + mapOf(parameter.code to value))
+
+  fun with(parameter: String, value: String) =
+    with(parameters = parameters + mapOf(parameter to value))
 
   val value: String
     get() {
@@ -165,7 +172,7 @@ class MediaType(
   companion object {
 
     fun from(acceptHeaders: List<String>): List<MediaType> {
-      return acceptHeaders.flatMap { header -> header.split(",") }.mapNotNull { from(it) }
+      return acceptHeaders.flatMap { header -> header.split(",") }.mapNotNull { from(it.trim()) }
     }
 
     fun from(string: String): MediaType? {
@@ -196,7 +203,7 @@ class MediaType(
     }
 
     private val fullRegex =
-      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$""" // ktlint-disable max-line-length
+      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs|x)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$""" // ktlint-disable max-line-length
         .toRegex(option = IGNORE_CASE)
     private val paramRegex = """ *; *([\w.-]+) *= *([\w.-]+)""".toRegex(option = IGNORE_CASE)
 

@@ -15,24 +15,93 @@
  */
 
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.MediaType.StandardParameterName.CharSet
+import io.outfoxx.sunday.MediaType.Suffix.BER
+import io.outfoxx.sunday.MediaType.Suffix.CBOR
+import io.outfoxx.sunday.MediaType.Suffix.DER
+import io.outfoxx.sunday.MediaType.Suffix.FastInfoSet
 import io.outfoxx.sunday.MediaType.Suffix.JSON
+import io.outfoxx.sunday.MediaType.Suffix.WBXML
 import io.outfoxx.sunday.MediaType.Suffix.XML
+import io.outfoxx.sunday.MediaType.Suffix.Zip
 import io.outfoxx.sunday.MediaType.Tree.Obsolete
 import io.outfoxx.sunday.MediaType.Tree.Personal
 import io.outfoxx.sunday.MediaType.Tree.Standard
+import io.outfoxx.sunday.MediaType.Tree.Unregistered
 import io.outfoxx.sunday.MediaType.Tree.Vendor
 import io.outfoxx.sunday.MediaType.Type.Any
 import io.outfoxx.sunday.MediaType.Type.Application
+import io.outfoxx.sunday.MediaType.Type.Audio
+import io.outfoxx.sunday.MediaType.Type.Example
+import io.outfoxx.sunday.MediaType.Type.Font
 import io.outfoxx.sunday.MediaType.Type.Image
+import io.outfoxx.sunday.MediaType.Type.Message
+import io.outfoxx.sunday.MediaType.Type.Model
+import io.outfoxx.sunday.MediaType.Type.Multipart
 import io.outfoxx.sunday.MediaType.Type.Text
+import io.outfoxx.sunday.MediaType.Type.Video
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class MediaTypeTest {
+
+  @Test
+  fun `extracts from headers`() {
+
+    val mediaTypes = MediaType.from(
+      listOf(
+        "${MediaType.JSON.value} , ${MediaType.CBOR.value}",
+        MediaType.HTML.value
+      )
+    )
+
+    assertThat(mediaTypes, containsInAnyOrder(MediaType.JSON, MediaType.CBOR, MediaType.HTML))
+  }
+
+  @Test
+  fun `test equality`() {
+
+    val mediaType = MediaType.HTML.with(CharSet, "utf-8")
+    assertEquals(mediaType, mediaType)
+
+    assertEquals(
+      MediaType.HTML.with(CharSet, "utf-8").with("test", "123"),
+      MediaType.HTML.with(CharSet, "utf-8").with("test", "123"),
+    )
+
+    assertNotEquals(
+      MediaType.from("application/text"),
+      MediaType.from("text/json"),
+    )
+
+    assertNotEquals(
+      MediaType.from("application/x-html"),
+      MediaType.from("application/x.html"),
+    )
+
+    assertNotEquals(
+      MediaType.from("text/html"),
+      MediaType.from("text/json"),
+    )
+
+    assertNotEquals(
+      MediaType.from("application/problem+json"),
+      MediaType.from("application/problem+cbor"),
+    )
+
+    assertNotEquals(
+      MediaType.HTML.with("a", "123").with("b", "456"),
+      MediaType.HTML.with("a", "123").with("b", "789"),
+    )
+
+  }
 
   @Test
   fun `test compatibility`() {
@@ -247,6 +316,33 @@ class MediaTypeTest {
       ),
       equalTo(MediaType.from("APPLICATION/VND.YAML  ;  CHARSET=UTF-8 ; SOMETHING=ELSE   "))
     )
+
+    assertThat(MediaType.from("application/*")?.type, equalTo(Application))
+    assertThat(MediaType.from("audio/*")?.type, equalTo(Audio))
+    assertThat(MediaType.from("example/*")?.type, equalTo(Example))
+    assertThat(MediaType.from("font/*")?.type, equalTo(Font))
+    assertThat(MediaType.from("image/*")?.type, equalTo(Image))
+    assertThat(MediaType.from("message/*")?.type, equalTo(Message))
+    assertThat(MediaType.from("model/*")?.type, equalTo(Model))
+    assertThat(MediaType.from("multipart/*")?.type, equalTo(Multipart))
+    assertThat(MediaType.from("text/*")?.type, equalTo(Text))
+    assertThat(MediaType.from("video/*")?.type, equalTo(Video))
+    assertThat(MediaType.from("*/*")?.type, equalTo(Any))
+
+    assertThat(MediaType.from("application/test")?.tree, equalTo(Standard))
+    assertThat(MediaType.from("application/vnd.test")?.tree, equalTo(Vendor))
+    assertThat(MediaType.from("application/prs.test")?.tree, equalTo(Personal))
+    assertThat(MediaType.from("application/x.test")?.tree, equalTo(Unregistered))
+    assertThat(MediaType.from("application/x-test")?.tree, equalTo(Obsolete))
+
+    assertThat(MediaType.from("application/text+xml")?.suffix, equalTo(XML))
+    assertThat(MediaType.from("application/text+json")?.suffix, equalTo(JSON))
+    assertThat(MediaType.from("application/text+ber")?.suffix, equalTo(BER))
+    assertThat(MediaType.from("application/text+der")?.suffix, equalTo(DER))
+    assertThat(MediaType.from("application/text+fastinfoset")?.suffix, equalTo(FastInfoSet))
+    assertThat(MediaType.from("application/text+wbxml")?.suffix, equalTo(WBXML))
+    assertThat(MediaType.from("application/text+zip")?.suffix, equalTo(Zip))
+    assertThat(MediaType.from("application/text+cbor")?.suffix, equalTo(CBOR))
   }
 
   @Test
@@ -259,6 +355,36 @@ class MediaTypeTest {
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ).value,
       "application/vnd.yaml;charset=utf-8;something=else"
+    )
+  }
+
+  @Test
+  fun `test parameter access`() {
+
+    val mediaType =
+      MediaType.HTML.with(CharSet, "utf-8").with("test", "123")
+
+    assertEquals(mediaType.parameter(CharSet), "utf-8")
+    assertEquals(mediaType.parameter("test"), "123")
+    assertNull(mediaType.parameter("none"))
+  }
+
+  @Test
+  fun `test parameter override`() {
+
+    assertEquals(
+      MediaType.HTML
+        .with("test", "123")
+        .with("test", "456")
+        .parameter("test"),
+      "456"
+    )
+    assertEquals(
+      MediaType.HTML
+        .with("test", "456")
+        .with("test", "123")
+        .parameter("test"),
+      "123"
     )
   }
 

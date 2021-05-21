@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    branches: [ master ]
+    tags: ["rel/v*"]
 
 jobs:
   build-test-publish:
@@ -16,6 +16,23 @@ jobs:
       with:
         java-version: '11'
 
+    - name: Publish Maven
+      uses: burrunan/gradle-cache-action@v1
+      env:
+        ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
+        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+      with:
+        job-id: jdk8-build-test
+        arguments: >-
+          build
+          publishRelease
+          -x test
+        properties: |
+          ossrhUsername=${{ secrets.OSSRH_USER }}
+          ossrhPassword=${{ secrets.OSSRH_PASS }}
+          github.token=${{ secrets.GITHUB_TOKEN }}
+
     - name: Build Docs
       uses: burrunan/gradle-cache-action@v1
       with:
@@ -27,4 +44,4 @@ jobs:
       with:
         branch: gh-pages
         clean: false
-        folder: build/javadoc
+        folder: build/dokka/

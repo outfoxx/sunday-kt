@@ -11,6 +11,7 @@ pluginManagement {
   val licenserPluginVersion: String by settings
   val kotlinterPluginVersion: String by settings
   val detektPluginVersion: String by settings
+  val githubReleasePluginVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
@@ -18,6 +19,7 @@ pluginManagement {
     id("net.minecrell.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("io.gitlab.arturbosch.detekt") version detektPluginVersion
+    id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
   }
 
 }

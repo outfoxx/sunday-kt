@@ -13,10 +13,11 @@ plugins {
   id("net.minecrell.licenser")
   id("org.jmailen.kotlinter")
   id("io.gitlab.arturbosch.detekt")
+  id("com.github.breadmoirai.github-release")
 }
 
-val mavenGroup: String by project
-val mavenVersion: String by project
+val releaseVersion: String by project
+val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
 val slf4jVersion: String by project
 val kotlinCoroutinesVersion: String by project
@@ -29,10 +30,11 @@ val jacksonVersion: String by project
 val junitVersion: String by project
 val hamcrestVersion: String by project
 
-group = mavenGroup
-version = mavenVersion
 
-val isSnapshot = "$version".endsWith("SNAPSHOT")
+
+group = "io.outfoxx.sunday"
+version = releaseVersion
+
 
 repositories {
   mavenCentral()
@@ -130,7 +132,7 @@ tasks {
 
 tasks {
   dokkaHtml {
-    outputDirectory.set(file("$buildDir/javadoc/${project.version}"))
+    outputDirectory.set(file("$buildDir/dokka/${project.version}"))
   }
 
   javadoc {
@@ -195,7 +197,7 @@ publishing {
         licenses {
           license {
             name.set("Apache License 2.0")
-            url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/master/LICENSE.txt")
+            url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/main/LICENSE.txt")
             distribution.set("repo")
           }
         }
@@ -220,26 +222,73 @@ publishing {
   }
 
   repositories {
-
     maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/outfoxx/sunday-kt")
+      credentials {
+        username = project.findProperty("github.user") as String? ?: System.getenv("USERNAME")
+        password = project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")
+      }
+    }
+    maven {
+      name = "MavenCentral"
       val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
       val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
       url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
-
       credentials {
         username = project.findProperty("ossrhUsername")?.toString()
         password = project.findProperty("ossrhPassword")?.toString()
       }
     }
-
   }
 
 }
 
 
-signing {
-  gradle.taskGraph.whenReady {
-    isRequired = hasTask("publishMavenJavaPublicationToMavenRepository")
+configure<SigningExtension> {
+  val signingKeyId: String? by project
+  val signingKey: String? by project
+  val signingPassword: String? by project
+  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+}
+
+tasks.withType<Sign>().configureEach {
+  onlyIf { !isSnapshot }
+}
+
+
+//
+// RELEASING
+//
+
+githubRelease {
+  owner("outfoxx")
+  repo("sunday-kt")
+  tagName("rel/v${releaseVersion}")
+  targetCommitish("main")
+  releaseName("v${releaseVersion}")
+  draft(true)
+  prerelease(isSnapshot)
+  releaseAssets(
+    files("${project.rootDir}/build/sunday-${releaseVersion}.jar")
+  )
+  overwrite(true)
+  token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+}
+
+tasks {
+
+  register("publishMavenRelease") {
+    dependsOn(
+      ":generator:publishAllPublicationsToMavenCentralRepository"
+    )
   }
-  sign(publishing.publications["mavenJava"])
+
+  register("publishRelease") {
+    dependsOn(
+      "publishMavenRelease",
+      "githubRelease"
+    )
+  }
+
 }

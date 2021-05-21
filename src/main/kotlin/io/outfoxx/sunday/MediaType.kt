@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday
 
+import java.util.Locale.ENGLISH
 import kotlin.text.RegexOption.IGNORE_CASE
 
 class MediaType(
@@ -87,42 +88,59 @@ class MediaType(
     }
   }
 
-  val subtype = subtype.toLowerCase()
-  val parameters = parameters.map { it.key.toLowerCase() to it.value.toLowerCase() }.toMap()
+  val subtype = subtype.toLowerCase(ENGLISH)
+  val parameters =
+    parameters
+      .map { it.key.toLowerCase(ENGLISH) to it.value.toLowerCase(ENGLISH) }
+      .toMap()
 
   fun parameter(name: StandardParameterName): String? {
     return parameters[name.code]
   }
 
-  fun with(type: Type? = null, tree: Tree? = null, subtype: String? = null, parameters: Map<String, String>? = null) =
-    MediaType(type ?: this.type, tree ?: this.tree, subtype ?: this.subtype, suffix, parameters ?: this.parameters)
+  fun parameter(name: String): String? {
+    return parameters[name]
+  }
+
+  fun with(
+    type: Type? = null,
+    tree: Tree? = null,
+    subtype: String? = null,
+    parameters: Map<String, String>? = null
+  ) =
+    MediaType(
+      type ?: this.type,
+      tree ?: this.tree,
+      subtype ?: this.subtype,
+      suffix,
+      parameters ?: this.parameters
+    )
 
   fun with(parameter: StandardParameterName, value: String) =
-    with(parameters = mapOf(parameter.code to value))
+    with(parameters = parameters + mapOf(parameter.code to value))
+
+  fun with(parameter: String, value: String) =
+    with(parameters = parameters + mapOf(parameter to value))
 
   val value: String
     get() {
       val type = this.type.code
       val tree = this.tree.code
-      val suffix = this.suffix?.let { "+${it.name.toLowerCase()}" } ?: ""
+      val suffix = this.suffix?.let { "+${it.name.toLowerCase(ENGLISH)}" } ?: ""
       val parameters = this.parameters.keys.sorted().joinToString("") { ";$it=${parameters[it]}" }
       return "$type/$tree$subtype$suffix$parameters"
     }
 
   fun compatible(other: MediaType): Boolean {
-    if (this.type != Type.Any && other.type != Type.Any && this.type != other.type) {
-      return false
+    return when {
+      this.type != Type.Any && other.type != Type.Any && this.type != other.type -> false
+      this.tree != Tree.Any && other.tree != Tree.Any && this.tree != other.tree -> false
+      this.subtype != "*" && other.subtype != "*" && this.subtype != other.subtype -> false
+      this.suffix != other.suffix -> false
+      else ->
+        this.parameters.keys.intersect(other.parameters.keys)
+          .all { this.parameters[it] == other.parameters[it] }
     }
-    if (this.tree != Tree.Any && other.tree != Tree.Any && this.tree != other.tree) {
-      return false
-    }
-    if (this.subtype != "*" && other.subtype != "*" && this.subtype != other.subtype) {
-      return false
-    }
-    if (this.suffix != other.suffix) {
-      return false
-    }
-    return this.parameters.keys.intersect(other.parameters.keys).all { this.parameters[it] == other.parameters[it] }
   }
 
   override fun equals(other: Any?): Boolean {
@@ -154,26 +172,30 @@ class MediaType(
   companion object {
 
     fun from(acceptHeaders: List<String>): List<MediaType> {
-      return acceptHeaders.flatMap { header -> header.split(",") }.mapNotNull { from(it) }
+      return acceptHeaders.flatMap { header -> header.split(",") }.mapNotNull { from(it.trim()) }
     }
 
     fun from(string: String): MediaType? {
       val match = fullRegex.matchEntire(string) ?: return null
 
-      val type = match.groupValues.getOrNull(1)?.toLowerCase()?.let { Type.fromCode(it) } ?: return null
+      val type =
+        match.groupValues.getOrNull(1)?.toLowerCase(ENGLISH)?.let { Type.fromCode(it) }
+          ?: return null
 
-      val tree = match.groupValues.getOrNull(2)?.toLowerCase()?.let { Tree.fromCode(it) } ?: Tree.Standard
+      val tree =
+        match.groupValues.getOrNull(2)?.toLowerCase(ENGLISH)?.let { Tree.fromCode(it) }
+          ?: Tree.Standard
 
-      val subType = match.groupValues.getOrNull(3)?.toLowerCase() ?: return null
+      val subType = match.groupValues.getOrNull(3)?.toLowerCase(ENGLISH) ?: return null
 
-      val suffix = match.groupValues.getOrNull(4)?.toLowerCase()?.let { Suffix.fromCode(it) }
+      val suffix = match.groupValues.getOrNull(4)?.toLowerCase(ENGLISH)?.let { Suffix.fromCode(it) }
 
       val parameters =
         match.groupValues.getOrNull(5)?.let { params ->
           paramRegex.findAll(params).mapNotNull { param ->
             val key = param.groupValues.getOrNull(1) ?: return@mapNotNull null
             val value = param.groupValues.getOrNull(2) ?: return@mapNotNull null
-            key.toLowerCase() to value.toLowerCase()
+            key.toLowerCase(ENGLISH) to value.toLowerCase(ENGLISH)
           }.toMap()
         } ?: emptyMap()
 
@@ -181,9 +203,8 @@ class MediaType(
     }
 
     private val fullRegex =
-      """^((?:[a-z]+|\*))/(x(?:-|\\.)|(?:(?:vnd|prs)\.)|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *(?:(?:[\w.-]+) *= *(?:[\w.-]+)) *)*)$""".toRegex(
-        option = IGNORE_CASE
-      )
+      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs|x)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$""" // ktlint-disable max-line-length
+        .toRegex(option = IGNORE_CASE)
     private val paramRegex = """ *; *([\w.-]+) *= *([\w.-]+)""".toRegex(option = IGNORE_CASE)
 
     val Plain = MediaType(Type.Text, subtype = "plain")
@@ -193,7 +214,8 @@ class MediaType(
     val CBOR = MediaType(Type.Application, subtype = "cbor")
     val EventStream = MediaType(Type.Text, subtype = "event-stream")
     val OctetStream = MediaType(Type.Application, subtype = "octet-stream")
-    val WWWFormUrlEncoded = MediaType(Type.Application, Tree.Obsolete, subtype = "www-form-urlencoded")
+    val WWWFormUrlEncoded =
+      MediaType(Type.Application, Tree.Obsolete, subtype = "www-form-urlencoded")
 
     val Any = MediaType(Type.Any, subtype = "*")
     val AnyText = MediaType(Type.Text, subtype = "*")

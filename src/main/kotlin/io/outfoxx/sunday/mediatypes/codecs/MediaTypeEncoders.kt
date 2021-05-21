@@ -37,12 +37,18 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
     fun registerDefaults() = registerURL().registerJSON().registerCBOR().registerData()
 
     fun registerURL(
-      arrayEncoding: WWWFormURLEncoder.ArrayEncoding = WWWFormURLEncoder.ArrayEncoding.Bracketed,
-      boolEncoding: WWWFormURLEncoder.BoolEncoding = WWWFormURLEncoder.BoolEncoding.Numeric,
-      dateEncoding: WWWFormURLEncoder.DateEncoding = WWWFormURLEncoder.DateEncoding.MillisecondsSince1970,
+      arrayEncoding: WWWFormURLEncoder.ArrayEncoding =
+        WWWFormURLEncoder.ArrayEncoding.Unbracketed,
+      boolEncoding: WWWFormURLEncoder.BoolEncoding =
+        WWWFormURLEncoder.BoolEncoding.Literal,
+      dateEncoding: WWWFormURLEncoder.DateEncoding =
+        WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch,
       mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
     ): Builder =
-      register(WWWFormURLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper), WWWFormUrlEncoded)
+      register(
+        WWWFormURLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper),
+        WWWFormUrlEncoded
+      )
 
     fun registerData() =
       register(BinaryEncoder(), MediaType.OctetStream)
@@ -51,8 +57,8 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       registerJSON(
         JsonMapper()
           .findAndRegisterModules()
-          .disable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
       )
 
     fun registerJSON(mapper: JsonMapper) =
@@ -62,8 +68,8 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       registerCBOR(
         CBORMapper()
           .findAndRegisterModules()
-          .disable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .disable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
       )
 
     fun registerCBOR(mapper: CBORMapper) =

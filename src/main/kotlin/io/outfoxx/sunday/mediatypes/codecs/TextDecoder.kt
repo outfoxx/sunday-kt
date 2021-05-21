@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.http
+package io.outfoxx.sunday.mediatypes.codecs
 
-object HeaderNames {
+import java.lang.IllegalArgumentException
+import kotlin.reflect.KType
 
-  const val Accept = "accept"
-  const val Authorization = "authorization"
-  const val Connection = "connection"
-  const val ContentLength = "content-length"
-  const val ContentType = "content-type"
-  const val Location = "location"
-  const val Server = "server"
-  const val TransferEncoding = "transfer-encoding"
-  const val UserAgent = "user-agent"
-  const val Cookie = "cookie"
-  const val SetCookie = "set-cookie"
-  const val Expect = "expect"
+class TextDecoder : MediaTypeDecoder {
 
-  const val LastEventId = "last-event-id"
+  private val charSet = Charsets.UTF_8
+
+  override fun <T : Any> decode(data: ByteArray, type: KType): T =
+    @Suppress("UNCHECKED_CAST")
+    when (type.classifier) {
+      String::class, CharSequence::class -> String(data, charSet) as T
+      else -> throw IllegalArgumentException("Unsupported type for text decode")
+    }
 }

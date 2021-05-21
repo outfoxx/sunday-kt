@@ -16,10 +16,11 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import okio.Buffer
+import okio.BufferedSource
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import okio.Source
-import okio.source
 import java.io.InputStream
 import kotlin.reflect.KType
 
@@ -31,7 +32,11 @@ class BinaryDecoder : MediaTypeDecoder {
       ByteArray::class -> data as T
       ByteString::class -> data.toByteString(0, data.size) as T
       InputStream::class -> data.inputStream() as T
-      Source::class -> data.inputStream().source() as T
-      else -> error("Unsupported type for binary decode")
+      Source::class, BufferedSource::class -> {
+        val buffer = Buffer()
+        buffer.write(data)
+        buffer as T
+      }
+      else -> throw IllegalArgumentException("Unsupported type for binary decode")
     }
 }

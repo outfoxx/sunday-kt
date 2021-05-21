@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.http
+package io.outfoxx.sunday.mediatypes.codecs
 
-object HeaderNames {
+class TextEncoder : MediaTypeEncoder {
 
-  const val Accept = "accept"
-  const val Authorization = "authorization"
-  const val Connection = "connection"
-  const val ContentLength = "content-length"
-  const val ContentType = "content-type"
-  const val Location = "location"
-  const val Server = "server"
-  const val TransferEncoding = "transfer-encoding"
-  const val UserAgent = "user-agent"
-  const val Cookie = "cookie"
-  const val SetCookie = "set-cookie"
-  const val Expect = "expect"
+  private val charSet = Charsets.UTF_8
 
-  const val LastEventId = "last-event-id"
+  override fun <B> encode(value: B): ByteArray =
+    when (value) {
+      is String -> value.toByteArray(charSet)
+      is CharSequence -> value.toString().toByteArray(charSet)
+      else -> throw IllegalArgumentException("Unsupported value for text encode")
+    }
 }

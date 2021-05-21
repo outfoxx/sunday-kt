@@ -19,13 +19,20 @@ package io.outfoxx.sunday
 class SundayError(message: String, val reason: Reason? = null, cause: Throwable? = null) :
   RuntimeException(message, cause) {
 
+  /* ktlint-disable max-line-length */
   enum class Reason(val message: String) {
     UnexpectedEmptyResponse("Unexpected empty reason"),
+    NoData("No data in response when method requires it"),
     InvalidContentType("Invalid Content-Type"),
     NoDecoder("No decoder registered for MediaType"),
+    NoEncoder("No encoder registered for MediaType"),
     ResponseDecodingFailed("Response decoding failed"),
-    EventDecodingFailed("Event decoding failed")
+    EventDecodingFailed("Event decoding failed"),
+    InvalidBaseUri("Base URL is invalid after expanding template"),
+    NoSupportedContentTypes("None of the provided Content-Types for the request has a registered decoder"),
+    NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder")
   }
+  /* ktlint-enable max-line-length */
 
   constructor(reason: Reason, extraMessage: String? = null, cause: Throwable? = null) :
     this("${reason.message}${extraMessage?.let { " $it" } ?: ""}", reason, cause)

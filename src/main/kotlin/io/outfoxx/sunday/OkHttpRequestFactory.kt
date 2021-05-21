@@ -21,8 +21,12 @@ import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
+import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.InvalidContentType
+import io.outfoxx.sunday.SundayError.Reason.NoData
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
+import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
+import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
 import io.outfoxx.sunday.SundayError.Reason.ResponseDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.UnexpectedEmptyResponse
 import io.outfoxx.sunday.http.HeaderNames.Accept
@@ -33,7 +37,7 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
-import io.outfoxx.sunday.mediatypes.codecs.URLQueryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -45,6 +49,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -55,23 +60,25 @@ import org.slf4j.LoggerFactory
 import org.zalando.problem.DefaultProblem
 import org.zalando.problem.Problem
 import org.zalando.problem.Status
+import org.zalando.problem.StatusType
 import org.zalando.problem.ThrowableProblem
+import java.io.Closeable
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
 
-class NetworkRequestFactory(
+class OkHttpRequestFactory(
   private val baseURI: URITemplate,
-  private val httpClient: OkHttpClient,
-  private val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
-  private val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
-) : RequestFactory() {
+  val httpClient: OkHttpClient,
+  val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
+  val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
+) : RequestFactory(), Closeable {
 
   companion object {
 
-    private val logger = LoggerFactory.getLogger(NetworkRequestFactory::class.java)
+    private val logger = LoggerFactory.getLogger(OkHttpRequestFactory::class.java)
 
     private val unacceptableStatusCodes = 400 until 600
     private val emptyDataStatusCodes = setOf(204, 205)
@@ -96,7 +103,9 @@ class NetworkRequestFactory(
   ): Request {
     logger.trace("Building request")
 
-    val urlBuilder = baseURI.resolve(pathTemplate, pathParameters)
+    val urlBuilder =
+      baseURI.resolve(pathTemplate, pathParameters).toURI().toHttpUrlOrNull()?.newBuilder()
+        ?: throw SundayError(InvalidBaseUri)
 
     if (!queryParameters.isNullOrEmpty()) {
 
@@ -105,13 +114,16 @@ class NetworkRequestFactory(
       val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded)
         ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
 
-      urlQueryEncoder as? URLQueryEncoder
-        ?: throw SundayError(NoDecoder, "'$WWWFormUrlEncoded' decoder must support query encoding")
+      urlQueryEncoder as? URLQueryParamsEncoder
+        ?: throw SundayError(
+          NoDecoder,
+          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}"
+        )
 
-      urlBuilder.query().join(urlQueryEncoder.encodeQueryString(queryParameters))
+      urlBuilder.encodedQuery(urlQueryEncoder.encodeQueryString(queryParameters))
     }
 
-    val requestBuilder = Request.Builder().url(urlBuilder.toURI().toString())
+    val requestBuilder = Request.Builder().url(urlBuilder.build())
 
     headers?.forEach { (headerName, headerValue) ->
       requestBuilder.addHeader(headerName, "$headerValue")
@@ -119,10 +131,11 @@ class NetworkRequestFactory(
 
     // Add `Accept` header based on accept types
     if (acceptTypes != null) {
-      val supportedAcceptTypes = acceptTypes.filter(mediaTypeEncoders::supports)
+      val supportedAcceptTypes = acceptTypes.filter(mediaTypeDecoders::supports)
       if (supportedAcceptTypes.isEmpty()) {
-        throw IllegalArgumentException("Unsupported Accept header media types: $acceptTypes")
+        throw SundayError(NoSupportedAcceptTypes)
       }
+
       val accept = supportedAcceptTypes.joinToString(" , ") { it.toString() }
 
       requestBuilder.header(Accept, accept)
@@ -134,10 +147,12 @@ class NetworkRequestFactory(
     contentType?.let { requestBuilder.addHeader(ContentType, contentType.toString()) }
 
     val requestBody = body?.let {
-      requireNotNull(contentType) { "No supported Content-Type for request with body value" }
+      contentType ?: throw SundayError(NoSupportedContentTypes)
 
-      val encodedBody = mediaTypeEncoders.find(contentType)?.encode(body)
-        ?: throw IllegalArgumentException("No registered encoder for Content-Type $contentType")
+      val mediaTypeEncoder = mediaTypeEncoders.find(contentType)
+        ?: error("Cannot find encoder that was reported as supported")
+
+      val encodedBody = mediaTypeEncoder.encode(body)
 
       encodedBody.toRequestBody(contentType.value.toMediaType())
     }
@@ -183,7 +198,17 @@ class NetworkRequestFactory(
     headers: Parameters?
   ): Response {
     val request =
-      request(method, pathTemplate, pathParameters, queryParameters, body, bodyType, contentTypes, acceptTypes, headers)
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        body,
+        bodyType,
+        contentTypes,
+        acceptTypes,
+        headers
+      )
 
     return response(request)
   }
@@ -245,7 +270,7 @@ class NetworkRequestFactory(
     val eventSource = eventSource(requestSupplier)
 
     eventTypes.forEach { (event, type) ->
-      eventSource.addEventListener(event) { _, _, data ->
+      eventSource.addEventListener(event) { (_, _, data) ->
         try {
 
           val decodedEvent = jsonDecoder.decode<D>(data ?: "", type)
@@ -257,13 +282,17 @@ class NetworkRequestFactory(
       }
     }
 
-    eventSource.onerror = { _, error ->
-      cancel("EventSource error encountered", error)
+    eventSource.onError = { error ->
+      logger.warn("EventSource error encountered", error)
     }
 
     eventSource.connect()
 
     awaitClose { eventSource.close() }
+  }
+
+  override fun close() {
+    close(true)
   }
 
   override fun close(cancelOutstandingRequests: Boolean) {
@@ -276,12 +305,16 @@ class NetworkRequestFactory(
     logger.trace("Parsing success response")
 
     val body = response.body
-    if (emptyDataStatusCodes.contains(response.code) || body == null) {
-      if (resultType != Unit::class) {
+    if (emptyDataStatusCodes.contains(response.code)) {
+      if (resultType != typeOf<Unit>()) {
         throw SundayError(UnexpectedEmptyResponse)
       }
       @Suppress("UNCHECKED_CAST")
       return Unit as T
+    }
+
+    if (body == null || body.contentLength() == 0L) {
+      throw SundayError(NoData)
     }
 
     val contentType =
@@ -302,18 +335,23 @@ class NetworkRequestFactory(
   private fun parseFailure(response: Response): ThrowableProblem {
     logger.trace("Parsing failure response")
 
-    val status = Status.valueOf(response.code)
+    val status =
+      try {
+        Status.valueOf(response.code)
+      } catch (x: IllegalArgumentException) {
+        NonStandardStatus(response)
+      }
 
     val body = response.body
 
-    return if (body != null) {
+    return if (body != null && body.contentLength() != 0L) {
 
       val contentType =
         body.contentType()?.let { MediaType.from(it.toString()) }
-          ?: throw SundayError(InvalidContentType, body.contentType()?.toString() ?: "")
+          ?: MediaType.OctetStream
 
       if (!contentType.compatible(ProblemJSON)) {
-        val (detail, responseData) =
+        val (responseText, responseData) =
           if (contentType.compatible(AnyText))
             body.string() to null
           else
@@ -321,10 +359,13 @@ class NetworkRequestFactory(
 
         Problem.builder()
           .withStatus(status)
-          .withDetail(detail)
+          .withTitle(status.reasonPhrase)
           .apply {
+            if (responseText != null) {
+              with("responseText", responseText)
+            }
             if (responseData != null) {
-              with("data", responseData)
+              with("responseData", responseData)
             }
           }
           .build()
@@ -339,13 +380,20 @@ class NetworkRequestFactory(
 
         val decoded: Map<String, Any> = problemDecoder.decode(body.bytes())
 
-        val typeId = decoded["type"]?.toString() ?: ""
-        val problemType = (problemTypes[typeId] ?: DefaultProblem::class).createType()
+        val problemType = decoded["type"]?.toString() ?: ""
+        val problemClass = (problemTypes[problemType] ?: DefaultProblem::class).createType()
 
-        problemDecoder.decode(decoded, problemType)
+        problemDecoder.decode(decoded, problemClass)
       }
     } else {
       Problem.valueOf(status)
     }
   }
+
+  data class NonStandardStatus(val response: Response) : StatusType {
+
+    override fun getStatusCode() = response.code
+    override fun getReasonPhrase() = response.message
+  }
+
 }

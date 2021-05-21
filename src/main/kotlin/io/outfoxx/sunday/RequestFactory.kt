@@ -22,10 +22,11 @@ import kotlinx.coroutines.flow.Flow
 import okhttp3.Request
 import okhttp3.Response
 import org.zalando.problem.Problem
+import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 
-abstract class RequestFactory {
+abstract class RequestFactory : Closeable {
 
   abstract fun registerProblem(typeId: String, problemType: KClass<out Problem>)
 
@@ -239,7 +240,7 @@ abstract class RequestFactory {
     )
   }
 
-  abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
+  protected abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
 
   fun <B : Any, D : Any> eventStream(
     method: Method,
@@ -289,9 +290,9 @@ abstract class RequestFactory {
     )
   }
 
-  abstract fun <D : Any> eventStream(
+  protected abstract fun <D : Any> eventStream(
     eventTypes: Map<String, KType>,
-    requestSupplier: suspend () -> Request
+    requestSupplier: suspend () -> Request,
   ): Flow<D>
 
   abstract fun close(cancelOutstandingRequests: Boolean)

@@ -24,4 +24,5 @@ interface StructuredMediaTypeDecoder : MediaTypeDecoder {
   fun <T : Any> decode(data: Map<String, Any>, type: KType): T
 }
 
-inline fun <reified T : Any> StructuredMediaTypeDecoder.decode(data: Map<String, Any>): T = decode(data, typeOf<T>())
+inline fun <reified T : Any> StructuredMediaTypeDecoder.decode(data: Map<String, Any>): T =
+  decode(data, typeOf<T>())

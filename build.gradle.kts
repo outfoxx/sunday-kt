@@ -1,3 +1,4 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -11,6 +12,7 @@ plugins {
 
   id("net.minecrell.licenser")
   id("org.jmailen.kotlinter")
+  id("io.gitlab.arturbosch.detekt")
 }
 
 val mavenGroup: String by project
@@ -46,8 +48,9 @@ dependencies {
   api("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
   api("com.github.hal4j:uritemplate:$uriTemplateVersion")
 
-  api("com.squareup.okhttp3:okhttp:$okHttpVersion")
+  api("com.squareup.okhttp3:okhttp")
   implementation("com.squareup.okhttp3:okhttp-sse")
+  implementation("com.squareup.okio:okio:2.10.0")
 
   implementation(kotlin("stdlib"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
@@ -88,6 +91,10 @@ tasks {
 
   withType<KotlinCompile> {
     kotlinOptions {
+      kotlinOptions {
+        languageVersion = "1.4"
+        apiVersion = "1.4"
+      }
       jvmTarget = "11"
     }
   }
@@ -100,7 +107,7 @@ tasks {
 //
 
 jacoco {
-  toolVersion = "0.8.5"
+  toolVersion = "0.8.7"
 }
 
 tasks {
@@ -143,6 +150,18 @@ kotlinter {
 license {
   header = file("HEADER.txt")
   include("**/*.kt")
+}
+
+detekt {
+  input = files("src/main/kotlin")
+
+  config = files("src/main/detekt/detekt.yml")
+  buildUponDefaultConfig = true
+  baseline = file("src/main/detekt/detekt-baseline.xml")
+}
+
+tasks.withType<Detekt>().configureEach {
+  jvmTarget = "11"
 }
 
 

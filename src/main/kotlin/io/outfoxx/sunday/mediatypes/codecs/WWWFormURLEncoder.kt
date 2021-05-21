@@ -23,13 +23,40 @@ import java.net.URLEncoder
 import java.time.Instant
 import java.time.format.DateTimeFormatter.ISO_INSTANT
 import kotlin.text.Charsets.US_ASCII
+import kotlin.text.Charsets.UTF_8
+import kotlin.text.RegexOption.IGNORE_CASE
 
 class WWWFormURLEncoder(
   private val arrayEncoding: ArrayEncoding = ArrayEncoding.Bracketed,
   private val boolEncoding: BoolEncoding = BoolEncoding.Numeric,
   private val dateEncoding: DateEncoding = DateEncoding.ISO8601,
   private val mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
-) : URLQueryEncoder {
+) : URLQueryParamsEncoder {
+
+  companion object {
+
+    val default = WWWFormURLEncoder()
+
+    private val URI_ENCODE_COMPONENT_FIXES_REGEX = """\+|%21|%27|%28|%29|%7E""".toRegex(IGNORE_CASE)
+
+    fun encodeURIComponent(value: Any): String {
+
+      val result = URLEncoder.encode("$value", UTF_8)
+
+      return URI_ENCODE_COMPONENT_FIXES_REGEX.replace(result) { matchResult ->
+        when (matchResult.value) {
+          "+" -> "%20"
+          "%21" -> "!"
+          "%27" -> "'"
+          "%28" -> "("
+          "%29" -> ")"
+          "%7E" -> "~"
+          else -> matchResult.value
+        }
+      }
+    }
+
+  }
 
   enum class ArrayEncoding(val encode: (String) -> String) {
     Bracketed({ "$it[]" }),
@@ -42,8 +69,13 @@ class WWWFormURLEncoder(
   }
 
   enum class DateEncoding(val encode: (Instant) -> String) {
-    SecondsSince1970({ "${it.epochSecond}" }),
-    MillisecondsSince1970({ "${it.toEpochMilli()}" }),
+    FractionalSecondsSinceEpoch(
+      {
+        (it.epochSecond + (it.nano / 1_000_000_000.0)).toBigDecimal()
+          .toPlainString()
+      }
+    ),
+    MillisecondsSinceEpoch({ it.toEpochMilli().toString() }),
     ISO8601({ ISO_INSTANT.format(it) })
   }
 
@@ -55,20 +87,33 @@ class WWWFormURLEncoder(
   }
 
   override fun encodeQueryString(parameters: Parameters): String =
-    parameters.keys.sorted()
-      .flatMap { key ->
-        encodeQueryComponent(key, parameters[key]!!)
+    parameters.toSortedMap(compareBy { it })
+      .flatMap { (key, value) ->
+        encodeQueryComponent(key, value)
       }
-      .joinToString("&") { "${it.first}=${it.second}" }
+      .joinToString("&")
 
-  private fun encodeQueryComponent(key: String, value: Any): List<Pair<String, String>> =
+  private fun encodeQueryComponent(key: String, value: Any?): List<String> =
     when (value) {
-      is Map<*, *> -> value.flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
-      is List<*> -> value.flatMap { element -> encodeQueryComponent(arrayEncoding.encode(key), element as Any) }
-      is Instant -> listOf(encode(key) to encode(dateEncoding.encode(value)))
-      is Boolean -> listOf(encode(key) to encode(boolEncoding.encode(value)))
-      else -> listOf(encode(key) to encode("$value"))
+      null -> listOf(encodeURIComponent(key))
+
+      is Map<*, *> -> value.toSortedMap(compareBy { it.toString() })
+        .flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
+
+      is List<*> -> value.flatMap { element ->
+        encodeQueryComponent(
+          arrayEncoding.encode(key),
+          element as Any
+        )
+      }
+
+      is Instant ->
+        listOf(encodeURIComponent(key) + "=" + encodeURIComponent(dateEncoding.encode(value)))
+
+      is Boolean ->
+        listOf(encodeURIComponent(key) + "=" + encodeURIComponent(boolEncoding.encode(value)))
+
+      else -> listOf(encodeURIComponent(key) + "=" + encodeURIComponent("$value"))
     }
 
-  private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8)
 }

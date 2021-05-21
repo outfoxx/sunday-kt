@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.http
+package io.outfoxx.sunday
 
-object HeaderNames {
+class EventSourceError(
+  val reason: Reason,
+) : Exception(reason.message) {
 
-  const val Accept = "accept"
-  const val Authorization = "authorization"
-  const val Connection = "connection"
-  const val ContentLength = "content-length"
-  const val ContentType = "content-type"
-  const val Location = "location"
-  const val Server = "server"
-  const val TransferEncoding = "transfer-encoding"
-  const val UserAgent = "user-agent"
-  const val Cookie = "cookie"
-  const val SetCookie = "set-cookie"
-  const val Expect = "expect"
+  enum class Reason(val message: String) {
+    EventTimeout("Event Timeout Reached"),
+    InvalidState("Invalid State")
+  }
 
-  const val LastEventId = "last-event-id"
 }

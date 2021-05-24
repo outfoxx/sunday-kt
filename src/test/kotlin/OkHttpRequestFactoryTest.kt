@@ -87,9 +87,9 @@ class OkHttpRequestFactoryTest {
     val requestFactory =
       OkHttpRequestFactory(
         URITemplate("http://example.com"),
-        httpClient,
-        specialEncoders,
-        specialDecoders
+        httpClient = httpClient,
+        mediaTypeEncoders = specialEncoders,
+        mediaTypeDecoders = specialDecoders
       )
     requestFactory.use {
 

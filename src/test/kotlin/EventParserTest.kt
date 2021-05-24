@@ -244,7 +244,6 @@ class EventParserTest {
         val sliceSize = min(Random.nextInt(10), eventStream.length)
         val slice = eventStream.substring(0 until sliceSize)
         eventBuffers.add(slice.encodeUtf8())
-        println("SLICE:: ${slice.replace("\n", "\\n")}")
         eventStream = eventStream.substring(sliceSize)
       }
 

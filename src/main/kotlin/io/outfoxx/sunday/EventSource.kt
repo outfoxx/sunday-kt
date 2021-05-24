@@ -30,6 +30,8 @@ import okhttp3.Callback
 import okhttp3.Headers
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.HttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.Response
 import okhttp3.internal.connection.RealCall
 import okhttp3.internal.toImmutableMap
@@ -42,21 +44,22 @@ import java.lang.Double.max
 import java.lang.Double.min
 import java.time.Duration
 import java.time.Instant
-import java.time.temporal.ChronoUnit.MILLIS
-import java.time.temporal.ChronoUnit.SECONDS
+import java.time.temporal.ChronoUnit
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.schedule
+import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.concurrent.write
 import kotlin.math.pow
 
 class EventSource(
-  private val callSupplier: suspend (Headers) -> Call,
-  retryTime: Duration = RetryTimeDefault,
-  eventTimeout: Duration = EventTimeoutDefault,
-  eventTimeoutCheckInterval: Duration = EventTimeoutCheckIntervalDefault,
+  private val requestSupplier: suspend (Headers) -> Request,
+  private val httpClient: OkHttpClient,
+  retryTime: Duration = retryTimeDefault,
+  eventTimeout: Duration? = eventTimeoutDefault,
+  private val eventTimeoutCheckInterval: Duration = eventTimeoutCheckIntervalDefault,
   private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java)
 ) : Closeable {
 
@@ -68,9 +71,47 @@ class EventSource(
   )
 
   companion object {
-    private val RetryTimeDefault = Duration.of(500, MILLIS)
-    private val EventTimeoutDefault = Duration.of(75, SECONDS)
-    private val EventTimeoutCheckIntervalDefault = Duration.of(2, SECONDS)
+
+    /***
+     * Global default time interval for connection retries.
+     *
+     * @see [EventSource.retryTime]
+     */
+    var retryTimeDefault: Duration = Duration.of(500, ChronoUnit.MILLIS)
+
+    /**
+     * Global default time interval for event timeout.
+     *
+     * If an event is not received within the specified timeout the connection is
+     * forcibly restarted. If set to null, the default will be that event timeouts are disabled.
+     *
+     * Each [EventSource] can override this setting in its constructor using the `eventTimeout`
+     * constructor parameter.
+     */
+    var eventTimeoutDefault: Duration? = Duration.of(75, ChronoUnit.SECONDS)
+
+    /**
+     * Global default time interval for event timeout checks.
+     *
+     * This setting controls the frequency that the event timeout is checked.
+     *
+     * Each [EventSource] can override this setting in its constructor using the
+     * `eventTimeoutCheckInterval`.
+     */
+    var eventTimeoutCheckIntervalDefault: Duration = Duration.of(2, ChronoUnit.SECONDS)
+
+    /**
+     * Global default read timeout for [EventSource] http clients.
+     *
+     * If data is not received without the read timeout, a cancellation error
+     * will cause a reconnection attempt to be initiated.
+     *
+     * Note: [EventSource]s can override the HTTP read timeout by customizing the `httpClient`
+     * constructor parameters. This default applies to instances that use a system create
+     * client.
+     */
+    var httpReadTimeoutDefault: Duration = Duration.ofMinutes(10)
+
     private const val MaxRetryTimeMultiple = 30.0
   }
 
@@ -82,15 +123,13 @@ class EventSource(
 
   private val stateLock = ReentrantReadWriteLock()
 
-  private var readyStateValue = Closed
-
   val readyState: ReadyState
-    get() = stateLock.read { readyStateValue }
-
-  private var retryTimeValue = retryTime
+    get() = readyStateValue.current
+  private var readyStateValue = ReadyStateValue()
 
   val retryTime: Duration
     get() = retryTimeValue
+  private var retryTimeValue = retryTime
 
   private var openHandler: (() -> Unit)? = null
   private var errorHandler: ((error: Throwable?) -> Unit)? = null
@@ -103,13 +142,11 @@ class EventSource(
   private var connectionOrigin: HttpUrl? = null
   private var reconnectTimerTask: TimerTask? = null
   private var lastEventId: String? = null
-  private var lastEventReceivedTime = Instant.now().plus(eventTimeout)
+  private var lastEventReceivedTime = Instant.MAX
   private var eventTimeout: Duration? = eventTimeout
-  private var eventTimeoutCheckInterval = eventTimeoutCheckInterval
   private var eventTimeoutTimerTask: TimerTask? = null
 
   private val eventParser = EventParser()
-
 
   /**
    * Event Listeners
@@ -128,29 +165,27 @@ class EventSource(
     set(value) = stateLock.write { messageHandler = value }
 
   val eventListeners: Map<String, (Event) -> Unit>
-    get() = eventListenersInternal.toImmutableMap()
+    get() = stateLock.read { eventListenersInternal.toImmutableMap() }
 
   fun addEventListener(event: String, handler: (Event) -> Unit) {
-    stateLock.write {
-      eventListenersInternal[event] = handler
-    }
+    stateLock.write { eventListenersInternal[event] = handler }
   }
 
-  fun removeEventListener(event: String) {
-    stateLock.write {
-      eventListenersInternal.remove(event)
-    }
+  fun removeEventListener(event: String, handler: (Event) -> Unit) {
+    stateLock.write { eventListenersInternal.remove(event, handler) }
   }
-
 
   /**
    * Connect
    */
 
   fun connect() {
-    if (readyStateValue == Connecting || readyStateValue == Open) {
+
+    if (readyStateValue.isNotClosed) {
       return
     }
+
+    readyStateValue.resetReadyState(Connecting)
 
     runBlocking {
       internalConnect()
@@ -158,20 +193,31 @@ class EventSource(
   }
 
   private suspend fun internalConnect() {
+
+    if (readyStateValue.isClosed) {
+      logger.debug("Skipping connect due to close")
+      return
+    }
+
     logger.debug("Connecting")
 
-    readyStateValue = Connecting
+    // Build default headers for passing to request builder
 
     var headers = mapOf(
       Accept to EventStream.value,
     )
+
+    // Add last-event-id if we are reconnecting
+
     lastEventId?.let {
       headers = headers.plus(LastEventId to it)
     }
 
     connectionAttemptTime = Instant.now()
 
-    currentCall = callSupplier(headers.toHeaders())
+    val request = requestSupplier(headers.toHeaders())
+
+    currentCall = httpClient.newCall(request)
 
     currentCall?.enqueue(
       object : Callback {
@@ -199,11 +245,9 @@ class EventSource(
         override fun onFailure(call: Call, e: IOException) {
           receivedError(e)
         }
-
       },
     )
   }
-
 
   /**
    * Connect
@@ -212,7 +256,7 @@ class EventSource(
   override fun close() {
     logger.debug("Closed")
 
-    readyStateValue = Closed
+    readyStateValue.resetReadyState(Closed)
 
     internalClose()
   }
@@ -226,7 +270,6 @@ class EventSource(
     stopEventTimeoutCheck()
   }
 
-
   /**
    * Event Timeout
    */
@@ -237,7 +280,15 @@ class EventSource(
 
     this.lastEventReceivedTime = lastEventReceivedTime
 
-    scheduleEventTimeoutCheck()
+    eventTimeoutTimerTask?.cancel()
+    eventTimeoutTimerTask =
+      Timer("Event Timeout", true)
+        .scheduleAtFixedRate(
+          eventTimeoutCheckInterval.toMillis(),
+          eventTimeoutCheckInterval.toMillis(),
+        ) {
+          checkEventTimeout()
+        }
   }
 
   private fun stopEventTimeoutCheck() {
@@ -256,61 +307,50 @@ class EventSource(
     val now = Instant.now()
     if (now.isBefore(deadline)) {
       logger.debug("Event timeout has not expired: now={}, deadline={}", now, deadline)
-      // check again
-      scheduleEventTimeoutCheck()
       return
     }
 
     logger.debug("Event timeout deadline expired")
 
-    errorHandler?.invoke(EventSourceError(EventTimeout))
+    stateLock.read { errorHandler }?.invoke(EventSourceError(EventTimeout))
 
     stopEventTimeoutCheck()
     scheduleReconnect()
   }
-
-  private fun scheduleEventTimeoutCheck() {
-    eventTimeoutTimerTask?.cancel()
-    eventTimeoutTimerTask =
-      Timer("Event Timeout")
-        .schedule(eventTimeoutCheckInterval.toMillis()) {
-          checkEventTimeout()
-        }
-  }
-
 
   /**
    * Connection Handlers
    */
 
   private fun receivedHeaders(response: Response) {
-    if (readyStateValue != Connecting) {
-      logger.warn("Invalid state for receiving headers: {}", readyStateValue)
 
-      errorHandler?.invoke(EventSourceError(InvalidState))
+    if (!readyStateValue.updateIfNotClosed(Open)) {
+      logger.warn("Invalid state for receiving headers: {}", readyStateValue.current)
+
+      stateLock.read { errorHandler }?.invoke(EventSourceError(InvalidState))
 
       scheduleReconnect()
       return
     }
 
+    logger.debug("Opened")
+
     connectionOrigin = response.request.url
     retryAttempt = 0
-    readyStateValue = Open
 
     // Start event timeout check, treating this
     // connect as last time we received an event
     startEventTimeoutCheck(Instant.now())
 
-    logger.debug("Opened")
-
-    openHandler?.invoke()
+    stateLock.read { openHandler }?.invoke()
   }
 
   private fun receivedData(source: BufferedSource) {
-    if (readyStateValue != Open) {
+
+    if (readyStateValue.current != Open) {
       logger.warn("Invalid state for receiving headers: {}", readyStateValue)
 
-      errorHandler?.invoke(EventSourceError(InvalidState))
+      stateLock.read { errorHandler }?.invoke(EventSourceError(InvalidState))
 
       scheduleReconnect()
       return
@@ -322,21 +362,23 @@ class EventSource(
   }
 
   private fun receivedError(t: Throwable?) {
-    if (readyStateValue == Closed) {
+
+    if (readyStateValue.isClosed) {
       return
     }
 
     logger.debug("Received error", t)
 
-    errorHandler?.invoke(t)
+    stateLock.read { errorHandler }?.invoke(t)
 
-    if (readyStateValue != Closed) {
+    if (readyStateValue.isNotClosed) {
       scheduleReconnect()
     }
   }
 
   private fun receivedComplete() {
-    if (readyStateValue == Closed) {
+
+    if (readyStateValue.isClosed) {
       return
     }
 
@@ -345,13 +387,17 @@ class EventSource(
     scheduleReconnect()
   }
 
-
   /**
    * Reconnection
    */
 
   private fun scheduleReconnect() {
+
     internalClose()
+
+    if (!readyStateValue.updateIfNotClosed(Connecting)) {
+      return
+    }
 
     val lastConnectTime =
       if (connectionAttemptTime != null) {
@@ -365,7 +411,6 @@ class EventSource(
     logger.debug("Scheduling reconnect in {}", retryDelay)
 
     retryAttempt++
-    readyStateValue = Connecting
 
     reconnectTimerTask =
       Timer("Reconnect", false)
@@ -411,7 +456,6 @@ class EventSource(
     return Duration.ofMillis(retryDelayMs.toLong())
   }
 
-
   /**
    * Event Dispatch
    */
@@ -430,11 +474,9 @@ class EventSource(
         logger.debug("update retry timeout: retryTime=$retryTime")
 
         this.retryTimeValue = Duration.ofMillis(retryTime)
-
       } else {
         logger.debug("ignoring invalid retry timeout message: retry=$retry")
       }
-
     }
 
     // Skip events without data
@@ -451,7 +493,6 @@ class EventSource(
       if (!eventId.contains(0.toChar())) {
 
         lastEventId = eventId
-
       } else {
         logger.debug("event id contains null, unable to use for last-event-id")
       }
@@ -459,19 +500,51 @@ class EventSource(
 
     val event = info.toEvent(connectionOrigin?.toString() ?: "")
 
-    val messageHandler = messageHandler
-    if (messageHandler != null) {
+    stateLock.read { messageHandler }?.let { handler ->
+
       logger.debug("dispatch onMessage: event=${info.event ?: ""}, id=${info.id ?: ""}")
 
-      messageHandler(event)
+      handler(event)
     }
 
-    val eventHandler = eventListeners[info.event ?: ""]
-    if (eventHandler != null) {
+    eventListeners[info.event ?: ""]?.let { handler ->
+
       logger.debug("dispatch listener: event=${info.event ?: ""}, id=${info.id ?: ""}")
 
-      eventHandler(event)
+      handler(event)
     }
   }
 
+  /**
+   * Ready state value manager that ensures concurrent
+   * access and reduces the chance of the event source
+   * automatically re-opening.
+   */
+  class ReadyStateValue {
+
+    private var currentValue = Closed
+    private val lock = ReentrantReadWriteLock()
+
+    val current: ReadyState get() = lock.read { currentValue }
+    val isClosed: Boolean get() = lock.read { currentValue == Closed }
+    val isNotClosed: Boolean get() = lock.read { currentValue != Closed }
+
+    fun updateIfNotClosed(newValue: ReadyState): Boolean {
+      lock.write {
+        if (currentValue == Closed) {
+          return false
+        }
+
+        currentValue = newValue
+
+        return true
+      }
+    }
+
+    fun resetReadyState(newValue: ReadyState) {
+      lock.write {
+        currentValue = newValue
+      }
+    }
+  }
 }

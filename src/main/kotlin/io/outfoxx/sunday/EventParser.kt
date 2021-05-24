@@ -22,7 +22,7 @@ import okio.ByteString
 import kotlin.text.Charsets.UTF_8
 
 /**
- * Parses & Dispatches Server-Sent Events
+ * Parses & Dispatches Server-Sent Events.
  *
  * The parser supports two-modes:
  * * `push` -
@@ -35,6 +35,7 @@ import kotlin.text.Charsets.UTF_8
  */
 class EventParser {
 
+  // Dispatched event information.
   data class EventInfo(
     var retry: String? = null,
     var event: String? = null,
@@ -141,7 +142,7 @@ class EventParser {
     private const val CR = 0x0D.toByte()
     private val CRLF = ByteString.of(CR, LF)
 
-    class Peeker(source: BufferedSource) {
+    private class Peeker(source: BufferedSource) {
 
       var bytesPeeked = 0L
         private set

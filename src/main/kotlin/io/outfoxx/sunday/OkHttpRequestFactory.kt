@@ -71,7 +71,8 @@ import kotlin.reflect.full.createType
 
 class OkHttpRequestFactory(
   private val baseURI: URITemplate,
-  val httpClient: OkHttpClient,
+  private val httpClient: OkHttpClient = OkHttpClient(),
+  private val eventHttpClient: OkHttpClient = httpClient.reconfiguredForEvents(),
   val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
 ) : RequestFactory(), Closeable {
@@ -247,21 +248,15 @@ class OkHttpRequestFactory(
     return parseSuccess(response, resultType)
   }
 
-  override fun eventSource(requestSupplier: suspend () -> Request): EventSource {
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
 
-    val callSupplier: suspend (Headers) -> Call = { headers ->
-      val request = requestSupplier().newBuilder()
-      headers.forEach { (name, value) -> request.header(name, value) }
-      httpClient.newCall(request.build())
-    }
-
-    return EventSource(callSupplier)
+    return EventSource(requestSupplier, eventHttpClient)
   }
 
   @ExperimentalCoroutinesApi
   override fun <D : Any> eventStream(
     eventTypes: Map<String, KType>,
-    requestSupplier: suspend () -> Request
+    requestSupplier: suspend (Headers) -> Request
   ): Flow<D> = callbackFlow {
 
     val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
@@ -298,6 +293,7 @@ class OkHttpRequestFactory(
   override fun close(cancelOutstandingRequests: Boolean) {
     if (cancelOutstandingRequests) {
       httpClient.dispatcher.cancelAll()
+      eventHttpClient.dispatcher.cancelAll()
     }
   }
 
@@ -395,5 +391,4 @@ class OkHttpRequestFactory(
     override fun getStatusCode() = response.code
     override fun getReasonPhrase() = response.message
   }
-
 }

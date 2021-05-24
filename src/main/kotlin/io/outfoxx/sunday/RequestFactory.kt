@@ -19,6 +19,7 @@ package io.outfoxx.sunday
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import kotlinx.coroutines.flow.Flow
+import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
 import org.zalando.problem.Problem
@@ -226,7 +227,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null
-  ): EventSource = eventSource {
+  ): EventSource = eventSource { eentSourceHeaders ->
     request(
       method,
       pathTemplate,
@@ -236,11 +237,13 @@ abstract class RequestFactory : Closeable {
       typeOf<Unit>(),
       contentTypes,
       acceptTypes,
-      headers
+      eentSourceHeaders.toMultimap().let { eventSourceHeaderParams ->
+        headers?.let { headers + eventSourceHeaderParams } ?: eventSourceHeaderParams
+      }
     )
   }
 
-  protected abstract fun eventSource(requestSupplier: suspend () -> Request): EventSource
+  protected abstract fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource
 
   fun <B : Any, D : Any> eventStream(
     method: Method,
@@ -292,7 +295,7 @@ abstract class RequestFactory : Closeable {
 
   protected abstract fun <D : Any> eventStream(
     eventTypes: Map<String, KType>,
-    requestSupplier: suspend () -> Request,
+    requestSupplier: suspend (Headers) -> Request,
   ): Flow<D>
 
   abstract fun close(cancelOutstandingRequests: Boolean)

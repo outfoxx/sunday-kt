@@ -31,6 +31,7 @@ import io.outfoxx.sunday.SundayError.Reason.ResponseDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.UnexpectedEmptyResponse
 import io.outfoxx.sunday.http.HeaderNames.Accept
 import io.outfoxx.sunday.http.HeaderNames.ContentType
+import io.outfoxx.sunday.http.HeaderParameters
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
@@ -126,8 +127,8 @@ class OkHttpRequestFactory(
 
     val requestBuilder = Request.Builder().url(urlBuilder.build())
 
-    headers?.forEach { (headerName, headerValue) ->
-      requestBuilder.addHeader(headerName, "$headerValue")
+    HeaderParameters.encode(headers).forEach { (headerName, headerValue) ->
+      requestBuilder.addHeader(headerName, headerValue)
     }
 
     // Add `Accept` header based on accept types

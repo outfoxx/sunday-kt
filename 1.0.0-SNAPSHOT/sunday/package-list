@@ -15,6 +15,8 @@ $dokka.location:io.outfoxx.sunday.http/HeaderNames/Server/#/PointingToDeclaratio
 $dokka.location:io.outfoxx.sunday.http/HeaderNames/SetCookie/#/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-header-names/-set-cookie.html
 $dokka.location:io.outfoxx.sunday.http/HeaderNames/TransferEncoding/#/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-header-names/-transfer-encoding.html
 $dokka.location:io.outfoxx.sunday.http/HeaderNames/UserAgent/#/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-header-names/-user-agent.html
+$dokka.location:io.outfoxx.sunday.http/HeaderParameters///PointingToDeclaration/sunday/io.outfoxx.sunday.http/-header-parameters/index.html
+$dokka.location:io.outfoxx.sunday.http/HeaderParameters/encode/#kotlin.collections.Map[kotlin.String,kotlin.Any?]?/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-header-parameters/encode.html
 $dokka.location:io.outfoxx.sunday.http/Method.Connect///PointingToDeclaration/sunday/io.outfoxx.sunday.http/-method/-connect/index.html
 $dokka.location:io.outfoxx.sunday.http/Method.Connect/name/#/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-method/-connect/name.html
 $dokka.location:io.outfoxx.sunday.http/Method.Connect/ordinal/#/PointingToDeclaration/sunday/io.outfoxx.sunday.http/-method/-connect/ordinal.html
@@ -436,6 +438,10 @@ $dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidContentType///Pointi
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidContentType/message/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-content-type/message.html
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidContentType/name/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-content-type/name.html
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidContentType/ordinal/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-content-type/ordinal.html
+$dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidHeaderValue///PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-header-value/index.html
+$dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidHeaderValue/message/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-header-value/message.html
+$dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidHeaderValue/name/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-header-value/name.html
+$dokka.location:io.outfoxx.sunday/SundayError.Reason.InvalidHeaderValue/ordinal/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-invalid-header-value/ordinal.html
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.NoData///PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-no-data/index.html
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.NoData/message/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-no-data/message.html
 $dokka.location:io.outfoxx.sunday/SundayError.Reason.NoData/name/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-reason/-no-data/name.html

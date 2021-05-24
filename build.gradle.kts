@@ -219,14 +219,6 @@ publishing {
 
   repositories {
     maven {
-      name = "GitHubPackages"
-      url = uri("https://maven.pkg.github.com/outfoxx/sunday-kt")
-      credentials {
-        username = project.findProperty("github.user") as String? ?: System.getenv("USERNAME")
-        password = project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN")
-      }
-    }
-    maven {
       name = "MavenCentral"
       val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
       val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"

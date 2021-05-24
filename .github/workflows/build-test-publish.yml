@@ -33,10 +33,10 @@ jobs:
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk8-build-test
-        arguments: build publishAllPublicationsToGitHubPackagesRepository -x test
+        arguments: build publishAllPublicationsToMavenCentralRepository -x test
         properties: |
-          github.user=${GITHUB_ACTOR}
-          github.token=${{ secrets.GITHUB_TOKEN }}
+          ossrhUsername=${{ secrets.OSSRH_USER }}
+          ossrhPassword=${{ secrets.OSSRH_PASS }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0

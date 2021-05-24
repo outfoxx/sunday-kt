@@ -85,18 +85,14 @@ java {
   withJavadocJar()
 }
 
-tasks {
-
-  withType<KotlinCompile> {
+tasks.withType<KotlinCompile>().configureEach {
+  kotlinOptions {
     kotlinOptions {
-      kotlinOptions {
-        languageVersion = "1.4"
-        apiVersion = "1.4"
-      }
-      jvmTarget = "11"
+      languageVersion = "1.4"
+      apiVersion = "1.4"
     }
+    jvmTarget = "11"
   }
-
 }
 
 
@@ -171,7 +167,7 @@ publishing {
 
   publications {
 
-    create<MavenPublication>("mavenJava") {
+    create<MavenPublication>("library") {
       from(components["java"])
 
       pom {
@@ -233,11 +229,12 @@ publishing {
 }
 
 
-configure<SigningExtension> {
+signing {
   val signingKeyId: String? by project
   val signingKey: String? by project
   val signingPassword: String? by project
   useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+  sign(publishing.publications["library"])
 }
 
 tasks.withType<Sign>().configureEach {
@@ -252,7 +249,7 @@ tasks.withType<Sign>().configureEach {
 githubRelease {
   owner("outfoxx")
   repo("sunday-kt")
-  tagName("${releaseVersion}")
+  tagName(releaseVersion)
   targetCommitish("main")
   releaseName("v${releaseVersion}")
   draft(true)

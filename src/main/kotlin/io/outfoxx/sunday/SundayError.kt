@@ -30,7 +30,8 @@ class SundayError(message: String, val reason: Reason? = null, cause: Throwable?
     EventDecodingFailed("Event decoding failed"),
     InvalidBaseUri("Base URL is invalid after expanding template"),
     NoSupportedContentTypes("None of the provided Content-Types for the request has a registered decoder"),
-    NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder")
+    NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder"),
+    InvalidHeaderValue("The encoded header value contains one or more invalid characters")
   }
   /* ktlint-enable max-line-length */
 

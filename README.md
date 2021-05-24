@@ -1,4 +1,4 @@
-[![CI](https://github.com/outfoxx/sunday-kt/actions/workflows/build-test-publish.yml/badge.svg)](https://github.com/outfoxx/sunday-kt/actions/workflows/build-test-publish.yml)
+[![CI](https://github.com/outfoxx/sunday-kt/actions/workflows/ci.yml/badge.svg)](https://github.com/outfoxx/sunday-kt/actions/workflows/ci.yml)
 
 ---
 

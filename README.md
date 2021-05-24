@@ -1,10 +1,14 @@
+[![CI](https://github.com/outfoxx/sunday-kt/actions/workflows/build-test-publish.yml/badge.svg)](https://github.com/outfoxx/sunday-kt/actions/workflows/build-test-publish.yml)
+
+---
+
 # Sunday 🙏 The framework of REST for Kotlin
 
 ---
 
 Kotlin framework for generated REST clients.
 
-## [Read the Documentation](https://outfoxx.github.io/sunday)
+### [Read the Documentation](https://outfoxx.github.io/sunday)
 
 
 License

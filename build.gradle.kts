@@ -252,13 +252,13 @@ tasks.withType<Sign>().configureEach {
 githubRelease {
   owner("outfoxx")
   repo("sunday-kt")
-  tagName("rel/v${releaseVersion}")
+  tagName("${releaseVersion}")
   targetCommitish("main")
   releaseName("v${releaseVersion}")
   draft(true)
-  prerelease(isSnapshot)
+  prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    files("${project.rootDir}/build/sunday-${releaseVersion}.jar")
+    files("${project.rootDir}/build/libs/sunday-${releaseVersion}*.jar")
   )
   overwrite(true)
   token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
@@ -268,7 +268,7 @@ tasks {
 
   register("publishMavenRelease") {
     dependsOn(
-      ":generator:publishAllPublicationsToMavenCentralRepository"
+      "publishAllPublicationsToMavenCentralRepository"
     )
   }
 

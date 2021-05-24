@@ -5,7 +5,7 @@ on:
     tags: ["[0-9]+.[0-9]+.[0-9]+**"]
 
 jobs:
-  build-test-publish:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,6 +14,9 @@ jobs:
     - uses: actions/setup-java@v1
       with:
         java-version: '11'
+
+    - uses: olegtarasov/get-tag@v2.1
+      id: tagName
 
     - name: Publish Maven
       uses: burrunan/gradle-cache-action@v1
@@ -28,6 +31,7 @@ jobs:
           publishRelease
           -x test
         properties: |
+          releaseVersion=${{ steps.tagName.outputs.tag }}
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}
           github.token=${{ secrets.GITHUB_TOKEN }}

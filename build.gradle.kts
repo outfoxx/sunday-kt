@@ -43,16 +43,12 @@ repositories {
 
 dependencies {
 
-  implementation(platform("com.squareup.okhttp3:okhttp-bom:$okHttpVersion"))
-
   api("org.slf4j:slf4j-api:$slf4jVersion")
   api("org.zalando:problem:$zalandoProblemVersion")
   api("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
   api("com.github.hal4j:uritemplate:$uriTemplateVersion")
 
-  api("com.squareup.okhttp3:okhttp")
-  implementation("com.squareup.okhttp3:okhttp-sse")
-  implementation("com.squareup.okio:okio:2.10.0")
+  api("com.squareup.okhttp3:okhttp:$okHttpVersion")
 
   implementation(kotlin("stdlib"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
@@ -73,7 +69,7 @@ dependencies {
 
   testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
 
-  testImplementation("com.squareup.okhttp3:mockwebserver")
+  testImplementation("com.squareup.okhttp3:mockwebserver:$okHttpVersion")
 }
 
 

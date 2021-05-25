@@ -51,7 +51,7 @@ dependencies {
   api("com.squareup.okhttp3:okhttp:$okHttpVersion")
 
   implementation(kotlin("stdlib"))
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinCoroutinesVersion")
 
   implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
   implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion")

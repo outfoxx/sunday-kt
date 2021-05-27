@@ -216,6 +216,10 @@ class MediaType(
     val OctetStream = MediaType(Type.Application, subtype = "octet-stream")
     val WWWFormUrlEncoded =
       MediaType(Type.Application, Tree.Obsolete, subtype = "www-form-urlencoded")
+    val X509CACert =
+      MediaType(Type.Application, Tree.Obsolete, subtype = "x509-ca-cert")
+    val X509UserCert =
+      MediaType(Type.Application, Tree.Obsolete, subtype = "x509-user-cert")
 
     val Any = MediaType(Type.Any, subtype = "*")
     val AnyText = MediaType(Type.Text, subtype = "*")

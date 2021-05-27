@@ -251,6 +251,8 @@ $dokka.location:io.outfoxx.sunday/MediaType.Companion/OctetStream/#/PointingToDe
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/Plain/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-plain.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/ProblemJSON/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-problem-j-s-o-n.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/WWWFormUrlEncoded/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-w-w-w-form-url-encoded.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/X509CACert/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x509-c-a-cert.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/X509UserCert/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x509-user-cert.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/XMLStructured/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x-m-l-structured.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/YAML/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-y-a-m-l.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/from/#kotlin.String/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/from.html

@@ -10,6 +10,31 @@ Kotlin framework for generated REST clients.
 
 ### [Read the Documentation](https://outfoxx.github.io/sunday)
 
+---
+
+Maven
+-----
+
+Sunday is delivered as a Maven artifact and releases are available from Maven Central.
+
+### Dependency Declaration
+
+##### Gradle
+
+```kotlin
+implementation("io.outfoxx.sunday:sunday:$version")
+```
+
+##### Maven
+
+```xml
+<dependency>
+  <groupId>io.outfoxx.sunday</groupId>
+  <artifactId>sunday</artifactId>
+  <version>${sunday.version}</version>
+</dependency>
+```
+
 
 License
 -------

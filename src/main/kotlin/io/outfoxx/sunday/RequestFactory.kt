@@ -18,10 +18,12 @@ package io.outfoxx.sunday
 
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
+import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import kotlinx.coroutines.flow.Flow
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
+import org.slf4j.Logger
 import org.zalando.problem.Problem
 import java.io.Closeable
 import kotlin.reflect.KClass
@@ -256,8 +258,8 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    eventTypes: Map<String, KType>
-  ): Flow<D> = eventStream(eventTypes) {
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> = eventStream(decoder) {
     request(
       method,
       pathTemplate,
@@ -279,8 +281,8 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    eventTypes: Map<String, KType>
-  ): Flow<D> = eventStream(eventTypes) {
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> = eventStream(decoder) {
     request(
       method,
       pathTemplate,
@@ -295,7 +297,7 @@ abstract class RequestFactory : Closeable {
   }
 
   protected abstract fun <D : Any> eventStream(
-    eventTypes: Map<String, KType>,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
     requestSupplier: suspend (Headers) -> Request,
   ): Flow<D>
 

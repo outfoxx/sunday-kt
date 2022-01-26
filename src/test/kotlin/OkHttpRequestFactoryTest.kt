@@ -963,9 +963,15 @@ class OkHttpRequestFactoryTest {
               val eventStream = requestFactory.eventStream<Map<String, Any>>(
                 Method.Get,
                 "",
-                eventTypes = mapOf(
-                  "hello" to typeOf<Map<String, Any>>()
-                )
+                decoder = { decoder, event, _, data, logger ->
+                  when (event) {
+                    "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                    else -> {
+                      logger.error("unsupported event type")
+                      null
+                    }
+                  }
+                }
               )
 
               eventStream.first()

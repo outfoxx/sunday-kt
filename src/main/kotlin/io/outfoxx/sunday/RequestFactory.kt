@@ -26,6 +26,7 @@ import org.zalando.problem.Problem
 import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
 abstract class RequestFactory : Closeable {
 

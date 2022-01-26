@@ -42,7 +42,8 @@ import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.channels.onFailure
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -56,6 +57,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.IOException
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.zalando.problem.DefaultProblem
 import org.zalando.problem.Problem
@@ -255,7 +257,7 @@ class OkHttpRequestFactory(
   }
 
   override fun <D : Any> eventStream(
-    eventTypes: Map<String, KType>,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
     requestSupplier: suspend (Headers) -> Request
   ): Flow<D> = callbackFlow {
 
@@ -264,17 +266,29 @@ class OkHttpRequestFactory(
 
     val eventSource = eventSource(requestSupplier)
 
-    eventTypes.forEach { (event, type) ->
-      eventSource.addEventListener(event) { (_, _, data) ->
+    eventSource.onMessage = { event ->
+
+      val data = event.data
+      if (data != null) {
+
         try {
 
-          val decodedEvent = jsonDecoder.decode<D>(data ?: "", type)
+          val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
+          if (decodedEvent != null) {
 
-          sendBlocking(decodedEvent)
+            trySendBlocking(decodedEvent)
+              .onFailure {
+                cancel("Event send failed", it)
+              }
+
+          }
+
         } catch (x: Throwable) {
           cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
         }
+
       }
+
     }
 
     eventSource.onError = { error ->

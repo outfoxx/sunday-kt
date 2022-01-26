@@ -88,10 +88,10 @@ class MediaType(
     }
   }
 
-  val subtype = subtype.toLowerCase(ENGLISH)
+  val subtype = subtype.lowercase(ENGLISH)
   val parameters =
     parameters
-      .map { it.key.toLowerCase(ENGLISH) to it.value.toLowerCase(ENGLISH) }
+      .map { it.key.lowercase(ENGLISH) to it.value.lowercase(ENGLISH) }
       .toMap()
 
   fun parameter(name: StandardParameterName): String? {
@@ -126,7 +126,7 @@ class MediaType(
     get() {
       val type = this.type.code
       val tree = this.tree.code
-      val suffix = this.suffix?.let { "+${it.name.toLowerCase(ENGLISH)}" } ?: ""
+      val suffix = this.suffix?.let { "+${it.name.lowercase(ENGLISH)}" } ?: ""
       val parameters = this.parameters.keys.sorted().joinToString("") { ";$it=${parameters[it]}" }
       return "$type/$tree$subtype$suffix$parameters"
     }
@@ -179,23 +179,23 @@ class MediaType(
       val match = fullRegex.matchEntire(string) ?: return null
 
       val type =
-        match.groupValues.getOrNull(1)?.toLowerCase(ENGLISH)?.let { Type.fromCode(it) }
+        match.groupValues.getOrNull(1)?.lowercase(ENGLISH)?.let { Type.fromCode(it) }
           ?: return null
 
       val tree =
-        match.groupValues.getOrNull(2)?.toLowerCase(ENGLISH)?.let { Tree.fromCode(it) }
+        match.groupValues.getOrNull(2)?.lowercase(ENGLISH)?.let { Tree.fromCode(it) }
           ?: Tree.Standard
 
-      val subType = match.groupValues.getOrNull(3)?.toLowerCase(ENGLISH) ?: return null
+      val subType = match.groupValues.getOrNull(3)?.lowercase(ENGLISH) ?: return null
 
-      val suffix = match.groupValues.getOrNull(4)?.toLowerCase(ENGLISH)?.let { Suffix.fromCode(it) }
+      val suffix = match.groupValues.getOrNull(4)?.lowercase(ENGLISH)?.let { Suffix.fromCode(it) }
 
       val parameters =
         match.groupValues.getOrNull(5)?.let { params ->
           paramRegex.findAll(params).mapNotNull { param ->
             val key = param.groupValues.getOrNull(1) ?: return@mapNotNull null
             val value = param.groupValues.getOrNull(2) ?: return@mapNotNull null
-            key.toLowerCase(ENGLISH) to value.toLowerCase(ENGLISH)
+            key.lowercase(ENGLISH) to value.lowercase(ENGLISH)
           }.toMap()
         } ?: emptyMap()
 

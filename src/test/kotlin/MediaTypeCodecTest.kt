@@ -19,7 +19,6 @@ import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
-import io.outfoxx.sunday.typeOf
 import okio.Buffer
 import okio.BufferedSource
 import okio.ByteString
@@ -34,6 +33,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import kotlin.reflect.typeOf
 
 class MediaTypeCodecTest {
 

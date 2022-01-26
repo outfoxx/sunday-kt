@@ -36,7 +36,6 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
-import io.outfoxx.sunday.typeOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -62,6 +61,7 @@ import org.zalando.problem.Status
 import org.zalando.problem.ThrowableProblem
 import java.net.URI
 import kotlin.coroutines.resume
+import kotlin.reflect.typeOf
 
 class OkHttpRequestFactoryTest {
 

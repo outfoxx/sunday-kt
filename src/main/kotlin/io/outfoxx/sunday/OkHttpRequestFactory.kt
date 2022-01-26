@@ -40,7 +40,6 @@ import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.sendBlocking
@@ -69,6 +68,7 @@ import kotlin.coroutines.resumeWithException
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
+import kotlin.reflect.typeOf
 
 class OkHttpRequestFactory(
   private val baseURI: URITemplate,
@@ -254,7 +254,6 @@ class OkHttpRequestFactory(
     return EventSource(requestSupplier, eventHttpClient)
   }
 
-  @ExperimentalCoroutinesApi
   override fun <D : Any> eventStream(
     eventTypes: Map<String, KType>,
     requestSupplier: suspend (Headers) -> Request

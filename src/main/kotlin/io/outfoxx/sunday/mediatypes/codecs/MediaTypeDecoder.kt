@@ -16,8 +16,8 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import io.outfoxx.sunday.typeOf
 import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
 interface MediaTypeDecoder {
 

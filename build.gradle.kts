@@ -10,7 +10,7 @@ plugins {
   kotlin("jvm")
   id("org.jetbrains.dokka")
 
-  id("net.minecrell.licenser")
+  id("org.cadixdev.licenser")
   id("org.jmailen.kotlinter")
   id("io.gitlab.arturbosch.detekt")
   id("com.github.breadmoirai.github-release")
@@ -38,7 +38,6 @@ version = releaseVersion
 
 repositories {
   mavenCentral()
-  jcenter()
 }
 
 dependencies {
@@ -51,6 +50,7 @@ dependencies {
   api("com.squareup.okhttp3:okhttp:$okHttpVersion")
 
   implementation(kotlin("stdlib"))
+  implementation(kotlin("reflect"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinCoroutinesVersion")
 
   implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
@@ -88,8 +88,8 @@ java {
 tasks.withType<KotlinCompile>().configureEach {
   kotlinOptions {
     kotlinOptions {
-      languageVersion = "1.4"
-      apiVersion = "1.4"
+      languageVersion = "1.6"
+      apiVersion = "1.6"
     }
     jvmTarget = "11"
   }
@@ -142,7 +142,7 @@ kotlinter {
 }
 
 license {
-  header = file("HEADER.txt")
+  header.set(resources.text.fromFile(file("HEADER.txt")))
   include("**/*.kt")
 }
 

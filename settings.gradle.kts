@@ -3,7 +3,7 @@ pluginManagement {
 
   repositories {
     gradlePluginPortal()
-    jcenter()
+    mavenCentral()
   }
 
   val kotlinPluginVersion: String by settings
@@ -16,7 +16,7 @@ pluginManagement {
   plugins {
     kotlin("jvm") version kotlinPluginVersion
     id("org.jetbrains.dokka") version dokkaPluginVersion
-    id("net.minecrell.licenser") version licenserPluginVersion
+    id("org.cadixdev.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("io.gitlab.arturbosch.detekt") version detektPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion

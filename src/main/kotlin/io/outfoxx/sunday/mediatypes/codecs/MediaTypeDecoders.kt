@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.core.Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED
+import com.fasterxml.jackson.core.Base64Variants
 import com.fasterxml.jackson.databind.DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.json.JsonMapper
@@ -45,6 +47,11 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
       registerJSON(
         JsonMapper()
           .findAndRegisterModules()
+          .setBase64Variant(
+            Base64Variants.MIME_NO_LINEFEEDS
+              .withReadPadding(PADDING_ALLOWED)
+              .withWritePadding(false)
+          )
           .enable(WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
           .enable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
       )
@@ -56,6 +63,11 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
       registerCBOR(
         CBORMapper()
           .findAndRegisterModules()
+          .setBase64Variant(
+            Base64Variants.MIME_NO_LINEFEEDS
+              .withReadPadding(PADDING_ALLOWED)
+              .withWritePadding(false)
+          )
           .enable(WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
           .enable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
       )

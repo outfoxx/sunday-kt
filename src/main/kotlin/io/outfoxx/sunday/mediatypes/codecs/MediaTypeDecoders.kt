@@ -38,7 +38,7 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
 
   class Builder(private val registered: Map<MediaType, MediaTypeDecoder> = mapOf()) {
 
-    fun registerDefaults() = registerJSON().registerCBOR().registerData()
+    fun registerDefaults() = registerJSON().registerCBOR().registerData().registerEventStream()
 
     fun registerData() =
       register(BinaryDecoder(), OctetStream)
@@ -74,6 +74,9 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
 
     fun registerCBOR(mapper: CBORMapper) =
       register(CBORDecoder(mapper), CBOR)
+
+    fun registerEventStream() =
+      register(TextDecoder(), MediaType.EventStream)
 
     fun register(decoder: MediaTypeDecoder, vararg types: MediaType) =
       Builder(registered.plus(types.map { it to decoder }))

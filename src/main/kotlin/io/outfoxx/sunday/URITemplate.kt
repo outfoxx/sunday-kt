@@ -17,23 +17,17 @@
 package io.outfoxx.sunday
 
 import com.github.hal4j.uritemplate.URIBuilder
+import com.github.hal4j.uritemplate.URITemplate
 import io.outfoxx.sunday.http.Parameters
 
 class URITemplate(
-  private val templateBuilder: URIBuilder,
-  private val parameters: Parameters
+  private val template: String,
+  private val parameters: Parameters = mapOf(),
 ) {
-
-  constructor(template: String, parameters: Parameters = mapOf()) :
-    this(URIBuilder.basedOn(template), parameters)
 
   fun resolve(relative: String? = null, parameters: Parameters? = null): URIBuilder {
 
-    val template =
-      if (relative != null)
-        templateBuilder.resolve(relative)
-      else
-        templateBuilder.asTemplate()
+    val template = URITemplate(join(template, relative))
 
     val allParameters =
       if (parameters != null)
@@ -43,4 +37,18 @@ class URITemplate(
 
     return template.expand(allParameters).toBuilder()
   }
+
+  private fun join(base: String, relative: String?) =
+    if (relative != null) {
+      if (base.endsWith("/") && relative.startsWith("/")) {
+        base + relative.removePrefix("/")
+      } else if (base.endsWith("/") || relative.startsWith("/")) {
+        base + relative
+      } else {
+        "$base/$relative"
+      }
+    } else {
+      base
+    }
+
 }

@@ -56,6 +56,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okhttp3.internal.http.HttpMethod
 import okio.IOException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -150,7 +151,7 @@ class OkHttpRequestFactory(
     // Add `Content-Type` header (even if body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.addHeader(ContentType, contentType.toString()) }
 
-    val requestBody = body?.let {
+    var requestBody = body?.let {
       contentType ?: throw SundayError(NoSupportedContentTypes)
 
       val mediaTypeEncoder = mediaTypeEncoders.find(contentType)
@@ -161,7 +162,13 @@ class OkHttpRequestFactory(
       encodedBody.toRequestBody(contentType.value.toMediaType())
     }
 
-    val request = requestBuilder.method(method.name, requestBody).build()
+    val methodName = method.name.uppercase()
+
+    if (requestBody == null && HttpMethod.requiresRequestBody(methodName)) {
+      requestBody = byteArrayOf().toRequestBody()
+    }
+
+    val request = requestBuilder.method(methodName, requestBody).build()
 
     logger.debug("Built request: {}", request)
 

@@ -56,6 +56,7 @@ $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/re
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerCBOR/#com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-c-b-o-r.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerData/#/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-data.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerDefaults/#/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-defaults.html
+$dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerEventStream/#/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-event-stream.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerJSON/#/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-j-s-o-n.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Builder/registerJSON/#com.fasterxml.jackson.databind.json.JsonMapper/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-builder/register-j-s-o-n.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs/MediaTypeDecoders.Companion///PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/-companion/index.html
@@ -316,7 +317,6 @@ $dokka.location:io.outfoxx.sunday/SundayError/SundayError/#io.outfoxx.sunday.Sun
 $dokka.location:io.outfoxx.sunday/SundayError/SundayError/#kotlin.String#io.outfoxx.sunday.SundayError.Reason?#kotlin.Throwable?/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/-sunday-error.html
 $dokka.location:io.outfoxx.sunday/SundayError/reason/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-sunday-error/reason.html
 $dokka.location:io.outfoxx.sunday/URITemplate///PointingToDeclaration/sunday/io.outfoxx.sunday/-u-r-i-template/index.html
-$dokka.location:io.outfoxx.sunday/URITemplate/URITemplate/#com.github.hal4j.uritemplate.URIBuilder#kotlin.collections.Map[kotlin.String,kotlin.Any?]/PointingToDeclaration/sunday/io.outfoxx.sunday/-u-r-i-template/-u-r-i-template.html
 $dokka.location:io.outfoxx.sunday/URITemplate/URITemplate/#kotlin.String#kotlin.collections.Map[kotlin.String,kotlin.Any?]/PointingToDeclaration/sunday/io.outfoxx.sunday/-u-r-i-template/-u-r-i-template.html
 $dokka.location:io.outfoxx.sunday/URITemplate/resolve/#kotlin.String?#kotlin.collections.Map[kotlin.String,kotlin.Any?]?/PointingToDeclaration/sunday/io.outfoxx.sunday/-u-r-i-template/resolve.html
 io.outfoxx.sunday

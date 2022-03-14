@@ -42,6 +42,7 @@ import java.io.Closeable
 import java.io.IOException
 import java.lang.Double.max
 import java.lang.Double.min
+import java.net.SocketException
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -358,7 +359,17 @@ class EventSource(
 
     logger.debug("Starting event processing")
 
-    eventParser.process(source, ::dispatchParsedEvent)
+    try {
+
+      eventParser.process(source, ::dispatchParsedEvent)
+
+    } catch (x: SocketException) {
+      if (readyStateValue.isClosed) {
+        return
+      } else {
+        throw x
+      }
+    }
   }
 
   private fun receivedError(t: Throwable?) {

@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.hal4j.uritemplate.URIBuilder
 import com.github.hal4j.uritemplate.URITemplate
 import io.outfoxx.sunday.http.Parameters
@@ -35,8 +36,20 @@ class URITemplate(
       else
         this.parameters
 
-    return template.expand(allParameters).toBuilder()
+    val allStringParameters =
+      allParameters.mapValues { entry ->
+        when (val value = entry.value) {
+          is Enum<*> -> enumName(value)
+          else -> value.toString()
+        }
+      }
+
+    return template.expand(allStringParameters).toBuilder()
   }
+
+  private fun <E : Enum<E>> enumName(value: Enum<E>) =
+    value.javaClass.getField(value.name).getAnnotation(JsonProperty::class.java)?.value
+      ?: value.name
 
   private fun join(base: String, relative: String?) =
     if (relative != null) {

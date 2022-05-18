@@ -181,8 +181,14 @@ class OkHttpRequestFactory(
     val call = httpClient.newCall(request)
 
     return suspendCancellableCoroutine { continuation ->
+      continuation.invokeOnCancellation {
+        call.cancel()
+      }
       call.enqueue(object : Callback {
         override fun onResponse(call: Call, response: Response) {
+
+          // Don't bother with resuming the continuation if it is already cancelled.
+          if (continuation.isCancelled) return
 
           continuation.resume(response)
         }
@@ -191,6 +197,7 @@ class OkHttpRequestFactory(
 
           // Don't bother with resuming the continuation if it is already cancelled.
           if (continuation.isCancelled) return
+
           continuation.resumeWithException(e)
         }
       })

@@ -16,6 +16,29 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.core.Base64Variant
+import com.fasterxml.jackson.core.Base64Variants
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 
-class CBORDecoder(cborMapper: CBORMapper) : ObjectMapperDecoder(cborMapper)
+class CBORDecoder(cborMapper: CBORMapper) : ObjectMapperDecoder(cborMapper) {
+
+  companion object {
+
+    val default =
+      CBORDecoder(
+        CBORMapper()
+          .findAndRegisterModules()
+          .setBase64Variant(
+            Base64Variants.MIME_NO_LINEFEEDS
+              .withReadPadding(Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED)
+              .withWritePadding(false)
+          )
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
+      )
+
+  }
+
+}

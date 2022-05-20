@@ -18,6 +18,12 @@ package io.outfoxx.sunday.mediatypes.codecs
 
 class TextEncoder : MediaTypeEncoder {
 
+  companion object {
+
+    val default = TextEncoder()
+
+  }
+
   private val charSet = Charsets.UTF_8
 
   override fun <B> encode(value: B): ByteArray =

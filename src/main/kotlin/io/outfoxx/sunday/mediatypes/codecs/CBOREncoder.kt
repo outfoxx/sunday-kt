@@ -16,6 +16,22 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 
-class CBOREncoder(cborMapper: CBORMapper) : ObjectMapperEncoder(cborMapper)
+class CBOREncoder(cborMapper: CBORMapper) : ObjectMapperEncoder(cborMapper) {
+
+  companion object {
+
+    val default =
+      CBOREncoder(
+        CBORMapper()
+          .findAndRegisterModules()
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
+      )
+
+  }
+
+}

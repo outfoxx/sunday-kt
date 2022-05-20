@@ -26,6 +26,12 @@ import kotlin.reflect.KType
 
 class BinaryDecoder : MediaTypeDecoder {
 
+  companion object {
+
+    val default = BinaryDecoder()
+
+  }
+
   override fun <T : Any> decode(data: ByteArray, type: KType): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {

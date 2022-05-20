@@ -16,12 +16,33 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.core.Base64Variant
+import com.fasterxml.jackson.core.Base64Variants
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.type.TypeFactory
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
 class JSONDecoder(jsonMapper: JsonMapper) : ObjectMapperDecoder(jsonMapper), TextMediaTypeDecoder {
+
+  companion object {
+
+    val default =
+      JSONDecoder(
+        JsonMapper()
+          .findAndRegisterModules()
+          .setBase64Variant(
+            Base64Variants.MIME_NO_LINEFEEDS
+              .withReadPadding(Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED)
+              .withWritePadding(false)
+          )
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+      )
+
+  }
 
   override fun <T : Any> decode(data: String, type: KType): T =
     objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))

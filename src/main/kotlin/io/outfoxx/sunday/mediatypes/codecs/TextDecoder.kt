@@ -20,6 +20,12 @@ import kotlin.reflect.KType
 
 class TextDecoder : MediaTypeDecoder {
 
+  companion object {
+
+    val default = TextDecoder()
+
+  }
+
   private val charSet = Charsets.UTF_8
 
   override fun <T : Any> decode(data: ByteArray, type: KType): T =

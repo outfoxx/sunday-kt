@@ -16,6 +16,22 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 
-class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper)
+class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper) {
+
+  companion object {
+
+    val default =
+      JSONEncoder(
+        JsonMapper()
+          .findAndRegisterModules()
+          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+      )
+
+  }
+
+}

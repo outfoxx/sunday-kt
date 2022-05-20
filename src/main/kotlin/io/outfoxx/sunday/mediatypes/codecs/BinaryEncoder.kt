@@ -23,6 +23,12 @@ import java.io.InputStream
 
 class BinaryEncoder : MediaTypeEncoder {
 
+  companion object {
+
+    val default = BinaryEncoder()
+
+  }
+
   override fun <B> encode(value: B): ByteArray =
     when (value) {
       is ByteArray -> value

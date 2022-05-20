@@ -16,13 +16,18 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.MediaType.Companion.AnyText
+import io.outfoxx.sunday.MediaType.Companion.CBOR
+import io.outfoxx.sunday.MediaType.Companion.JSON
+import io.outfoxx.sunday.MediaType.Companion.JSONStructured
+import io.outfoxx.sunday.MediaType.Companion.OctetStream
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.MediaType.Companion.X509CACert
+import io.outfoxx.sunday.MediaType.Companion.X509UserCert
 
 class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>) {
 
@@ -34,7 +39,14 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
 
   class Builder(val registered: Map<MediaType, MediaTypeEncoder> = mapOf()) {
 
-    fun registerDefaults() = registerURL().registerJSON().registerCBOR().registerData()
+    fun registerDefaults() =
+      this
+        .registerData()
+        .registerURL()
+        .registerJSON()
+        .registerCBOR()
+        .registerText()
+        .registerX509()
 
     fun registerURL(
       arrayEncoding: WWWFormURLEncoder.ArrayEncoding =
@@ -51,29 +63,25 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
       )
 
     fun registerData() =
-      register(BinaryEncoder(), MediaType.OctetStream)
+      register(BinaryEncoder.default, OctetStream)
 
     fun registerJSON() =
-      registerJSON(
-        JsonMapper()
-          .findAndRegisterModules()
-          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
-      )
+      register(JSONEncoder.default, JSON, JSONStructured)
 
     fun registerJSON(mapper: JsonMapper) =
-      register(JSONEncoder(mapper), MediaType.JSON, MediaType.JSONStructured)
+      register(JSONEncoder(mapper), JSON, JSONStructured)
 
     fun registerCBOR() =
-      registerCBOR(
-        CBORMapper()
-          .findAndRegisterModules()
-          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
-      )
+      register(CBOREncoder.default, CBOR)
 
     fun registerCBOR(mapper: CBORMapper) =
-      register(CBOREncoder(mapper), MediaType.CBOR)
+      register(CBOREncoder(mapper), CBOR)
+
+    fun registerText() =
+      register(TextEncoder.default, AnyText)
+
+    fun registerX509() =
+      register(BinaryEncoder.default, X509CACert, X509UserCert)
 
     fun register(decoder: MediaTypeEncoder, vararg types: MediaType) =
       Builder(registered.plus(types.map { it to decoder }))

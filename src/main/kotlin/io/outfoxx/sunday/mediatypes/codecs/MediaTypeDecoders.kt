@@ -16,17 +16,17 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import com.fasterxml.jackson.core.Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED
-import com.fasterxml.jackson.core.Base64Variants
-import com.fasterxml.jackson.databind.DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS
-import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.MediaType.Companion.AnyText
 import io.outfoxx.sunday.MediaType.Companion.CBOR
+import io.outfoxx.sunday.MediaType.Companion.EventStream
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.JSONStructured
 import io.outfoxx.sunday.MediaType.Companion.OctetStream
+import io.outfoxx.sunday.MediaType.Companion.X509CACert
+import io.outfoxx.sunday.MediaType.Companion.X509UserCert
 
 class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>) {
 
@@ -38,45 +38,38 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
 
   class Builder(private val registered: Map<MediaType, MediaTypeDecoder> = mapOf()) {
 
-    fun registerDefaults() = registerJSON().registerCBOR().registerData().registerEventStream()
+    fun registerDefaults() =
+      this
+        .registerData()
+        .registerJSON()
+        .registerCBOR()
+        .registerEventStream()
+        .registerText()
+        .registerX509()
 
     fun registerData() =
       register(BinaryDecoder(), OctetStream)
 
     fun registerJSON() =
-      registerJSON(
-        JsonMapper()
-          .findAndRegisterModules()
-          .setBase64Variant(
-            Base64Variants.MIME_NO_LINEFEEDS
-              .withReadPadding(PADDING_ALLOWED)
-              .withWritePadding(false)
-          )
-          .enable(WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
-      )
+      register(JSONDecoder.default, JSON, JSONStructured)
 
     fun registerJSON(mapper: JsonMapper) =
       register(JSONDecoder(mapper), JSON, JSONStructured)
 
     fun registerCBOR() =
-      registerCBOR(
-        CBORMapper()
-          .findAndRegisterModules()
-          .setBase64Variant(
-            Base64Variants.MIME_NO_LINEFEEDS
-              .withReadPadding(PADDING_ALLOWED)
-              .withWritePadding(false)
-          )
-          .enable(WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
-      )
+      register(CBORDecoder.default, CBOR)
 
     fun registerCBOR(mapper: CBORMapper) =
       register(CBORDecoder(mapper), CBOR)
 
+    fun registerText() =
+      register(TextDecoder.default, AnyText)
+
     fun registerEventStream() =
-      register(TextDecoder(), MediaType.EventStream)
+      register(BinaryDecoder.default, EventStream)
+
+    fun registerX509() =
+      register(BinaryDecoder.default, X509CACert, X509UserCert)
 
     fun register(decoder: MediaTypeDecoder, vararg types: MediaType) =
       Builder(registered.plus(types.map { it to decoder }))

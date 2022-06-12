@@ -5,3 +5,6 @@ style:
   MagicNumber:
     ignorePropertyDeclaration: true
 
+complexity:
+  TooManyFunctions:
+    active: false

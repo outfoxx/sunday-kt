@@ -280,7 +280,7 @@ class OkHttpRequestFactoryTest {
               Method.Post,
               "/add-accept-headers",
               body = "a body",
-              contentTypes = listOf(MediaType.from("application/x-unknown")!!)
+              contentTypes = listOf(MediaType.from("application/x-unknown"))
             )
           }
         }

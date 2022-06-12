@@ -172,21 +172,30 @@ class MediaType(
   companion object {
 
     fun from(acceptHeaders: List<String>): List<MediaType> {
-      return acceptHeaders.flatMap { header -> header.split(",") }.mapNotNull { from(it.trim()) }
+      return acceptHeaders.flatMap { header -> header.split(",") }.map { from(it.trim()) }
     }
 
-    fun from(string: String): MediaType? {
-      val match = fullRegex.matchEntire(string) ?: return null
+    fun from(string: String, default: MediaType? = null): MediaType {
+
+      fun default(): MediaType {
+        if (default == null) {
+          throw SundayError(SundayError.Reason.InvalidContentType, string)
+        } else {
+          return default
+        }
+      }
+
+      val match = fullRegex.matchEntire(string) ?: return default()
 
       val type =
         match.groupValues.getOrNull(1)?.lowercase(ENGLISH)?.let { Type.fromCode(it) }
-          ?: return null
+          ?: return default()
 
       val tree =
         match.groupValues.getOrNull(2)?.lowercase(ENGLISH)?.let { Tree.fromCode(it) }
           ?: Tree.Standard
 
-      val subType = match.groupValues.getOrNull(3)?.lowercase(ENGLISH) ?: return null
+      val subType = match.groupValues.getOrNull(3)?.lowercase(ENGLISH) ?: return default()
 
       val suffix = match.groupValues.getOrNull(4)?.lowercase(ENGLISH)?.let { Suffix.fromCode(it) }
 

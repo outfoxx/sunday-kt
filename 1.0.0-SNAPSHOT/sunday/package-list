@@ -27,6 +27,49 @@ $dokka.location:io.outfoxx.sunday.http/Method.Post///PointingToDeclaration/{"org
 $dokka.location:io.outfoxx.sunday.http/Method.Put///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}sunday/io.outfoxx.sunday.http/-method/-put/index.html
 $dokka.location:io.outfoxx.sunday.http/Method.Trace///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}sunday/io.outfoxx.sunday.http/-method/-trace/index.html
 $dokka.location:io.outfoxx.sunday.http/Method///PointingToDeclaration/sunday/io.outfoxx.sunday.http/-method/index.html
+$dokka.location:io.outfoxx.sunday.json.patch////PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/index.html
+$dokka.location:io.outfoxx.sunday.json.patch//getOrDefault/io.outfoxx.sunday.json.patch.UpdateOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function0[TypeParam(bounds=[kotlin.Any])]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/get-or-default.html
+$dokka.location:io.outfoxx.sunday.json.patch//getOrDefaultNullifyingDelete/io.outfoxx.sunday.json.patch.PatchOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function0[TypeParam(bounds=[kotlin.Any])?]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/get-or-default-nullifying-delete.html
+$dokka.location:io.outfoxx.sunday.json.patch//getOrElse/io.outfoxx.sunday.json.patch.PatchOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function1[kotlin.Boolean,kotlin.Nothing]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/get-or-else.html
+$dokka.location:io.outfoxx.sunday.json.patch//map/io.outfoxx.sunday.json.patch.PatchOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any]),TypeParam(bounds=[kotlin.Any])]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/map.html
+$dokka.location:io.outfoxx.sunday.json.patch//map/io.outfoxx.sunday.json.patch.UpdateOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any]),TypeParam(bounds=[kotlin.Any])]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/map.html
+$dokka.location:io.outfoxx.sunday.json.patch//use/io.outfoxx.sunday.json.patch.PatchOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any])?,kotlin.Unit]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/use.html
+$dokka.location:io.outfoxx.sunday.json.patch//use/io.outfoxx.sunday.json.patch.UpdateOp[TypeParam(bounds=[kotlin.Any])]#kotlin.Function1[TypeParam(bounds=[kotlin.Any]),kotlin.Unit]/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/use.html
+$dokka.location:io.outfoxx.sunday.json.patch/Patch///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/Patch/delete/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch/delete.html
+$dokka.location:io.outfoxx.sunday.json.patch/Patch/none/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch/none.html
+$dokka.location:io.outfoxx.sunday.json.patch/Patch/set/#TypeParam(bounds=[kotlin.Any])/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch/set.html
+$dokka.location:io.outfoxx.sunday.json.patch/Patch/setOrDelete/#TypeParam(bounds=[kotlin.Any])?/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch/set-or-delete.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Companion///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-companion/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Companion/delete/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-companion/delete.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Companion/none/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-companion/none.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Companion/set/#TypeParam(bounds=[kotlin.Any])/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-companion/set.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Companion/setOrDelete/#TypeParam(bounds=[kotlin.Any])?/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-companion/set-or-delete.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Delete.Companion///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-delete/-companion/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Delete.Companion/instance/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-delete/-companion/instance.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Delete///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-delete/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Delete/toString/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-delete/to-string.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer.TypedDeserializer///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/-typed-deserializer/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer.TypedDeserializer/TypedDeserializer/#com.fasterxml.jackson.databind.JavaType/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/-typed-deserializer/-typed-deserializer.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer.TypedDeserializer/deserialize/#com.fasterxml.jackson.core.JsonParser#com.fasterxml.jackson.databind.DeserializationContext/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/-typed-deserializer/deserialize.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer.TypedDeserializer/getNullValue/#com.fasterxml.jackson.databind.DeserializationContext/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/-typed-deserializer/get-null-value.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer/createContextual/#com.fasterxml.jackson.databind.DeserializationContext#com.fasterxml.jackson.databind.BeanProperty/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/create-contextual.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Deserializer/deserialize/#com.fasterxml.jackson.core.JsonParser?#com.fasterxml.jackson.databind.DeserializationContext?/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-deserializer/deserialize.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.None.Companion///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-none/-companion/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.None.Companion/instance/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-none/-companion/instance.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.None///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-none/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.None/toString/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-none/to-string.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Serializer///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-serializer/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Serializer/Serializer/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-serializer/-serializer.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Serializer/isEmpty/#com.fasterxml.jackson.databind.SerializerProvider?#io.outfoxx.sunday.json.patch.PatchOp[*]?/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-serializer/is-empty.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Serializer/serialize/#io.outfoxx.sunday.json.patch.PatchOp[*]#com.fasterxml.jackson.core.JsonGenerator#com.fasterxml.jackson.databind.SerializerProvider/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-serializer/serialize.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Set///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-set/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Set/Set/#TypeParam(bounds=[kotlin.Any])/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-set/-set.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Set/toString/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-set/to-string.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp.Set/value/#/PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/-set/value.html
+$dokka.location:io.outfoxx.sunday.json.patch/PatchOp///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-patch-op/index.html
+$dokka.location:io.outfoxx.sunday.json.patch/UpdateOp///PointingToDeclaration/sunday/io.outfoxx.sunday.json.patch/-update-op/index.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs////PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/index.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs//decode/io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoder#kotlin.ByteArray/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/decode.html
 $dokka.location:io.outfoxx.sunday.mediatypes.codecs//decode/io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder#kotlin.collections.Map[kotlin.String,kotlin.Any]/PointingToDeclaration/sunday/io.outfoxx.sunday.mediatypes.codecs/decode.html
@@ -216,15 +259,17 @@ $dokka.location:io.outfoxx.sunday/MediaType.Companion/EventStream/#/PointingToDe
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/HTML/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-h-t-m-l.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/JSON/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-j-s-o-n.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/JSONStructured/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-j-s-o-n-structured.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/JsonPatch/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-json-patch.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/MergePatch/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-merge-patch.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/OctetStream/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-octet-stream.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/Plain/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-plain.html
-$dokka.location:io.outfoxx.sunday/MediaType.Companion/ProblemJSON/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-problem-j-s-o-n.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/Problem/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-problem.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/WWWFormUrlEncoded/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-w-w-w-form-url-encoded.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/X509CACert/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x509-c-a-cert.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/X509UserCert/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x509-user-cert.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/XMLStructured/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-x-m-l-structured.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/YAML/#/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/-y-a-m-l.html
-$dokka.location:io.outfoxx.sunday/MediaType.Companion/from/#kotlin.String/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/from.html
+$dokka.location:io.outfoxx.sunday/MediaType.Companion/from/#kotlin.String#io.outfoxx.sunday.MediaType?/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/from.html
 $dokka.location:io.outfoxx.sunday/MediaType.Companion/from/#kotlin.collections.List[kotlin.String]/PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-companion/from.html
 $dokka.location:io.outfoxx.sunday/MediaType.StandardParameterName.CharSet///PointingToDeclaration/{"org.jetbrains.dokka.links.EnumEntryDRIExtra":{"key":"org.jetbrains.dokka.links.EnumEntryDRIExtra"}}sunday/io.outfoxx.sunday/-media-type/-standard-parameter-name/-char-set/index.html
 $dokka.location:io.outfoxx.sunday/MediaType.StandardParameterName///PointingToDeclaration/sunday/io.outfoxx.sunday/-media-type/-standard-parameter-name/index.html
@@ -341,5 +386,6 @@ $dokka.location:io.outfoxx.sunday/URITemplate/URITemplate/#kotlin.String#kotlin.
 $dokka.location:io.outfoxx.sunday/URITemplate/resolve/#kotlin.String?#kotlin.collections.Map[kotlin.String,kotlin.Any?]?/PointingToDeclaration/sunday/io.outfoxx.sunday/-u-r-i-template/resolve.html
 io.outfoxx.sunday
 io.outfoxx.sunday.http
+io.outfoxx.sunday.json.patch
 io.outfoxx.sunday.mediatypes.codecs
 

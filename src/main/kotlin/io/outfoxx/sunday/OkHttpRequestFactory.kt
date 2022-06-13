@@ -18,7 +18,6 @@ package io.outfoxx.sunday
 
 import io.outfoxx.sunday.MediaType.Companion.AnyText
 import io.outfoxx.sunday.MediaType.Companion.JSON
-import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
@@ -374,7 +373,7 @@ class OkHttpRequestFactory(
         body.contentType()?.let { MediaType.from(it.toString()) }
           ?: MediaType.OctetStream
 
-      if (!contentType.compatible(ProblemJSON)) {
+      if (!contentType.compatible(MediaType.Problem)) {
         val (responseText, responseData) =
           if (contentType.compatible(AnyText))
             body.string() to null
@@ -396,11 +395,14 @@ class OkHttpRequestFactory(
       } else {
 
         val problemDecoder =
-          mediaTypeDecoders.find(ProblemJSON)
-            ?: throw SundayError(NoDecoder, ProblemJSON.value)
+          mediaTypeDecoders.find(MediaType.Problem)
+            ?: throw SundayError(NoDecoder, MediaType.Problem.value)
 
         problemDecoder as? StructuredMediaTypeDecoder
-          ?: throw SundayError(NoDecoder, "'$ProblemJSON' decoder must support structured decoding")
+          ?: throw SundayError(
+            NoDecoder,
+            "'${MediaType.Problem}' decoder must support structured decoding"
+          )
 
         val decoded: Map<String, Any> = problemDecoder.decode(body.bytes())
 

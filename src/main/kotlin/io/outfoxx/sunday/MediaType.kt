@@ -239,6 +239,9 @@ class MediaType(
     val JSONStructured = MediaType(Type.Any, Tree.Any, subtype = "*", suffix = Suffix.JSON)
     val XMLStructured = MediaType(Type.Any, Tree.Any, subtype = "*", suffix = Suffix.XML)
 
-    val ProblemJSON = MediaType(Type.Application, subtype = "problem", suffix = Suffix.JSON)
+    val Problem = MediaType(Type.Application, subtype = "problem", suffix = Suffix.JSON)
+
+    val JsonPatch = MediaType(Type.Application, subtype = "json-patch", suffix = Suffix.JSON)
+    val MergePatch = MediaType(Type.Application, subtype = "merge-patch", suffix = Suffix.JSON)
   }
 }

@@ -21,7 +21,7 @@ import io.outfoxx.sunday.MediaType.Companion.CBOR
 import io.outfoxx.sunday.MediaType.Companion.EventStream
 import io.outfoxx.sunday.MediaType.Companion.HTML
 import io.outfoxx.sunday.MediaType.Companion.JSON
-import io.outfoxx.sunday.MediaType.Companion.ProblemJSON
+import io.outfoxx.sunday.MediaType.Companion.Problem
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.OkHttpRequestFactory
 import io.outfoxx.sunday.SundayError
@@ -681,7 +681,7 @@ class OkHttpRequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, ProblemJSON)
+        .addHeader(ContentType, Problem)
         .setBody(objectMapper.writeValueAsString(testProblem))
     )
     server.start()
@@ -720,7 +720,7 @@ class OkHttpRequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, ProblemJSON)
+        .addHeader(ContentType, Problem)
         .setBody(objectMapper.writeValueAsString(testProblem))
     )
     server.start()
@@ -794,7 +794,7 @@ class OkHttpRequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, ProblemJSON)
+        .addHeader(ContentType, Problem)
     )
     server.start()
     server.use {
@@ -830,7 +830,7 @@ class OkHttpRequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, ProblemJSON)
+        .addHeader(ContentType, Problem)
         .setBody(objectMapper.writeValueAsString(TestProblem("test")))
     )
     server.start()
@@ -863,7 +863,7 @@ class OkHttpRequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, ProblemJSON)
+        .addHeader(ContentType, Problem)
         .setBody(objectMapper.writeValueAsString(TestProblem("test")))
     )
     server.start()

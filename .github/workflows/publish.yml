@@ -24,7 +24,7 @@ jobs:
         job-id: jdk11-build-test
         arguments: build dokkaHtmlMultiModule -x test
 
-    - name: Publish Maven
+    - name: Publish Release
       uses: burrunan/gradle-cache-action@v1
       env:
         ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
@@ -32,7 +32,7 @@ jobs:
         ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
       with:
         job-id: jdk11-build-test
-        arguments: publishRelease
+        arguments: build publishRelease -x test
         properties: |
           releaseVersion=${{ steps.tagName.outputs.tag }}
           ossrhUsername=${{ secrets.OSSRH_USER }}

@@ -1,246 +1,268 @@
 import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+import org.cadixdev.gradle.licenser.LicenseExtension
+import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jmailen.gradle.kotlinter.KotlinterExtension
 
 plugins {
-  `java-library`
-  jacoco
-  `maven-publish`
-  signing
 
-  kotlin("jvm")
   id("org.jetbrains.dokka")
-
-  id("org.cadixdev.licenser")
-  id("org.jmailen.kotlinter")
-  id("io.gitlab.arturbosch.detekt")
   id("com.github.breadmoirai.github-release")
+
+  kotlin("jvm") apply (false)
+  id("org.cadixdev.licenser") apply (false)
+  id("org.jmailen.kotlinter") apply (false)
+  id("io.gitlab.arturbosch.detekt") apply (false)
 }
 
 val releaseVersion: String by project
 val isSnapshot = releaseVersion.endsWith("SNAPSHOT")
 
-val slf4jVersion: String by project
 val kotlinCoroutinesVersion: String by project
-val uriTemplateVersion: String by project
-val zalandoProblemVersion: String by project
-val okHttpVersion: String by project
-
-val jacksonVersion: String by project
+val slf4jVersion: String by project
 
 val junitVersion: String by project
 val hamcrestVersion: String by project
 
+val javaVersion: String by project
+val kotlinVersion: String by project
 
+allprojects {
 
-group = "io.outfoxx.sunday"
-version = releaseVersion
+  group = "io.outfoxx.sunday"
+  version = releaseVersion
 
-
-repositories {
-  mavenCentral()
-}
-
-dependencies {
-
-  api("org.slf4j:slf4j-api:$slf4jVersion")
-  api("org.zalando:problem:$zalandoProblemVersion")
-  api("org.zalando:jackson-datatype-problem:$zalandoProblemVersion")
-  api("com.github.hal4j:uritemplate:$uriTemplateVersion")
-
-  api("com.squareup.okhttp3:okhttp:$okHttpVersion")
-
-  implementation(kotlin("stdlib"))
-  implementation(kotlin("reflect"))
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinCoroutinesVersion")
-
-  implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-  implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-
-  //
-  // TESTING
-  //
-
-  testRuntimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
-
-  testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-  testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
-
-  testImplementation("org.hamcrest:hamcrest-library:$hamcrestVersion")
-
-  testImplementation("com.squareup.okhttp3:mockwebserver:$okHttpVersion")
-}
-
-
-//
-// COMPILE
-//
-
-java {
-  sourceCompatibility = JavaVersion.VERSION_1_8
-  targetCompatibility = JavaVersion.VERSION_1_8
-
-  withSourcesJar()
-  withJavadocJar()
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-  kotlinOptions {
-    kotlinOptions {
-      languageVersion = "1.6"
-      apiVersion = "1.6"
-    }
-    jvmTarget = "11"
+  repositories {
+    mavenCentral()
   }
+
 }
 
 
-//
-// TEST
-//
+subprojects {
 
-jacoco {
-  toolVersion = "0.8.7"
-}
+  apply(plugin = "java-library")
+  apply(plugin = "jacoco")
+  apply(plugin = "maven-publish")
+  apply(plugin = "signing")
 
-tasks {
-  test {
+  apply(plugin = "org.jetbrains.kotlin.jvm")
+  apply(plugin = "org.jetbrains.dokka")
+  apply(plugin = "org.cadixdev.licenser")
+  apply(plugin = "org.jmailen.kotlinter")
+  apply(plugin = "io.gitlab.arturbosch.detekt")
+
+  dependencies {
+
+    "implementation"(kotlin("stdlib"))
+    "implementation"(kotlin("reflect"))
+    "implementation"("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinCoroutinesVersion")
+
+    //
+    // TESTING
+    //
+
+    "testRuntimeOnly"("org.slf4j:slf4j-simple:$slf4jVersion")
+
+    "testImplementation"("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+    "testImplementation"("org.junit.jupiter:junit-jupiter-params:$junitVersion")
+    "testRuntimeOnly"("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+
+    "testImplementation"("org.hamcrest:hamcrest-library:$hamcrestVersion")
+  }
+
+
+  //
+  // COMPILE
+  //
+
+  configure<JavaPluginExtension> {
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    targetCompatibility = JavaVersion.toVersion(javaVersion)
+
+    withSourcesJar()
+    withJavadocJar()
+  }
+
+  tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
+      kotlinOptions {
+        languageVersion = kotlinVersion
+        apiVersion = kotlinVersion
+      }
+      jvmTarget = javaVersion
+    }
+  }
+
+
+  //
+  // TEST
+  //
+
+  configure<JacocoPluginExtension> {
+    toolVersion = "0.8.7"
+  }
+
+  tasks.named<Test>("test").configure {
+
     useJUnitPlatform()
 
-    finalizedBy(jacocoTestReport)
-    jacoco {}
+    finalizedBy("jacocoTestReport")
   }
 
-  jacocoTestReport {
-    dependsOn(test)
+  tasks.named<JacocoReport>("jacocoTestReport").configure {
+    dependsOn("test")
   }
-}
 
 
-//
-// DOCS
-//
+  //
+  // CHECKS
+  //
 
-tasks {
-  dokkaHtml {
+  configure<KotlinterExtension> {
+    indentSize = 2
+  }
+
+  configure<LicenseExtension> {
+    header.set(resources.text.fromFile(file("${rootProject.layout.projectDirectory}/HEADER.txt")))
+    include("**/*.kt")
+  }
+
+  configure<DetektExtension> {
+    input = files("src/main/kotlin")
+
+    config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
+    buildUponDefaultConfig = true
+    baseline = file("src/main/detekt/detekt-baseline.xml")
+  }
+
+  tasks.withType<Detekt>().configureEach {
+    jvmTarget = javaVersion
+  }
+
+
+  //
+  // DOCS
+  //
+
+  tasks.named<DokkaTask>("dokkaHtml") {
+    failOnWarning.set(true)
+    suppressObviousFunctions.set(false)
     outputDirectory.set(file("$buildDir/dokka/${project.version}"))
   }
 
-  javadoc {
-    dependsOn(dokkaHtml)
+  tasks.named<DokkaTask>("dokkaJavadoc") {
+    failOnWarning.set(true)
+    suppressObviousFunctions.set(false)
+    outputDirectory.set(tasks.named<Javadoc>("javadoc").get().destinationDir)
   }
-}
+
+  tasks.named<Javadoc>("javadoc").configure {
+    dependsOn("dokkaJavadoc")
+  }
 
 
-//
-// CHECKS
-//
+  //
+  // PUBLISHING
+  //
 
-kotlinter {
-  indentSize = 2
-}
+  configure<PublishingExtension> {
 
-license {
-  header.set(resources.text.fromFile(file("HEADER.txt")))
-  include("**/*.kt")
-}
+    publications {
 
-detekt {
-  input = files("src/main/kotlin")
+      create<MavenPublication>("library") {
+        from(components["java"])
 
-  config = files("src/main/detekt/detekt.yml")
-  buildUponDefaultConfig = true
-  baseline = file("src/main/detekt/detekt-baseline.xml")
-}
+        pom {
 
-tasks.withType<Detekt>().configureEach {
-  jvmTarget = "11"
-}
+          when (project.name) {
+            "sunday-core" -> {
+              name.set("Sunday - Kotlin - Core")
+              description.set("Sunday | The framework of REST for Kotlin")
+            }
 
-
-//
-// PUBLISHING
-//
-
-publishing {
-
-  publications {
-
-    create<MavenPublication>("library") {
-      from(components["java"])
-
-      pom {
-
-        name.set("Sunday Kotlin")
-        description.set("Sunday | The framework of REST for Kotlin")
-        url.set("https://github.com/outfoxx/sunday-kt")
-
-        organization {
-          name.set("Outfox, Inc.")
-          url.set("https://outfoxx.io")
-        }
-
-        issueManagement {
-          system.set("GitHub")
-          url.set("https://github.com/outfoxx/sunday-kt/issues")
-        }
-
-        licenses {
-          license {
-            name.set("Apache License 2.0")
-            url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/main/LICENSE.txt")
-            distribution.set("repo")
+            "sunday-okhttp" -> {
+              name.set("Sunday - Kotlin - OkHttp Implementation")
+              description.set(
+                """
+                  Sunday | The framework of REST for Kotlin
+                  
+                  The OkHttp implementation uses the OkHttp client library
+                  to execute HTTP requests.
+                """.trimIndent()
+              )
+            }
           }
-        }
-
-        scm {
           url.set("https://github.com/outfoxx/sunday-kt")
-          connection.set("scm:https://github.com/outfoxx/sunday-kt.git")
-          developerConnection.set("scm:git@github.com:outfoxx/sunday-kt.git")
-        }
 
-        developers {
-          developer {
-            id.set("kdubb")
-            name.set("Kevin Wooten")
-            email.set("kevin@outfoxx.io")
+          organization {
+            name.set("Outfox, Inc.")
+            url.set("https://outfoxx.io")
           }
+
+          issueManagement {
+            system.set("GitHub")
+            url.set("https://github.com/outfoxx/sunday-kt/issues")
+          }
+
+          licenses {
+            license {
+              name.set("Apache License 2.0")
+              url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/main/LICENSE.txt")
+              distribution.set("repo")
+            }
+          }
+
+          scm {
+            url.set("https://github.com/outfoxx/sunday-kt")
+            connection.set("scm:https://github.com/outfoxx/sunday-kt.git")
+            developerConnection.set("scm:git@github.com:outfoxx/sunday-kt.git")
+          }
+
+          developers {
+            developer {
+              id.set("kdubb")
+              name.set("Kevin Wooten")
+              email.set("kevin@outfoxx.io")
+            }
+          }
+
         }
+      }
 
+    }
+
+    repositories {
+      maven {
+        name = "MavenCentral"
+        val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+        val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+        url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
+        credentials {
+          username = project.findProperty("ossrhUsername")?.toString()
+          password = project.findProperty("ossrhPassword")?.toString()
+        }
       }
     }
 
   }
 
-  repositories {
-    maven {
-      name = "MavenCentral"
-      val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-      val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-      url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
-      credentials {
-        username = project.findProperty("ossrhUsername")?.toString()
-        password = project.findProperty("ossrhPassword")?.toString()
-      }
-    }
+  configure<SigningExtension> {
+    val signingKeyId: String? by project
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+
+    val publishing = project.extensions.getByType<PublishingExtension>()
+    sign(publishing.publications["library"])
+  }
+
+  tasks.withType<Sign>().configureEach {
+    onlyIf { !isSnapshot }
   }
 
 }
-
-
-signing {
-  val signingKeyId: String? by project
-  val signingKey: String? by project
-  val signingPassword: String? by project
-  useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-  sign(publishing.publications["library"])
-}
-
-tasks.withType<Sign>().configureEach {
-  onlyIf { !isSnapshot }
-}
-
 
 //
 // RELEASING
@@ -252,16 +274,27 @@ githubRelease {
   tagName(releaseVersion)
   targetCommitish("main")
   releaseName("v${releaseVersion}")
+  generateReleaseNotes(true)
   draft(true)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    files("${project.rootDir}/build/libs/sunday-${releaseVersion}*.jar")
+    listOf("core", "okhttp").flatMap { module ->
+      listOf("", "-javadoc", "-sources").map { suffix ->
+        file("$rootDir/$module/build/libs/sunday-$module-$releaseVersion$suffix.jar")
+      }
+    }
   )
   overwrite(true)
-  token(project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+  authorization(
+    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
+  )
 }
 
 tasks {
+
+  dokkaHtmlMultiModule.configure {
+    outputDirectory.set(buildDir.resolve("dokka/${releaseVersion}"))
+  }
 
   register("publishMavenRelease") {
     dependsOn(

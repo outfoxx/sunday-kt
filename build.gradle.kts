@@ -27,6 +27,8 @@ val hamcrestVersion: String by project
 val javaVersion: String by project
 val kotlinVersion: String by project
 
+val moduleNames = listOf("core", "jdk", "okhttp")
+
 allprojects {
 
   group = "io.outfoxx.sunday"
@@ -285,9 +287,9 @@ githubRelease {
   draft(true)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    listOf("core", "jdk", "okhttp").flatMap { module ->
+    moduleNames.flatMap { moduleName ->
       listOf("", "-javadoc", "-sources").map { suffix ->
-        file("$rootDir/$module/build/libs/sunday-$module-$releaseVersion$suffix.jar")
+        file("$rootDir/$moduleName/build/libs/sunday-$moduleName-$releaseVersion$suffix.jar")
       }
     }
   )
@@ -305,7 +307,9 @@ tasks {
 
   register("publishMavenRelease") {
     dependsOn(
-      "publishAllPublicationsToMavenCentralRepository"
+      moduleNames.map { moduleName ->
+        ":sunday-$moduleName:publishAllPublicationsToMavenCentralRepository"
+      }
     )
   }
 

@@ -8,5 +8,7 @@ io.outfoxx.sunday.json.patch
 io.outfoxx.sunday.mediatypes.codecs
 io.outfoxx.sunday.problems
 io.outfoxx.sunday.utils
+module:sunday-jdk
+io.outfoxx.sunday.jdk
 module:sunday-okhttp
 io.outfoxx.sunday.okhttp

@@ -3,12 +3,19 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>io.outfoxx.sunday.jdk</title>
-<link href="../../images/logo-icon.svg" rel="icon" type="image/svg">
-    <script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
-const savedDarkMode = storage ? JSON.parse(storage) : false
-if(savedDarkMode === true){
-    document.getElementsByTagName("html")[0].classList.add("theme-dark")
-}</script>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
 <script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../styles/style.css" rel="Stylesheet">
 <link href="../../styles/jetbrains-mono.css" rel="Stylesheet">
@@ -19,7 +26,8 @@ if(savedDarkMode === true){
 <script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../scripts/main.js" defer></script>
-<script type="text/javascript" src="../../scripts/prism.js" async></script></head>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
 <body>
 <div class="navigation-wrapper" id="navigation-wrapper">
     <div id="leftToggler"><span class="icon-toggler"></span></div>
@@ -39,9 +47,9 @@ if(savedDarkMode === true){
     </div>
     <div id="main">
 <div class="main-content" id="content" pageids="sunday-jdk::io.outfoxx.sunday.jdk////PointingToDeclaration//1142809428">
-  <div class="breadcrumbs"><a href="../index.html">sunday-jdk</a><span class="delimiter">/</span><a href="index.html">io.outfoxx.sunday.jdk</a></div>
+  <div class="breadcrumbs"><a href="../index.html">sunday-jdk</a><span class="delimiter">/</span><span class="current">io.outfoxx.sunday.jdk</span></div>
   <div class="cover ">
-    <h1 class="cover"><span>Package io.</span><wbr><span>outfoxx.</span><wbr><span>sunday.</span><wbr><span>jdk</span></h1>
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button></div>
@@ -57,7 +65,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-request/index.html">JdkRequest</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">request<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpRequest///PointingToDeclaration/">HttpRequest</span><span class="token punctuation">, </span></span><span class="parameter ">httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-request/index.html">Request</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-request/index.html">Request</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-request/index.html">JdkRequest</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">request<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpRequest///PointingToDeclaration/">HttpRequest</span><span class="token punctuation">, </span></span><span class="parameter ">httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-request/index.html">Request</a></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-request/index.html">Request</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -72,7 +80,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-request-factory/index.html">JdkRequestFactory</a><span class="token punctuation">(</span><span class="parameters wrapped"><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;baseURI<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday/-u-r-i-template/index.html">URITemplate</a><span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span><span class="token operator"> = </span>defaultHttpClient()<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">val </span>mediaTypeEncoders<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday.mediatypes.codecs/-media-type-encoders/index.html">MediaTypeEncoders</a><span class="token operator"> = </span>MediaTypeEncoders.default<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;<span class="token keyword">val </span>mediaTypeDecoders<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/index.html">MediaTypeDecoders</a><span class="token operator"> = </span>MediaTypeDecoders.default<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;requestTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>requestTimeoutDefault<span class="token punctuation">, </span></span><span class="parameter indented">&nbsp;&nbsp;&nbsp;&nbsp;eventRequestTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>EventSource.eventTimeoutDefault</span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday/-request-factory/index.html">RequestFactory</a>, <a href="https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html">Closeable</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday/-request-factory/index.html">RequestFactory</a>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-request-factory/index.html">JdkRequestFactory</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">baseURI<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday/-u-r-i-template/index.html">URITemplate</a><span class="token punctuation">, </span></span><span class="parameter ">httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span><span class="token operator"> = </span>defaultHttpClient()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>mediaTypeEncoders<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday.mediatypes.codecs/-media-type-encoders/index.html">MediaTypeEncoders</a><span class="token operator"> = </span>MediaTypeEncoders.default<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>mediaTypeDecoders<span class="token operator">: </span><a href="../../sunday-core/io.outfoxx.sunday.mediatypes.codecs/-media-type-decoders/index.html">MediaTypeDecoders</a><span class="token operator"> = </span>MediaTypeDecoders.default<span class="token punctuation">, </span></span><span class="parameter ">requestTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>requestTimeoutDefault<span class="token punctuation">, </span></span><span class="parameter ">eventRequestTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>EventSource.eventTimeoutDefault</span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday/-request-factory/index.html">RequestFactory</a>, <a href="https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html">Closeable</a></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday/-request-factory/index.html">RequestFactory</a>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -87,7 +95,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-response/index.html">JdkResponse</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">response<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpResponse///PointingToDeclaration/">HttpResponse</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="okio/BufferedSource///PointingToDeclaration/">BufferedSource</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a> based on <span data-unresolved-link="java.net.http/HttpResponse///PointingToDeclaration/">HttpResponse</span>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-response/index.html">JdkResponse</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">response<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpResponse///PointingToDeclaration/">HttpResponse</span><span class="token operator">&lt;</span><span class="token keyword"></span><span data-unresolved-link="okio/BufferedSource///PointingToDeclaration/">BufferedSource</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">httpClient<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpClient///PointingToDeclaration/">HttpClient</span></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a> based on <span data-unresolved-link="java.net.http/HttpResponse///PointingToDeclaration/">HttpResponse</span>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -102,7 +110,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-response-info/index.html">JdkResponseInfo</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">responseInfo<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpResponse.ResponseInfo///PointingToDeclaration/">HttpResponse.ResponseInfo</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>request<span class="token operator">: </span><a href="-jdk-request/index.html">JdkRequest</a></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a> based on <span data-unresolved-link="java.net.http/HttpResponse.ResponseInfo///PointingToDeclaration/">ResponseInfo</span>.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-jdk-response-info/index.html">JdkResponseInfo</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">responseInfo<span class="token operator">: </span><span data-unresolved-link="java.net.http/HttpResponse.ResponseInfo///PointingToDeclaration/">HttpResponse.ResponseInfo</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>request<span class="token operator">: </span><a href="-jdk-request/index.html">JdkRequest</a></span></span><span class="token punctuation">)</span> : <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a></div><div class="brief "><p class="paragraph">JDK11 HTTP Client implementation of <a href="../../sunday-core/io.outfoxx.sunday.http/-response/index.html">Response</a> based on <span data-unresolved-link="java.net.http/HttpResponse.ResponseInfo///PointingToDeclaration/">ResponseInfo</span>.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -117,7 +125,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-reason-phrases/index.html">ReasonPhrases</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-jdk:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-reason-phrases/index.html">ReasonPhrases</a></div></div></div>
               </div>
             </div>
           </div>
@@ -126,8 +134,9 @@ if(savedDarkMode === true){
     </div>
   </div>
 </div>
-        <div class="footer"><span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
-        </div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
     </div>
 </div>
 

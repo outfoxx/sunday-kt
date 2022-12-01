@@ -3,12 +3,19 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>Response</title>
-<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
-    <script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
-const savedDarkMode = storage ? JSON.parse(storage) : false
-if(savedDarkMode === true){
-    document.getElementsByTagName("html")[0].classList.add("theme-dark")
-}</script>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
 <script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
 <link href="../../../styles/style.css" rel="Stylesheet">
 <link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
@@ -19,7 +26,8 @@ if(savedDarkMode === true){
 <script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
 <script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
 <script type="text/javascript" src="../../../scripts/main.js" defer></script>
-<script type="text/javascript" src="../../../scripts/prism.js" async></script></head>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
 <body>
 <div class="navigation-wrapper" id="navigation-wrapper">
     <div id="leftToggler"><span class="icon-toggler"></span></div>
@@ -39,10 +47,10 @@ if(savedDarkMode === true){
     </div>
     <div id="main">
 <div class="main-content" id="content" pageids="sunday-core::io.outfoxx.sunday.http/Response///PointingToDeclaration//-1398131682">
-  <div class="breadcrumbs"><a href="../../index.html">sunday-core</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.http</a><span class="delimiter">/</span><a href="index.html">Response</a></div>
+  <div class="breadcrumbs"><a href="../../index.html">sunday-core</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday.http</a><span class="delimiter">/</span><span class="current">Response</span></div>
   <div class="cover ">
     <h1 class="cover"><span><span>Response</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">Response</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">HTTP response.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">Response</a></div><p class="paragraph">HTTP response.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Properties">Properties</button><button class="section-tab" data-togglable="Extensions">Extensions</button><button class="section-tab" data-togglable="Inheritors">Inheritors</button></div>
@@ -52,13 +60,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="body.html">body</a></div>
+                <div><a href="body.html"><span><span>body</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1546363573%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="1546363573%2FProperties%2F-1398131682" anchor-label="body" id="1546363573%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="body.html">body</a><span class="token operator">: </span><span data-unresolved-link="okio/BufferedSource///PointingToDeclaration/">BufferedSource</span><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="1546363573%2FProperties%2F-1398131682" anchor-label="body" id="1546363573%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response data source, if available.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="1546363573%2FProperties%2F-1398131682" anchor-label="body" id="1546363573%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="body.html">body</a><span class="token operator">: </span><span data-unresolved-link="okio/BufferedSource///PointingToDeclaration/">BufferedSource</span><span class="token operator">?</span></div><div class="brief "><a data-name="1546363573%2FProperties%2F-1398131682" anchor-label="body" id="1546363573%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response data source, if available.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -67,13 +75,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="headers.html">headers</a></div>
+                <div><a href="headers.html"><span><span>headers</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1372372387%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1372372387%2FProperties%2F-1398131682" anchor-label="headers" id="-1372372387%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="headers.html">headers</a><span class="token operator">: </span><a href="../index.html#550319891%2FClasslikes%2F-1398131682">Headers</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="-1372372387%2FProperties%2F-1398131682" anchor-label="headers" id="-1372372387%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response headers, if any were delivered.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1372372387%2FProperties%2F-1398131682" anchor-label="headers" id="-1372372387%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="headers.html">headers</a><span class="token operator">: </span><a href="../index.html#550319891%2FClasslikes%2F-1398131682">Headers</a></div><div class="brief "><a data-name="-1372372387%2FProperties%2F-1398131682" anchor-label="headers" id="-1372372387%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response headers, if any were delivered.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -82,13 +90,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="reason-phrase.html">reasonPhrase</a></div>
+                <div><a href="reason-phrase.html"><span>reason</span><wbr><span><span>Phrase</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-244352870%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-244352870%2FProperties%2F-1398131682" anchor-label="reasonPhrase" id="-244352870%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="reason-phrase.html">reasonPhrase</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="-244352870%2FProperties%2F-1398131682" anchor-label="reasonPhrase" id="-244352870%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP status message of the response.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-244352870%2FProperties%2F-1398131682" anchor-label="reasonPhrase" id="-244352870%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="reason-phrase.html">reasonPhrase</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="brief "><a data-name="-244352870%2FProperties%2F-1398131682" anchor-label="reasonPhrase" id="-244352870%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP status message of the response.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -97,13 +105,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="request.html">request</a></div>
+                <div><a href="request.html"><span><span>request</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="72944500%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="72944500%2FProperties%2F-1398131682" anchor-label="request" id="72944500%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="request.html">request</a><span class="token operator">: </span><a href="../-request/index.html">Request</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="72944500%2FProperties%2F-1398131682" anchor-label="request" id="72944500%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP request after API rewrites and/or HTTP redirects.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="72944500%2FProperties%2F-1398131682" anchor-label="request" id="72944500%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="request.html">request</a><span class="token operator">: </span><a href="../-request/index.html">Request</a></div><div class="brief "><a data-name="72944500%2FProperties%2F-1398131682" anchor-label="request" id="72944500%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP request after API rewrites and/or HTTP redirects.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -112,13 +120,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="status-code.html">statusCode</a></div>
+                <div><a href="status-code.html"><span>status</span><wbr><span><span>Code</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-667837832%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-667837832%2FProperties%2F-1398131682" anchor-label="statusCode" id="-667837832%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="status-code.html">statusCode</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="-667837832%2FProperties%2F-1398131682" anchor-label="statusCode" id="-667837832%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP status code of the response.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-667837832%2FProperties%2F-1398131682" anchor-label="statusCode" id="-667837832%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="status-code.html">statusCode</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div><div class="brief "><a data-name="-667837832%2FProperties%2F-1398131682" anchor-label="statusCode" id="-667837832%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP status code of the response.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -127,13 +135,13 @@ if(savedDarkMode === true){
         <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
           <div class="main-subrow keyValue ">
             <div class=""><span class="inline-flex">
-                <div><a href="trailers.html">trailers</a></div>
+                <div><a href="trailers.html"><span><span>trailers</span></span></a></div>
 <span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-155162761%2FProperties%2F-1398131682"></span>
                   <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-155162761%2FProperties%2F-1398131682" anchor-label="trailers" id="-155162761%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="trailers.html">trailers</a><span class="token operator">: </span><a href="../index.html#550319891%2FClasslikes%2F-1398131682">Headers</a><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><a data-name="-155162761%2FProperties%2F-1398131682" anchor-label="trailers" id="-155162761%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response trailers, if any were delivered.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-155162761%2FProperties%2F-1398131682" anchor-label="trailers" id="-155162761%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword"></span><span class="token keyword">val </span><a href="trailers.html">trailers</a><span class="token operator">: </span><a href="../index.html#550319891%2FClasslikes%2F-1398131682">Headers</a><span class="token operator">?</span></div><div class="brief "><a data-name="-155162761%2FProperties%2F-1398131682" anchor-label="trailers" id="-155162761%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">HTTP response trailers, if any were delivered.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -163,7 +171,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../content-length.html">contentLength</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html">Long</a><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Convenience accessor for HTTP Content-Length header.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../content-length.html">contentLength</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html">Long</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Convenience accessor for HTTP Content-Length header.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -178,7 +186,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../content-type.html">contentType</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday/-media-type/index.html">MediaType</a><span class="token operator">?</span><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Convenience accessor for HTTP Content-Type header.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../content-type.html">contentType</a><span class="token operator">: </span><a href="../../io.outfoxx.sunday/-media-type/index.html">MediaType</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Convenience accessor for HTTP Content-Type header.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -193,7 +201,7 @@ if(savedDarkMode === true){
                 </span></span></div>
             <div>
               <div class="title">
-                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-depenent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../is-successful.html">isSuccessful</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><div class="brief "><p class="paragraph">Convenience for checking if the <a href="status-code.html">Response.statusCode</a> represents a successful response.</p></div></div></div>
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="index.html">Response</a><span class="token punctuation">.</span><a href="../is-successful.html">isSuccessful</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Convenience for checking if the <a href="status-code.html">Response.statusCode</a> represents a successful response.</p></div></div></div>
               </div>
             </div>
           </div>
@@ -202,8 +210,9 @@ if(savedDarkMode === true){
     </div>
   </div>
 </div>
-        <div class="footer"><span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
-        </div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
     </div>
 </div>
 

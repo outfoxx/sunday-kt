@@ -193,6 +193,18 @@ subprojects {
                 """.trimIndent()
               )
             }
+
+            "sunday-jdk" -> {
+              name.set("Sunday - Kotlin - JDK 11 HTTP Client Implementation")
+              description.set(
+                """
+                  Sunday | The framework of REST for Kotlin
+                  
+                  The JDK 11 HTTP Client implementation uses the JDK 11 HTTP client
+                  to execute HTTP requests.
+                """.trimIndent()
+              )
+            }
           }
           url.set("https://github.com/outfoxx/sunday-kt")
 
@@ -278,7 +290,7 @@ githubRelease {
   draft(true)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
-    listOf("core", "okhttp").flatMap { module ->
+    listOf("core", "jdk", "okhttp").flatMap { module ->
       listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$module/build/libs/sunday-$module-$releaseVersion$suffix.jar")
       }

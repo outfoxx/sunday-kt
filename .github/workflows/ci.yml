@@ -48,11 +48,17 @@ jobs:
       with:
         java-version: '11'
 
+    - name: Build Artifacts & Docs
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk11-build-test
+        arguments: build dokkaHtmlMultiModule -x test
+
     - name: Publish Maven (Snapshot)
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk11-build-test
-        arguments: build publishAllPublicationsToMavenCentralRepository -x test
+        arguments: publishAllPublicationsToMavenCentralRepository
         properties: |
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}

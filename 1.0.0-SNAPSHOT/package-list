@@ -1,0 +1,12 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+module:sunday-core
+io.outfoxx.sunday
+io.outfoxx.sunday.http
+io.outfoxx.sunday.json.patch
+io.outfoxx.sunday.mediatypes.codecs
+io.outfoxx.sunday.problems
+io.outfoxx.sunday.utils
+module:sunday-okhttp
+io.outfoxx.sunday.okhttp

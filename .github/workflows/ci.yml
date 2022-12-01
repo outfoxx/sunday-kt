@@ -22,15 +22,17 @@ jobs:
     - name: Build & Test
       uses: burrunan/gradle-cache-action@v1
       with:
-        job-id: jdk8-build-test
-        arguments: build
+        job-id: jdk11-build-test
+        arguments: check
 
     - name: Updload Reports
       uses: actions/upload-artifact@v2
       if: always()
       with:
         name: reports
-        path: build/reports
+        path: |
+          core/build/reports/
+          okhttp/build/reports/
 
   publish:
     runs-on: ubuntu-latest
@@ -49,7 +51,7 @@ jobs:
     - name: Publish Maven (Snapshot)
       uses: burrunan/gradle-cache-action@v1
       with:
-        job-id: jdk8-build-test
+        job-id: jdk11-build-test
         arguments: build publishAllPublicationsToMavenCentralRepository -x test
         properties: |
           ossrhUsername=${{ secrets.OSSRH_USER }}

@@ -25,3 +25,11 @@ pluginManagement {
 }
 
 rootProject.name = "sunday"
+
+include(
+  "core",
+  "okhttp",
+)
+
+project(":core").name = "sunday-core"
+project(":okhttp").name = "sunday-okhttp"

@@ -25,7 +25,7 @@ jobs:
         ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
         ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
       with:
-        job-id: jdk8-build-test
+        job-id: jdk11-build-test
         arguments: >-
           build
           publishRelease
@@ -39,8 +39,8 @@ jobs:
     - name: Build Docs
       uses: burrunan/gradle-cache-action@v1
       with:
-        job-id: jdk8-build-test
-        arguments: dokkaHtml
+        job-id: jdk11-build-test
+        arguments: dokkaHtmlMultiModule
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0

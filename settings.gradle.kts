@@ -29,7 +29,9 @@ rootProject.name = "sunday"
 include(
   "core",
   "okhttp",
+  "jdk",
 )
 
 project(":core").name = "sunday-core"
 project(":okhttp").name = "sunday-okhttp"
+project(":jdk").name = "sunday-jdk"

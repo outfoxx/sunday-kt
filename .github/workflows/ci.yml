@@ -33,6 +33,7 @@ jobs:
         path: |
           core/build/reports/
           okhttp/build/reports/
+          jdk/build/reports/
 
   publish:
     runs-on: ubuntu-latest

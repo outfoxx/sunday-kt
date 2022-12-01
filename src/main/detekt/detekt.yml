@@ -19,7 +19,7 @@ complexity:
     active: false
   ComplexCondition:
     threshold: 6
-  ComplexMethod:
+  CyclomaticComplexMethod:
     threshold: 20
     ignoreSimpleWhenEntries: true
   NestedBlockDepth:

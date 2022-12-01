@@ -3,7 +3,6 @@ import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jmailen.gradle.kotlinter.KotlinterExtension
 
 plugins {
 
@@ -119,10 +118,6 @@ subprojects {
   //
   // CHECKS
   //
-
-  configure<KotlinterExtension> {
-    indentSize = 2
-  }
 
   configure<LicenseExtension> {
     header.set(resources.text.fromFile(file("${rootProject.layout.projectDirectory}/HEADER.txt")))

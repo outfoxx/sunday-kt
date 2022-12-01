@@ -322,10 +322,10 @@ class EventSource(
             }
           }
 
+      } catch (ignored: CancellationException) {
+        // do nothing
       } catch (error: Throwable) {
-        if (error !is CancellationException) {
-          receivedError(error)
-        }
+        receivedError(error)
       }
     }
   }

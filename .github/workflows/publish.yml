@@ -18,12 +18,6 @@ jobs:
     - uses: olegtarasov/get-tag@v2.1
       id: tagName
 
-    - name: Build Artifacts & Docs
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk11-build-test
-        arguments: build dokkaHtmlMultiModule -x test
-
     - name: Publish Release
       uses: burrunan/gradle-cache-action@v1
       env:
@@ -38,6 +32,12 @@ jobs:
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}
           github.token=${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Documentation
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk11-build-test
+        arguments: dokkaHtmlMultiModule -x build
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@4.0.0

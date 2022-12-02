@@ -14,24 +14,9 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.okhttp
+package io.outfoxx.sunday.test
 
-import io.outfoxx.sunday.http.Headers
-import io.outfoxx.sunday.http.Request
-import io.outfoxx.sunday.test.EventSourceTest
-import okhttp3.Headers.Companion.toHeaders
-import okhttp3.OkHttpClient
-
-class OkHttpEventSourceTest : EventSourceTest() {
-
-  override fun createRequest(url: String, headers: Headers): Request =
-    OkHttpRequest(
-      okhttp3.Request.Builder()
-        .method("GET", null)
-        .url(url)
-        .headers(headers.toMap().toHeaders())
-        .build(),
-      OkHttpClient.Builder().build(),
-    )
-
+enum class Implementation {
+  JDK,
+  OkHttp
 }

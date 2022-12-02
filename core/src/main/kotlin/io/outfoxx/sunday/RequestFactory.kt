@@ -23,10 +23,13 @@ import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ValueResponse
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import kotlinx.coroutines.flow.Flow
 import org.slf4j.Logger
 import org.zalando.problem.Problem
+import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
@@ -61,7 +64,11 @@ abstract class RequestFactory : Closeable {
    * @param typeId Problem type id to register.
    * @param problemType [Problem] subclass to map to [typeId].
    */
-  abstract fun registerProblem(typeId: String, problemType: KClass<out Problem>)
+  abstract fun registerProblem(typeId: String, problemType: KClass<out ThrowableProblem>)
+
+  abstract val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
+  abstract val mediaTypeEncoders: MediaTypeEncoders
+  abstract val mediaTypeDecoders: MediaTypeDecoders
 
   /**
    * Create a [Request].

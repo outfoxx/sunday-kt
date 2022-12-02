@@ -109,6 +109,12 @@ subprojects {
 
     useJUnitPlatform()
 
+    if (System.getenv("CI").isNullOrBlank()) {
+      testLogging {
+        events("passed", "skipped", "failed")
+      }
+    }
+
     finalizedBy("jacocoTestReport")
   }
 

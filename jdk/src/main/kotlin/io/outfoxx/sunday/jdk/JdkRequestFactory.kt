@@ -83,8 +83,8 @@ import kotlin.reflect.typeOf
 class JdkRequestFactory(
   private val baseURI: URITemplate,
   private val httpClient: HttpClient = defaultHttpClient(),
-  val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
-  val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
+  override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
+  override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault
 ) : RequestFactory(), Closeable {
@@ -115,10 +115,12 @@ class JdkRequestFactory(
     }
   }
 
-  private val problemTypes = mutableMapOf<String, KClass<out Problem>>()
+  override val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
+    get() = registeredProblemTypesStorage
+  private val registeredProblemTypesStorage = mutableMapOf<String, KClass<out ThrowableProblem>>()
 
-  override fun registerProblem(typeId: String, problemType: KClass<out Problem>) {
-    problemTypes[typeId] = problemType
+  override fun registerProblem(typeId: String, problemType: KClass<out ThrowableProblem>) {
+    registeredProblemTypesStorage[typeId] = problemType
   }
 
   override suspend fun <B : Any> request(
@@ -390,7 +392,8 @@ class JdkRequestFactory(
         val decoded: Map<String, Any> = problemDecoder.decode(body)
 
         val problemType = decoded["type"]?.toString() ?: ""
-        val problemClass = (problemTypes[problemType] ?: DefaultProblem::class).createType()
+        val problemClass =
+          (registeredProblemTypesStorage[problemType] ?: DefaultProblem::class).createType()
 
         problemDecoder.decode(decoded, problemClass)
       }

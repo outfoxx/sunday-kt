@@ -14,5 +14,5 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk9:$kotlinCoroutinesVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
-  testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
+  testImplementation(testFixtures(project(":sunday-core")))
 }

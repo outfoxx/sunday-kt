@@ -22,7 +22,7 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.http.ValueResponse
+import io.outfoxx.sunday.http.ResultResponse
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
@@ -44,10 +44,12 @@ abstract class RequestFactory : Closeable {
    * Purpose of the request.
    */
   enum class RequestPurpose {
+
     /**
      * Request will be used for normal RPC style calls.
      */
     Normal,
+
     /**
      * Request will be used for Server-Sent Events connections.
      */
@@ -173,10 +175,9 @@ abstract class RequestFactory : Closeable {
 
   /**
    * Create and execute a [request][Request] created from the given request
-   * parameters and return the server's [response][Response] along with a value
-   * decoded based on the response's Content-Type.
+   * parameters and returns a result decoded from the server's response.
    *
-   * @return [ValueResponse] returned from the generated request.
+   * @return Instance of [R] decoded from the HTTP response.
    */
   suspend inline fun <reified B : Any, reified R : Any> result(
     method: Method,
@@ -187,7 +188,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ValueResponse<R> = result(
+  ): R = result(
     method,
     pathTemplate,
     pathParameters,
@@ -201,10 +202,9 @@ abstract class RequestFactory : Closeable {
 
   /**
    * Create and execute a [request][Request] created from the given request
-   * parameters and return the server's [response][Response] along with a value
-   * decoded based on the response's Content-Type.
+   * parameters and returns a result decoded from the server's response.
    *
-   * @return [ValueResponse] returned from the generated request.
+   * @return Instance of [R] decoded from the HTTP response.
    */
   suspend inline fun <reified R : Any> result(
     method: Method,
@@ -214,7 +214,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ValueResponse<R> = result(
+  ): R = result(
     method,
     pathTemplate,
     pathParameters,
@@ -228,12 +228,11 @@ abstract class RequestFactory : Closeable {
 
   /**
    * Create and execute a [request][Request] created from the given request
-   * parameters and return the server's [response][Response] along with a value
-   * decoded based on the response's Content-Type.
+   * parameters and returns a result decoded from the server's response.
    *
-   * @return [ValueResponse] returned from the generated request.
+   * @return Instance of [R] decoded from the HTTP response.
    */
-  abstract suspend fun <B : Any, R : Any> result(
+  suspend fun <B : Any, R : Any> result(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -243,7 +242,91 @@ abstract class RequestFactory : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     resultType: KType
-  ): ValueResponse<R>
+  ): R = resultResponse<B, R>(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    body,
+    contentTypes,
+    acceptTypes,
+    headers,
+    resultType,
+  ).result
+
+  /**
+   * Create and execute a [request][Request] created from the given request
+   * parameters and return the server's [response][Response] along with a result
+   * decoded from the server's response.
+   *
+   * @return [ResultResponse] returned from the generated request.
+   */
+  suspend inline fun <reified B : Any, reified R : Any> resultResponse(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+  ): ResultResponse<R> = resultResponse(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    body,
+    contentTypes,
+    acceptTypes,
+    headers,
+    typeOf<R>()
+  )
+
+  /**
+   * Create and execute a [request][Request] created from the given request
+   * parameters and return the server's [response][Response] along with a result
+   * decoded from the server's response.
+   *
+   * @return [ResultResponse] returned from the generated request.
+   */
+  suspend inline fun <reified R : Any> resultResponse(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+  ): ResultResponse<R> = resultResponse(
+    method,
+    pathTemplate,
+    pathParameters,
+    queryParameters,
+    null as Unit?,
+    contentTypes,
+    acceptTypes,
+    headers,
+    typeOf<R>()
+  )
+
+  /**
+   * Create and execute a [request][Request] created from the given request
+   * parameters and return the server's [response][Response] along with a result
+   * decoded from the server's response.
+   *
+   * @return [ResultResponse] returned from the generated request.
+   */
+  abstract suspend fun <B : Any, R : Any> resultResponse(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    resultType: KType
+  ): ResultResponse<R>
 
   /**
    * Creates an [EventSource] that uses the provided request parameters to supply

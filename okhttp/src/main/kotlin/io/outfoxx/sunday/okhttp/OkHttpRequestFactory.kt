@@ -41,7 +41,7 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.http.ValueResponse
+import io.outfoxx.sunday.http.ResultResponse
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
@@ -192,7 +192,7 @@ class OkHttpRequestFactory(
     return request.execute()
   }
 
-  override suspend fun <B : Any, R : Any> result(
+  override suspend fun <B : Any, R : Any> resultResponse(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters?,
@@ -202,7 +202,7 @@ class OkHttpRequestFactory(
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
     resultType: KType
-  ): ValueResponse<R> {
+  ): ResultResponse<R> {
 
     val response =
       response(
@@ -220,7 +220,7 @@ class OkHttpRequestFactory(
       throw parseFailure(response)
     }
 
-    return ValueResponse(parseSuccess(response, resultType), response)
+    return ResultResponse(parseSuccess(response, resultType), response)
   }
 
   override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {

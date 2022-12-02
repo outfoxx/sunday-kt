@@ -1,10 +1,9 @@
-[![CI](https://github.com/outfoxx/sunday-kt/actions/workflows/ci.yml/badge.svg)](https://github.com/outfoxx/sunday-kt/actions/workflows/ci.yml)
+Sunday 🙏 The framework of REST for Kotlin
+===
 
----
-
-# Sunday 🙏 The framework of REST for Kotlin
-
----
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/outfoxx/sunday-kt/CI)
+![Maven Central](https://img.shields.io/maven-central/v/io.outfoxx.sunday/sunday.svg)
+![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/io.outfoxx.sunday/sunday.svg)
 
 Kotlin framework for generated REST clients.
 

@@ -67,10 +67,16 @@ abstract class GeneratedAPITests {
         acceptTypes = listOf(JSON),
       )
 
+    suspend fun testVoidResultResponse(): ResultResponse<Unit> =
+      requestFactory.resultResponse(
+        method = Method.Get,
+        pathTemplate = "/test",
+      )
+
   }
 
   @Test
-  fun `generated styel API result method`() {
+  fun `generated style API result method`() {
 
     val testResult = API.TestResult("Test", 10)
 
@@ -93,7 +99,7 @@ abstract class GeneratedAPITests {
   }
 
   @Test
-  fun `generated styel API result response method`() {
+  fun `generated style API result response method`() {
 
     val testResult = API.TestResult("Test", 10)
 
@@ -109,12 +115,36 @@ abstract class GeneratedAPITests {
 
       val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
 
-      val result = runBlocking { api.testResultResponse() }
+      val resultResponse = runBlocking { api.testResultResponse() }
 
-      assertThat(result.result, equalTo(testResult))
+      assertThat(resultResponse.result, equalTo(testResult))
       assertThat(
-        result.headers.map { it.first.lowercase() to it.second.lowercase() },
+        resultResponse.headers.map { it.first.lowercase() to it.second.lowercase() },
         hasItems(ContentType to JSON.value, ContentLength to "29")
+      )
+    }
+  }
+
+  @Test
+  fun `generated style API unit result response method`() {
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .addHeader(ContentLength, "0")
+        .setResponseCode(204)
+    )
+    server.start()
+    server.use {
+
+      val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
+
+      val responseResult = runBlocking { api.testVoidResultResponse() }
+
+      assertThat(responseResult.result, equalTo(Unit))
+      assertThat(
+        responseResult.headers.map { it.first.lowercase() to it.second.lowercase() },
+        hasItems(ContentLength to "0")
       )
     }
   }

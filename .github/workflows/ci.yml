@@ -49,7 +49,7 @@ jobs:
       with:
         java-version: '11'
 
-    - name: Build Artifacts & Docs
+    - name: Build Artifacts & Documentation
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk11-build-test
@@ -63,13 +63,6 @@ jobs:
         properties: |
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}
-
-    - name: Upload Documentation
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: docs
-        path: build/dokka/
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4

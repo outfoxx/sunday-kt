@@ -25,7 +25,7 @@ jobs:
         job-id: jdk11-build-test
         arguments: check
 
-    - name: Updload Reports
+    - name: Upload Reports
       uses: actions/upload-artifact@v2
       if: always()
       with:
@@ -64,8 +64,15 @@ jobs:
           ossrhUsername=${{ secrets.OSSRH_USER }}
           ossrhPassword=${{ secrets.OSSRH_PASS }}
 
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: docs
+        path: build/dokka/
+
     - name: Publish Documentation
-      uses: JamesIves/github-pages-deploy-action@4.0.0
+      uses: JamesIves/github-pages-deploy-action@4
       with:
         branch: gh-pages
         clean: false

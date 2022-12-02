@@ -40,7 +40,7 @@ jobs:
         arguments: dokkaHtmlMultiModule -x build
 
     - name: Publish Documentation
-      uses: JamesIves/github-pages-deploy-action@4.0.0
+      uses: JamesIves/github-pages-deploy-action@4
       with:
         branch: gh-pages
         clean: false

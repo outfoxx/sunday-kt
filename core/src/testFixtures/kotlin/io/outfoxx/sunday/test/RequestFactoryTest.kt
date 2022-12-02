@@ -336,7 +336,7 @@ abstract class RequestFactoryTest {
 
           val result =
             runBlocking {
-              requestFactory.result<Void, Tester>(
+              requestFactory.resultResponse<Void, Tester>(
                 Method.Get,
                 "",
                 pathParameters = null,
@@ -349,7 +349,7 @@ abstract class RequestFactoryTest {
             }
 
           assertThat(result.headers, hasItem(ContentType to "application/json"))
-          assertThat(result.value, equalTo(tester))
+          assertThat(result.result, equalTo(tester))
         }
     }
   }

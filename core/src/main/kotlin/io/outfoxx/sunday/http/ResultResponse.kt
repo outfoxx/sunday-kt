@@ -17,9 +17,9 @@
 package io.outfoxx.sunday.http
 
 /**
- * HTTP response that includes a parsed/decoded value.
+ * HTTP response that includes a parsed/decoded result.
  */
-data class ValueResponse<T : Any>(
-  val value: T,
+data class ResultResponse<T : Any>(
+  val result: T,
   private val response: Response,
 ) : Response by response

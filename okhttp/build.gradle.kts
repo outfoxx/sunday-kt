@@ -11,5 +11,5 @@ dependencies {
   implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
-  testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
+  testImplementation(testFixtures(project(":sunday-core")))
 }

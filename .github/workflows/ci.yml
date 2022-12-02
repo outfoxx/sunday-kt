@@ -40,7 +40,7 @@ jobs:
 
     needs: [build-test]
 
-    if: github.event.pull_request.merged
+    if: github.event_name == 'push'
 
     steps:
     - uses: actions/checkout@v2

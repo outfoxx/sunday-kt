@@ -1,0 +1,47 @@
+name: Publish Snapshot
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-snapshot-${{github.ref_name}}
+  cancel-in-progress: true
+
+jobs:
+
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: oracle
+
+    - name: Build Artifacts & Documentation
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk11-build-test
+        arguments: build dokkaHtmlMultiModule -x test
+
+    - name: Publish Maven Artifacts (Snapshot)
+      uses: burrunan/gradle-cache-action@v1
+      with:
+        job-id: jdk11-build-test
+        arguments: publishAllPublicationsToMavenCentralRepository
+        properties: |
+          ossrhUsername=${{ secrets.OSSRH_USER }}
+          ossrhPassword=${{ secrets.OSSRH_PASS }}
+
+    - name: Publish Documentation
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: gh-pages
+        clean: false
+        folder: build/dokka

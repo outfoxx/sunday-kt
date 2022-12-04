@@ -12,6 +12,7 @@ pluginManagement {
   val kotlinterPluginVersion: String by settings
   val detektPluginVersion: String by settings
   val githubReleasePluginVersion: String by settings
+  val sonarqubeVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
@@ -20,6 +21,7 @@ pluginManagement {
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("io.gitlab.arturbosch.detekt") version detektPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
+    id("org.sonarqube") version sonarqubeVersion
   }
 
 }
@@ -30,6 +32,7 @@ include(
   "core",
   "okhttp",
   "jdk",
+  "code-coverage",
 )
 
 project(":core").name = "sunday-core"

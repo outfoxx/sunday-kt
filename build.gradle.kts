@@ -8,6 +8,8 @@ plugins {
 
   id("org.jetbrains.dokka")
   id("com.github.breadmoirai.github-release")
+  id("org.sonarqube")
+
 
   kotlin("jvm") apply (false)
   id("org.cadixdev.licenser") apply (false)
@@ -40,8 +42,7 @@ allprojects {
 
 }
 
-
-subprojects {
+configure(moduleNames.map { project(":sunday-$it") }) {
 
   apply(plugin = "java-library")
   apply(plugin = "jacoco")
@@ -115,11 +116,9 @@ subprojects {
       }
     }
 
-    finalizedBy("jacocoTestReport")
-  }
+    reports.junitXml.required.set(true)
 
-  tasks.named<JacocoReport>("jacocoTestReport").configure {
-    dependsOn("test")
+    finalizedBy("jacocoTestReport")
   }
 
 
@@ -277,6 +276,34 @@ subprojects {
     onlyIf { !isSnapshot }
   }
 
+  sonarqube {
+    properties {
+      property("sonar.sources", "src/main")
+      property("sonar.tests", "src/test")
+      property("sonar.junit.reportPaths", "build/test-results/test")
+      property("sonar.jacoco.reportPath", "")
+      property("sonar.jacoco.reportPaths", "")
+      property(
+        "sonar.coverage.jacoco.xmlReportPaths",
+        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
+      )
+    }
+  }
+
+}
+
+
+//
+// ANALYSIS
+//
+
+sonarqube {
+  properties {
+    property("sonar.projectName", "sunday-kt")
+    property("sonar.projectKey", "outfoxx_sunday-kt")
+    property("sonar.organization", "outfoxx")
+    property("sonar.host.url", "https://sonarcloud.io")
+  }
 }
 
 //

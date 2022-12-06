@@ -9,6 +9,7 @@ plugins {
   id("org.jetbrains.dokka")
   id("com.github.breadmoirai.github-release")
   id("org.sonarqube")
+  id("io.github.gradle-nexus.publish-plugin")
 
 
   kotlin("jvm") apply (false)
@@ -132,7 +133,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   }
 
   configure<DetektExtension> {
-    input = files("src/main/kotlin")
+    source = files("src/main/kotlin")
 
     config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
     buildUponDefaultConfig = true
@@ -175,6 +176,9 @@ configure(moduleNames.map { project(":sunday-$it") }) {
 
       create<MavenPublication>("library") {
         from(components["java"])
+
+        suppressPomMetadataWarningsFor("testFixturesApiElements")
+        suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
 
         pom {
 
@@ -246,20 +250,6 @@ configure(moduleNames.map { project(":sunday-$it") }) {
       }
 
     }
-
-    repositories {
-      maven {
-        name = "MavenCentral"
-        val snapshotUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-        val releaseUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-        url = uri(if (isSnapshot) snapshotUrl else releaseUrl)
-        credentials {
-          username = project.findProperty("ossrhUsername")?.toString()
-          password = project.findProperty("ossrhPassword")?.toString()
-        }
-      }
-    }
-
   }
 
   configure<SigningExtension> {
@@ -275,6 +265,11 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   tasks.withType<Sign>().configureEach {
     onlyIf { !isSnapshot }
   }
+
+
+  //
+  // ANALYSIS
+  //
 
   sonarqube {
     properties {
@@ -308,6 +303,16 @@ sonarqube {
   }
 }
 
+
+//
+// DOCS
+//
+
+tasks.dokkaHtmlMultiModule.configure {
+  outputDirectory.set(buildDir.resolve("dokka/${releaseVersion}"))
+}
+
+
 //
 // RELEASING
 //
@@ -317,9 +322,9 @@ githubRelease {
   repo("sunday-kt")
   tagName(releaseVersion)
   targetCommitish("main")
-  releaseName("v${releaseVersion}")
+  releaseName("🚀 v${releaseVersion}")
   generateReleaseNotes(true)
-  draft(true)
+  draft(false)
   prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
   releaseAssets(
     moduleNames.flatMap { moduleName ->
@@ -334,25 +339,8 @@ githubRelease {
   )
 }
 
-tasks {
-
-  dokkaHtmlMultiModule.configure {
-    outputDirectory.set(buildDir.resolve("dokka/${releaseVersion}"))
+nexusPublishing {
+  repositories {
+    sonatype()
   }
-
-  register("publishMavenRelease") {
-    dependsOn(
-      moduleNames.map { moduleName ->
-        ":sunday-$moduleName:publishAllPublicationsToMavenCentralRepository"
-      }
-    )
-  }
-
-  register("publishRelease") {
-    dependsOn(
-      "publishMavenRelease",
-      "githubRelease"
-    )
-  }
-
 }

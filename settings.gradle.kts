@@ -12,7 +12,8 @@ pluginManagement {
   val kotlinterPluginVersion: String by settings
   val detektPluginVersion: String by settings
   val githubReleasePluginVersion: String by settings
-  val sonarqubeVersion: String by settings
+  val sonarqubePluginVersion: String by settings
+  val nexusPublishPluginVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
@@ -21,7 +22,8 @@ pluginManagement {
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("io.gitlab.arturbosch.detekt") version detektPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
-    id("org.sonarqube") version sonarqubeVersion
+    id("org.sonarqube") version sonarqubePluginVersion
+    id("io.github.gradle-nexus.publish-plugin") version nexusPublishPluginVersion
   }
 
 }

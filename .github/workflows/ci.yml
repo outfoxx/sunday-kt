@@ -19,8 +19,8 @@ jobs:
 
     - uses: actions/setup-java@v3
       with:
-        java-version: '17'
-        distribution: oracle
+        java-version: '11'
+        distribution: adopt
 
     - name: Build & Test
       uses: burrunan/gradle-cache-action@v1
@@ -31,12 +31,10 @@ jobs:
         job-id: jdk11-build-test
         arguments: check sonar
 
-    - name: Upload Reports
-      uses: actions/upload-artifact@v3
-      if: always()
+    - name: Report Tests
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: reports
-        path: |
-          core/build/reports/
-          okhttp/build/reports/
-          jdk/build/reports/
+        name: Tests Results
+        path: "**/build/test-results/*/*.xml"
+        reporter: java-junit

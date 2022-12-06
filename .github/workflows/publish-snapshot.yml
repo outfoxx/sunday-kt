@@ -21,8 +21,8 @@ jobs:
 
     - uses: actions/setup-java@v3
       with:
-        java-version: '17'
-        distribution: oracle
+        java-version: '11'
+        distribution: adopt
 
     - name: Build Artifacts & Documentation
       uses: burrunan/gradle-cache-action@v1
@@ -34,10 +34,10 @@ jobs:
       uses: burrunan/gradle-cache-action@v1
       with:
         job-id: jdk11-build-test
-        arguments: publishAllPublicationsToMavenCentralRepository
+        arguments: publishToSonatype
         properties: |
-          ossrhUsername=${{ secrets.OSSRH_USER }}
-          ossrhPassword=${{ secrets.OSSRH_PASS }}
+          sonatypeUsername=${{ secrets.OSSRH_USER }}
+          sonatypePassword=${{ secrets.OSSRH_PASS }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4

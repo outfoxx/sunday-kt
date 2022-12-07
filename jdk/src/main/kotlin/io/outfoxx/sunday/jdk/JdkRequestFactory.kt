@@ -18,20 +18,15 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.MediaType.Companion.AnyText
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
-import io.outfoxx.sunday.SundayError.Reason.InvalidContentType
-import io.outfoxx.sunday.SundayError.Reason.NoData
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
-import io.outfoxx.sunday.SundayError.Reason.ResponseDecodingFailed
-import io.outfoxx.sunday.SundayError.Reason.UnexpectedEmptyResponse
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.Accept
 import io.outfoxx.sunday.http.HeaderNames.ContentType
@@ -41,17 +36,10 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.http.ResultResponse
-import io.outfoxx.sunday.http.contentLength
-import io.outfoxx.sunday.http.contentType
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
-import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
-import io.outfoxx.sunday.mediatypes.codecs.decode
-import io.outfoxx.sunday.problems.NonStandardStatus
-import io.outfoxx.sunday.utils.from
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
@@ -61,9 +49,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import okio.buffer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.zalando.problem.DefaultProblem
-import org.zalando.problem.Problem
-import org.zalando.problem.Status
 import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
 import java.net.Authenticator
@@ -73,9 +58,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.time.Duration
 import kotlin.reflect.KClass
-import kotlin.reflect.KType
-import kotlin.reflect.full.createType
-import kotlin.reflect.typeOf
 
 /**
  * JDK11 HTTP Client implementation of [RequestFactory].
@@ -102,9 +84,6 @@ class JdkRequestFactory(
     val requestTimeoutDefault: Duration = Duration.ofSeconds(10)
 
     private val logger = LoggerFactory.getLogger(JdkRequestFactory::class.java)
-
-    private val unacceptableStatusCodes = 400 until 600
-    private val emptyDataStatusCodes = setOf(204, 205)
 
     private fun URI.replaceQuery(rawQuery: String?): URI {
       val authorityPart = rawAuthority
@@ -221,37 +200,6 @@ class JdkRequestFactory(
     return request.execute()
   }
 
-  override suspend fun <B : Any, R : Any> resultResponse(
-    method: Method,
-    pathTemplate: String,
-    pathParameters: Parameters?,
-    queryParameters: Parameters?,
-    body: B?,
-    contentTypes: List<MediaType>?,
-    acceptTypes: List<MediaType>?,
-    headers: Parameters?,
-    resultType: KType
-  ): ResultResponse<R> {
-
-    val response =
-      response(
-        method,
-        pathTemplate,
-        pathParameters,
-        queryParameters,
-        body,
-        contentTypes,
-        acceptTypes,
-        headers
-      )
-
-    if (unacceptableStatusCodes.contains(response.statusCode)) {
-      throw parseFailure(response)
-    }
-
-    return ResultResponse(parseSuccess(response, resultType), response)
-  }
-
   override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
 
     return EventSource(requestSupplier)
@@ -307,98 +255,5 @@ class JdkRequestFactory(
 
   override fun close(cancelOutstandingRequests: Boolean) {
     // TODO track outstanding requests and implement appropriately
-  }
-
-  private fun <T : Any> parseSuccess(response: Response, resultType: KType): T {
-    logger.trace("Parsing success response")
-
-    val body = response.body
-    if (emptyDataStatusCodes.contains(response.statusCode)) {
-      if (resultType != typeOf<Unit>()) {
-        throw SundayError(UnexpectedEmptyResponse)
-      }
-      @Suppress("UNCHECKED_CAST")
-      return Unit as T
-    }
-
-    if (body == null || response.contentLength == 0L) {
-      throw SundayError(NoData)
-    }
-
-    val contentType =
-      response.contentType?.let { MediaType.from(it.toString()) }
-        ?: throw SundayError(InvalidContentType, response.contentType?.value ?: "")
-
-    val contentTypeDecoder = mediaTypeDecoders.find(contentType)
-      ?: throw SundayError(NoDecoder, contentType.value)
-
-    try {
-
-      return contentTypeDecoder.decode(body, resultType)
-    } catch (x: Throwable) {
-      throw SundayError(ResponseDecodingFailed, cause = x)
-    }
-  }
-
-  private fun parseFailure(response: Response): ThrowableProblem {
-    logger.trace("Parsing failure response")
-
-    val status =
-      try {
-        Status.valueOf(response.statusCode)
-      } catch (ignored: IllegalArgumentException) {
-        NonStandardStatus(response)
-      }
-
-    val body = response.body
-
-    return if (body != null && response.contentLength != 0L) {
-
-      val contentType =
-        response.contentType?.let { MediaType.from(it.toString()) }
-          ?: MediaType.OctetStream
-
-      if (!contentType.compatible(MediaType.Problem)) {
-        val (responseText, responseData) =
-          if (contentType.compatible(AnyText))
-            body.readString(Charsets.from(contentType)) to null
-          else
-            null to body.readByteArray()
-
-        Problem.builder()
-          .withStatus(status)
-          .withTitle(status.reasonPhrase)
-          .apply {
-            if (responseText != null) {
-              with("responseText", responseText)
-            }
-            if (responseData != null) {
-              with("responseData", responseData)
-            }
-          }
-          .build()
-      } else {
-
-        val problemDecoder =
-          mediaTypeDecoders.find(MediaType.Problem)
-            ?: throw SundayError(NoDecoder, MediaType.Problem.value)
-
-        problemDecoder as? StructuredMediaTypeDecoder
-          ?: throw SundayError(
-            NoDecoder,
-            "'${MediaType.Problem}' decoder must support structured decoding"
-          )
-
-        val decoded: Map<String, Any> = problemDecoder.decode(body)
-
-        val problemType = decoded["type"]?.toString() ?: ""
-        val problemClass =
-          (registeredProblemTypesStorage[problemType] ?: DefaultProblem::class).createType()
-
-        problemDecoder.decode(decoded, problemClass)
-      }
-    } else {
-      Problem.valueOf(status)
-    }
   }
 }

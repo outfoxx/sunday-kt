@@ -19,8 +19,10 @@ package io.outfoxx.sunday.okhttp
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.onSuccess
@@ -46,6 +48,7 @@ import kotlin.coroutines.resumeWithException
 class OkHttpRequest(
   private val request: okhttp3.Request,
   private val httpClient: OkHttpClient,
+  private val requestDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : Request {
 
   companion object {
@@ -114,68 +117,73 @@ class OkHttpRequest(
       logger.debug("Starting")
 
       val call = httpClient.newCall(request)
-      call.enqueue(
-        object : Callback {
-          override fun onResponse(call: Call, response: okhttp3.Response) {
+      call.enqueue(RequestCallback(this, httpClient, requestDispatcher))
 
-            logger.debug("Received response")
-
-            launch(Dispatchers.IO) {
-
-              response.use {
-
-                // Because they called `start`, this is a long-lived response,
-                // cancel full-call timeouts.
-                (call as? RealCall)?.timeoutEarlyExit()
-
-                val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
-
-                trySend(startEvent)
-                  .onSuccess { logger.trace("Sent: start") }
-                  .onFailure { logger.error("Failed to send: start") }
-
-                val body = response.body
-                if (body != null) {
-
-                  logger.debug("Processing: response body")
-
-                  while (true) {
-
-                    val buffer = Buffer()
-
-                    val bytesRead = body.source().read(buffer, READ_SIZE)
-                    if (bytesRead == EOF) {
-                      break
-                    }
-
-                    trySend(Request.Event.Data(buffer))
-                      .onSuccess { logger.trace("Sent: data") }
-                      .onFailure { logger.error("Failed to send: data") }
-                  }
-
-                }
-
-                trySend(Request.Event.End(response.trailers()))
-                  .onSuccess { logger.trace("Sent: end") }
-                  .onFailure { logger.error("Failed to send: end") }
-              }
-
-              close()
-
-              logger.debug("Closed: response events")
-            }
-          }
-
-          override fun onFailure(call: Call, e: IOException) {
-
-            logger.debug("Received error")
-
-            cancel("Call failed", e)
-          }
-        },
-      )
       awaitClose { call.cancel() }
     }
   }
 
+  class RequestCallback(
+    private val scope: ProducerScope<Request.Event>,
+    private val httpClient: OkHttpClient,
+    private val dispatcher: CoroutineDispatcher,
+  ) : Callback {
+
+    override fun onResponse(call: Call, response: okhttp3.Response) {
+
+      logger.debug("Received response")
+
+      scope.launch(dispatcher) {
+
+        response.use {
+
+          // Because they called `start`, this is a long-lived response,
+          // cancel full-call timeouts.
+          (call as? RealCall)?.timeoutEarlyExit()
+
+          val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
+
+          scope.trySend(startEvent)
+            .onSuccess { logger.trace("Sent: start") }
+            .onFailure { logger.error("Failed to send: start") }
+
+          val body = response.body
+          if (body != null) {
+
+            logger.debug("Processing: response body")
+
+            while (true) {
+
+              val buffer = Buffer()
+
+              val bytesRead = body.source().read(buffer, READ_SIZE)
+              if (bytesRead == EOF) {
+                break
+              }
+
+              scope.trySend(Request.Event.Data(buffer))
+                .onSuccess { logger.trace("Sent: data") }
+                .onFailure { logger.error("Failed to send: data") }
+            }
+
+          }
+
+          scope.trySend(Request.Event.End(response.trailers()))
+            .onSuccess { logger.trace("Sent: end") }
+            .onFailure { logger.error("Failed to send: end") }
+        }
+
+        scope.close()
+
+        logger.debug("Closed: response events")
+      }
+    }
+
+    override fun onFailure(call: Call, e: IOException) {
+
+      logger.debug("Received error")
+
+      scope.cancel("Call failed", e)
+    }
+  }
 }

@@ -1,0 +1,286 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>EventSource</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+<a href="../../../index.html">
+<span>sunday</span>            </a>    </div>
+    <div>1.0.0-beta.18
+    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageids="sunday-core::io.outfoxx.sunday/EventSource///PointingToDeclaration//-1398131682">
+  <div class="breadcrumbs"><a href="../../index.html">sunday-core</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday</a><span class="delimiter">/</span><span class="current">EventSource</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Event</span><wbr><span><span>Source</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">EventSource</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">requestSupplier<span class="token operator">: </span><span class="token keyword">suspend </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.http/index.html#550319891%2FClasslikes%2F-1398131682">Headers</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.http/-request/index.html">Request</a><span class="token punctuation">, </span></span><span class="parameter ">retryTime<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>retryTimeDefault<span class="token punctuation">, </span></span><span class="parameter ">eventTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator">?</span><span class="token operator"> = </span>eventTimeoutDefault<span class="token punctuation">, </span></span><span class="parameter ">eventTimeoutCheckInterval<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>eventTimeoutCheckIntervalDefault<span class="token punctuation">, </span></span><span class="parameter ">logger<span class="token operator">: </span><span data-unresolved-link="org.slf4j/Logger///PointingToDeclaration/">Logger</span><span class="token operator"> = </span>LoggerFactory.getLogger(EventSource::class.java)</span></span><span class="token punctuation">)</span> : <a href="https://docs.oracle.com/javase/8/docs/api/java/io/Closeable.html">Closeable</a></div><p class="paragraph">Server-Sent Events stream client.</p><p class="paragraph"><a href="index.html">EventSource</a> is built on Sunday requests and allows customizing the requests for scenarios like authentication and custom headers.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button></div>
+    <div class="tabs-section-body">
+      <h2 class="tabbedcontent">Constructors</h2>
+      <div class="table" data-togglable="Constructors"><a data-name="1103161935%2FConstructors%2F-1398131682" anchor-label="EventSource" id="1103161935%2FConstructors%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-event-source.html"><span>Event</span><wbr><span><span>Source</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1103161935%2FConstructors%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-event-source.html"><span class="token function">EventSource</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">requestSupplier<span class="token operator">: </span><span class="token keyword">suspend </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.http/index.html#550319891%2FClasslikes%2F-1398131682">Headers</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="../../io.outfoxx.sunday.http/-request/index.html">Request</a><span class="token punctuation">, </span></span><span class="parameter ">retryTime<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>retryTimeDefault<span class="token punctuation">, </span></span><span class="parameter ">eventTimeout<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator">?</span><span class="token operator"> = </span>eventTimeoutDefault<span class="token punctuation">, </span></span><span class="parameter ">eventTimeoutCheckInterval<span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a><span class="token operator"> = </span>eventTimeoutCheckIntervalDefault<span class="token punctuation">, </span></span><span class="parameter ">logger<span class="token operator">: </span><span data-unresolved-link="org.slf4j/Logger///PointingToDeclaration/">Logger</span><span class="token operator"> = </span>LoggerFactory.getLogger(EventSource::class.java)</span></span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Types</h2>
+      <div class="table" data-togglable="Types"><a data-name="-1252149090%2FClasslikes%2F-1398131682" anchor-label="Companion" id="-1252149090%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-companion/index.html"><span><span>Companion</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1252149090%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="2001013072%2FClasslikes%2F-1398131682" anchor-label="Event" id="2001013072%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-event/index.html"><span><span>Event</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2001013072%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-event/index.html">Event</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>event<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>id<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>data<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>origin<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">SSE Event.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="154815594%2FClasslikes%2F-1398131682" anchor-label="ReadyState" id="154815594%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-ready-state/index.html"><span>Ready</span><wbr><span><span>State</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="154815594%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-ready-state/index.html">ReadyState</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-ready-state/index.html">EventSource.ReadyState</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Possible states of the <a href="index.html">EventSource</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="-865660692%2FFunctions%2F-1398131682" anchor-label="addEventListener" id="-865660692%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="add-event-listener.html"><span>add</span><wbr><span>Event</span><wbr><span><span>Listener</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-865660692%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="add-event-listener.html"><span class="token function">addEventListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">event<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">handler<span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="-event/index.html">EventSource.Event</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Add an event listener for a specific event type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1640231585%2FFunctions%2F-1398131682" anchor-label="close" id="-1640231585%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="close.html"><span><span>close</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1640231585%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="close.html"><span class="token function">close</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Close and disconnect the <a href="index.html">EventSource</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2028369875%2FFunctions%2F-1398131682" anchor-label="connect" id="-2028369875%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="connect.html"><span><span>connect</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2028369875%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="connect.html"><span class="token function">connect</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Connect the <a href="index.html">EventSource</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="532175477%2FFunctions%2F-1398131682" anchor-label="removeEventListener" id="532175477%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="remove-event-listener.html"><span>remove</span><wbr><span>Event</span><wbr><span><span>Listener</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="532175477%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="remove-event-listener.html"><span class="token function">removeEventListener</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">event<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">handler<span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span><a href="-event/index.html">EventSource.Event</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Removed a previously added event listener.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Properties</h2>
+      <div class="table" data-togglable="Properties"><a data-name="-1280361666%2FProperties%2F-1398131682" anchor-label="eventListeners" id="-1280361666%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="event-listeners.html"><span>event</span><wbr><span><span>Listeners</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1280361666%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1280361666%2FProperties%2F-1398131682" anchor-label="eventListeners" id="-1280361666%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="event-listeners.html">eventListeners</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><span class="token punctuation">(</span><span class="token keyword"></span><a href="-event/index.html">EventSource.Event</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator">&gt;</span></div><div class="brief "><a data-name="-1280361666%2FProperties%2F-1398131682" anchor-label="eventListeners" id="-1280361666%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Current list of event listeners.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1153652366%2FProperties%2F-1398131682" anchor-label="onError" id="1153652366%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="on-error.html"><span>on</span><wbr><span><span>Error</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1153652366%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="1153652366%2FProperties%2F-1398131682" anchor-label="onError" id="1153652366%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="on-error.html">onError</a><span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span>error<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator">?</span></div><div class="brief "><a data-name="1153652366%2FProperties%2F-1398131682" anchor-label="onError" id="1153652366%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Error handler.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-591920337%2FProperties%2F-1398131682" anchor-label="onMessage" id="-591920337%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="on-message.html"><span>on</span><wbr><span><span>Message</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-591920337%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-591920337%2FProperties%2F-1398131682" anchor-label="onMessage" id="-591920337%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="on-message.html">onMessage</a><span class="token operator">: </span><span class="token punctuation">(</span><span class="token keyword"></span>event<span class="token operator">: </span><a href="-event/index.html">EventSource.Event</a><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator">?</span></div><div class="brief "><a data-name="-591920337%2FProperties%2F-1398131682" anchor-label="onMessage" id="-591920337%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Message handler.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="2100640186%2FProperties%2F-1398131682" anchor-label="onOpen" id="2100640186%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="on-open.html"><span>on</span><wbr><span><span>Open</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2100640186%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="2100640186%2FProperties%2F-1398131682" anchor-label="onOpen" id="2100640186%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">var </span><a href="on-open.html">onOpen</a><span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html">Unit</a><span class="token operator">?</span></div><div class="brief "><a data-name="2100640186%2FProperties%2F-1398131682" anchor-label="onOpen" id="2100640186%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Open handler.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2004956555%2FProperties%2F-1398131682" anchor-label="readyState" id="-2004956555%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="ready-state.html"><span>ready</span><wbr><span><span>State</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2004956555%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-2004956555%2FProperties%2F-1398131682" anchor-label="readyState" id="-2004956555%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="ready-state.html">readyState</a><span class="token operator">: </span><a href="-ready-state/index.html">EventSource.ReadyState</a></div><div class="brief "><a data-name="-2004956555%2FProperties%2F-1398131682" anchor-label="readyState" id="-2004956555%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Current state of the <a href="index.html">EventSource</a>.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-662989982%2FProperties%2F-1398131682" anchor-label="retryTime" id="-662989982%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="retry-time.html"><span>retry</span><wbr><span><span>Time</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-662989982%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-662989982%2FProperties%2F-1398131682" anchor-label="retryTime" id="-662989982%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="retry-time.html">retryTime</a><span class="token operator">: </span><a href="https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html">Duration</a></div><div class="brief "><a data-name="-662989982%2FProperties%2F-1398131682" anchor-label="retryTime" id="-662989982%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Current retry time.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+
+</body></html>
+

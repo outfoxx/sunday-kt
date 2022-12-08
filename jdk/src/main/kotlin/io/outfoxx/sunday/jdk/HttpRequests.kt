@@ -22,3 +22,27 @@ import java.net.http.HttpRequest
 internal fun HttpRequest.Builder.headers(headers: Headers) = apply {
   headers.forEach { header(it.first, it.second) }
 }
+
+fun HttpRequest.copyToBuilder(): HttpRequest.Builder {
+
+  val builder = HttpRequest.newBuilder()
+  builder.uri(uri())
+  builder.expectContinue(expectContinue())
+
+  version().ifPresent(builder::version)
+  timeout().ifPresent(builder::timeout)
+
+  val method = method()
+  bodyPublisher().ifPresentOrElse(
+    { builder.method(method, it) },
+    {
+      when (method) {
+        "GET" -> builder.GET()
+        "DELETE" -> builder.DELETE()
+        else -> builder.method(method, HttpRequest.BodyPublishers.noBody())
+      }
+    }
+  )
+
+  return builder
+}

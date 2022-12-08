@@ -65,6 +65,7 @@ import kotlin.reflect.KClass
 class JdkRequestFactory(
   private val baseURI: URITemplate,
   private val httpClient: HttpClient = defaultHttpClient(),
+  private val adapter: suspend (HttpRequest) -> HttpRequest = { it },
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
@@ -191,7 +192,10 @@ class JdkRequestFactory(
 
     logger.debug("Built request: {}", request)
 
-    return JdkRequest(request, httpClient)
+    return JdkRequest(
+      adapter.invoke(request),
+      httpClient
+    )
   }
 
   override suspend fun response(request: Request): Response {

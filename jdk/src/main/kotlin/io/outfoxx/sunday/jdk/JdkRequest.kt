@@ -79,7 +79,10 @@ class JdkRequest(
 
     val response =
       httpClient
-        .sendAsync(request, BufferedSourceBodyHandler())
+        .sendAsync(
+          request,
+          BufferedSourceBodyHandler()
+        )
         .await()
 
     return JdkResponse(response, httpClient)

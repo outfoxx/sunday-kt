@@ -28,7 +28,7 @@ import java.net.http.HttpResponse
  */
 class JdkResponse(
   private val response: HttpResponse<BufferedSource>,
-  private val httpClient: HttpClient
+  private val httpClient: HttpClient,
 ) : Response {
 
   override val statusCode: Int

@@ -1,0 +1,361 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>MediaType</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+<a href="../../../index.html">
+<span>sunday</span>            </a>    </div>
+    <div>1.0.0-beta.19
+    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageids="sunday-core::io.outfoxx.sunday/MediaType///PointingToDeclaration//-1398131682">
+  <div class="breadcrumbs"><a href="../../index.html">sunday-core</a><span class="delimiter">/</span><a href="../index.html">io.outfoxx.sunday</a><span class="delimiter">/</span><span class="current">MediaType</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Media</span><wbr><span><span>Type</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">MediaType</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>type<span class="token operator">: </span><a href="-type/index.html">MediaType.Type</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>tree<span class="token operator">: </span><a href="-tree/index.html">MediaType.Tree</a><span class="token operator"> = </span>Tree.Standard<span class="token punctuation">, </span></span><span class="parameter ">subtype<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"*"</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>suffix<span class="token operator">: </span><a href="-suffix/index.html">MediaType.Suffix</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">parameters<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyMap()</span></span><span class="token punctuation">)</span></div><p class="paragraph">MIME Media type with support for parameters.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Types">Types</button><button class="section-tab" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button></div>
+    <div class="tabs-section-body">
+      <h2 class="tabbedcontent">Constructors</h2>
+      <div class="table" data-togglable="Constructors"><a data-name="1268450974%2FConstructors%2F-1398131682" anchor-label="MediaType" id="1268450974%2FConstructors%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-media-type.html"><span>Media</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1268450974%2FConstructors%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-media-type.html"><span class="token function">MediaType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="-type/index.html">MediaType.Type</a><span class="token punctuation">, </span></span><span class="parameter ">tree<span class="token operator">: </span><a href="-tree/index.html">MediaType.Tree</a><span class="token operator"> = </span>Tree.Standard<span class="token punctuation">, </span></span><span class="parameter ">subtype<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"*"</span><span class="token punctuation">, </span></span><span class="parameter ">suffix<span class="token operator">: </span><a href="-suffix/index.html">MediaType.Suffix</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">vararg </span>parameters<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html">Pair</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="80429733%2FConstructors%2F-1398131682" anchor-label="MediaType" id="80429733%2FConstructors%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-media-type.html"><span>Media</span><wbr><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="80429733%2FConstructors%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-media-type.html"><span class="token function">MediaType</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="-type/index.html">MediaType.Type</a><span class="token punctuation">, </span></span><span class="parameter ">tree<span class="token operator">: </span><a href="-tree/index.html">MediaType.Tree</a><span class="token operator"> = </span>Tree.Standard<span class="token punctuation">, </span></span><span class="parameter ">subtype<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">"*"</span><span class="token punctuation">, </span></span><span class="parameter ">suffix<span class="token operator">: </span><a href="-suffix/index.html">MediaType.Suffix</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">parameters<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyMap()</span></span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Types</h2>
+      <div class="table" data-togglable="Types"><a data-name="386734613%2FClasslikes%2F-1398131682" anchor-label="Companion" id="386734613%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-companion/index.html"><span><span>Companion</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="386734613%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-companion/index.html">Companion</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1795257706%2FClasslikes%2F-1398131682" anchor-label="StandardParameterName" id="1795257706%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-standard-parameter-name/index.html"><span>Standard</span><wbr><span>Parameter</span><wbr><span><span>Name</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1795257706%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-standard-parameter-name/index.html">StandardParameterName</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-standard-parameter-name/index.html">MediaType.StandardParameterName</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Standard parameter names.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-2069553008%2FClasslikes%2F-1398131682" anchor-label="Suffix" id="-2069553008%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-suffix/index.html"><span><span>Suffix</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2069553008%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-suffix/index.html">Suffix</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-suffix/index.html">MediaType.Suffix</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Allowed suffixes of media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1047136483%2FClasslikes%2F-1398131682" anchor-label="Tree" id="1047136483%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-tree/index.html"><span><span>Tree</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1047136483%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-tree/index.html">Tree</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-tree/index.html">MediaType.Tree</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Allowed trees of media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1251800263%2FClasslikes%2F-1398131682" anchor-label="Type" id="1251800263%2FClasslikes%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="-type/index.html"><span><span>Type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1251800263%2FClasslikes%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">enum </span><a href="-type/index.html">Type</a> : <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-enum/index.html">Enum</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="-type/index.html">MediaType.Type</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">Allowed types of media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="1571988203%2FFunctions%2F-1398131682" anchor-label="compatible" id="1571988203%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="compatible.html"><span><span>compatible</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1571988203%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="compatible.html"><span class="token function">compatible</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="index.html">MediaType</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Check if a given <a href="index.html">media type</a> is compatible with this instance.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1652445067%2FFunctions%2F-1398131682" anchor-label="equals" id="-1652445067%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="equals.html"><span><span>equals</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1652445067%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">operator override </span><span class="token keyword">fun </span><a href="equals.html"><span class="token function">equals</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">other<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html">Any</a><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1937060049%2FFunctions%2F-1398131682" anchor-label="hashCode" id="1937060049%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="hash-code.html"><span>hash</span><wbr><span><span>Code</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1937060049%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="hash-code.html"><span class="token function">hashCode</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html">Int</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1260913270%2FFunctions%2F-1398131682" anchor-label="parameter" id="1260913270%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="parameter.html"><span><span>parameter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1260913270%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="parameter.html"><span class="token function">parameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="-standard-parameter-name/index.html">MediaType.StandardParameterName</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Looks up a parameter using a <a href="-standard-parameter-name/index.html">standard parameter name</a>.</p></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="parameter.html"><span class="token function">parameter</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Looks up a parameter.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="1758893984%2FFunctions%2F-1398131682" anchor-label="toString" id="1758893984%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="to-string.html"><span>to</span><wbr><span><span>String</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1758893984%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="to-string.html"><span class="token function">toString</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1799137169%2FFunctions%2F-1398131682" anchor-label="with" id="-1799137169%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="with.html"><span><span>with</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1799137169%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="with.html"><span class="token function">with</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">parameter<span class="token operator">: </span><a href="-standard-parameter-name/index.html">MediaType.StandardParameterName</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaType</a></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="with.html"><span class="token function">with</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">parameter<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaType</a></div><div class="brief "><p class="paragraph">Builds a new <a href="index.html">MediaType</a> overriding a parameter value.</p></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="with.html"><span class="token function">with</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="-type/index.html">MediaType.Type</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">tree<span class="token operator">: </span><a href="-tree/index.html">MediaType.Tree</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">subtype<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">parameters<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaType</a></div><div class="brief "><p class="paragraph">Builds a new <a href="index.html">MediaType</a> overriding one or more of the properties.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Properties</h2>
+      <div class="table" data-togglable="Properties"><a data-name="-653460958%2FProperties%2F-1398131682" anchor-label="parameters" id="-653460958%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="parameters.html"><span><span>parameters</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-653460958%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-653460958%2FProperties%2F-1398131682" anchor-label="parameters" id="-653460958%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="parameters.html">parameters</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><a data-name="-653460958%2FProperties%2F-1398131682" anchor-label="parameters" id="-653460958%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Parameters of the media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="658991316%2FProperties%2F-1398131682" anchor-label="subtype" id="658991316%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="subtype.html"><span><span>subtype</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="658991316%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="658991316%2FProperties%2F-1398131682" anchor-label="subtype" id="658991316%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="subtype.html">subtype</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><a data-name="658991316%2FProperties%2F-1398131682" anchor-label="subtype" id="658991316%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Subtype of the media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-639912421%2FProperties%2F-1398131682" anchor-label="suffix" id="-639912421%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="suffix.html"><span><span>suffix</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-639912421%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-639912421%2FProperties%2F-1398131682" anchor-label="suffix" id="-639912421%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="suffix.html">suffix</a><span class="token operator">: </span><a href="-suffix/index.html">MediaType.Suffix</a><span class="token operator">?</span><span class="token operator"> = </span>null</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1728015826%2FProperties%2F-1398131682" anchor-label="tree" id="-1728015826%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="tree.html"><span><span>tree</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1728015826%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1728015826%2FProperties%2F-1398131682" anchor-label="tree" id="-1728015826%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="tree.html">tree</a><span class="token operator">: </span><a href="-tree/index.html">MediaType.Tree</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1523352046%2FProperties%2F-1398131682" anchor-label="type" id="-1523352046%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="type.html"><span><span>type</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1523352046%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1523352046%2FProperties%2F-1398131682" anchor-label="type" id="-1523352046%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="type.html">type</a><span class="token operator">: </span><a href="-type/index.html">MediaType.Type</a></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="945666301%2FProperties%2F-1398131682" anchor-label="value" id="945666301%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="value.html"><span><span>value</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="945666301%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="945666301%2FProperties%2F-1398131682" anchor-label="value" id="945666301%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="value.html">value</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><a data-name="945666301%2FProperties%2F-1398131682" anchor-label="value" id="945666301%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><p class="paragraph">Encoded media type.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2022 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+
+</body></html>
+

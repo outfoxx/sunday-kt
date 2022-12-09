@@ -20,6 +20,8 @@ import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.PathEncoder
+import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
@@ -63,6 +65,7 @@ class OkHttpRequestFactory(
   private val eventHttpClient: OkHttpClient = httpClient.reconfiguredForEvents(),
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
+  override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
 ) : RequestFactory(), Closeable {
 
   companion object {
@@ -92,7 +95,8 @@ class OkHttpRequestFactory(
     logger.trace("Building request")
 
     val urlBuilder =
-      baseURI.resolve(pathTemplate, pathParameters).toURI().toHttpUrlOrNull()?.newBuilder()
+      baseURI.resolve(pathTemplate, pathParameters, pathEncoders)
+        .toURI().toHttpUrlOrNull()?.newBuilder()
         ?: throw SundayError(InvalidBaseUri)
 
     if (!queryParameters.isNullOrEmpty()) {

@@ -91,6 +91,7 @@ abstract class RequestFactory : Closeable {
   abstract val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
   abstract val mediaTypeEncoders: MediaTypeEncoders
   abstract val mediaTypeDecoders: MediaTypeDecoders
+  abstract val pathEncoders: Map<KClass<*>, PathEncoder>
 
   /**
    * Create a [Request].

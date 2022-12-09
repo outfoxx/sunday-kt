@@ -106,6 +106,32 @@ abstract class RequestFactoryTest {
    */
 
   @Test
+  fun `encodes path parameters`() {
+
+    createRequestFactory(URITemplate("http://example.com/{id}"))
+      .use { requestFactory ->
+
+        val request =
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/encoded-params",
+              pathParameters = mapOf("id" to 123),
+              body = null,
+              contentTypes = null,
+              acceptTypes = null,
+              headers = null
+            )
+          }
+
+        assertThat(
+          request.uri,
+          equalTo(URI("http://example.com/123/encoded-params"))
+        )
+      }
+  }
+
+  @Test
   fun `encodes query parameters`() {
 
     createRequestFactory(URITemplate("http://example.com"))

@@ -16,10 +16,10 @@
 
 package io.outfoxx.sunday
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.hal4j.uritemplate.URIBuilder
 import com.github.hal4j.uritemplate.URITemplate
 import io.outfoxx.sunday.http.Parameters
+import kotlin.reflect.KClass
 
 /**
  * RFC 6570 URI template and parameters.
@@ -44,9 +44,14 @@ class URITemplate(
    * before parameter replacement.
    * @param parameters Parameters that override the [io.outfoxx.sunday.URITemplate.parameters]
    * on the template instance before parameter replacement.
+   * @param encoders Map of [PathEncoder]s used to convert parameters to path strings.
    * @return [URIBuilder] with a fully resolved URI and replaced parameters.
    */
-  fun resolve(relative: String? = null, parameters: Parameters? = null): URIBuilder {
+  fun resolve(
+    relative: String? = null,
+    parameters: Parameters? = null,
+    encoders: Map<KClass<*>, PathEncoder> = mapOf()
+  ): URIBuilder {
 
     val template = URITemplate(join(template, relative))
 
@@ -57,19 +62,18 @@ class URITemplate(
         this.parameters
 
     val allStringParameters =
-      allParameters.mapValues { entry ->
-        when (val value = entry.value) {
-          is Enum<*> -> enumName(value)
-          else -> value.toString()
+      allParameters
+        .filterValues { it != null }
+        .mapValues { (_, value) ->
+          value!!
+          encoders.entries
+            .firstOrNull { it.key.isInstance(value) }
+            ?.value?.invoke(value)
+            ?: value.toString()
         }
-      }
 
     return template.expand(allStringParameters).toBuilder()
   }
-
-  private fun <E : Enum<E>> enumName(value: Enum<E>) =
-    value.javaClass.getField(value.name).getAnnotation(JsonProperty::class.java)?.value
-      ?: value.name
 
   private fun join(base: String, relative: String?) =
     if (relative != null) {

@@ -20,6 +20,8 @@ import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.PathEncoder
+import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
@@ -68,6 +70,7 @@ class JdkRequestFactory(
   private val adapter: suspend (HttpRequest) -> HttpRequest = { it },
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
+  override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault
 ) : RequestFactory(), Closeable {
@@ -118,7 +121,7 @@ class JdkRequestFactory(
 
     var uri =
       try {
-        baseURI.resolve(pathTemplate, pathParameters).toURI()
+        baseURI.resolve(pathTemplate, pathParameters, pathEncoders).toURI()
       } catch (x: Throwable) {
         throw SundayError(InvalidBaseUri, cause = x)
       }

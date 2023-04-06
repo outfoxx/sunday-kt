@@ -116,7 +116,14 @@ class WWWFormURLEncoder(
       is Map<*, *> -> value.toSortedMap(compareBy { it.toString() })
         .flatMap { (nestedKey, value) -> encodeQueryComponent("$key[$nestedKey]", value as Any) }
 
-      is List<*> -> value.flatMap { element ->
+      is Iterable<*> -> value.flatMap { element ->
+        encodeQueryComponent(
+          arrayEncoding.encode(key),
+          element as Any
+        )
+      }
+
+      is Array<*> -> value.flatMap { element ->
         encodeQueryComponent(
           arrayEncoding.encode(key),
           element as Any

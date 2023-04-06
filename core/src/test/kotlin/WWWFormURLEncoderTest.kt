@@ -63,7 +63,7 @@ class WWWFormURLEncoderTest {
   }
 
   @Test
-  fun `encodes array values in bracketed form`() {
+  fun `encodes list values in bracketed form`() {
     val encoder = WWWFormURLEncoder(
       WWWFormURLEncoder.ArrayEncoding.Bracketed,
       WWWFormURLEncoder.BoolEncoding.Numeric,
@@ -77,7 +77,7 @@ class WWWFormURLEncoderTest {
   }
 
   @Test
-  fun `encodes array values in unbracketed form`() {
+  fun `encodes list values in unbracketed form`() {
     val encoder = WWWFormURLEncoder(
       WWWFormURLEncoder.ArrayEncoding.Unbracketed,
       WWWFormURLEncoder.BoolEncoding.Numeric,
@@ -86,6 +86,62 @@ class WWWFormURLEncoderTest {
 
     assertThat(
       encoder.encodeQueryString(mapOf("test" to listOf(1, 2, 3))),
+      equalTo("test=1&test=2&test=3")
+    )
+  }
+
+  @Test
+  fun `encodes set values in bracketed form`() {
+    val encoder = WWWFormURLEncoder(
+      WWWFormURLEncoder.ArrayEncoding.Bracketed,
+      WWWFormURLEncoder.BoolEncoding.Numeric,
+      WWWFormURLEncoder.DateEncoding.ISO8601
+    )
+
+    assertThat(
+      encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))),
+      equalTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3")
+    )
+  }
+
+  @Test
+  fun `encodes set values in unbracketed form`() {
+    val encoder = WWWFormURLEncoder(
+      WWWFormURLEncoder.ArrayEncoding.Unbracketed,
+      WWWFormURLEncoder.BoolEncoding.Numeric,
+      WWWFormURLEncoder.DateEncoding.ISO8601
+    )
+
+    assertThat(
+      encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))),
+      equalTo("test=1&test=2&test=3")
+    )
+  }
+
+  @Test
+  fun `encodes array values in bracketed form`() {
+    val encoder = WWWFormURLEncoder(
+      WWWFormURLEncoder.ArrayEncoding.Bracketed,
+      WWWFormURLEncoder.BoolEncoding.Numeric,
+      WWWFormURLEncoder.DateEncoding.ISO8601
+    )
+
+    assertThat(
+      encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))),
+      equalTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3")
+    )
+  }
+
+  @Test
+  fun `encodes array values in unbracketed form`() {
+    val encoder = WWWFormURLEncoder(
+      WWWFormURLEncoder.ArrayEncoding.Unbracketed,
+      WWWFormURLEncoder.BoolEncoding.Numeric,
+      WWWFormURLEncoder.DateEncoding.ISO8601
+    )
+
+    assertThat(
+      encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))),
       equalTo("test=1&test=2&test=3")
     )
   }

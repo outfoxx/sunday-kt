@@ -253,7 +253,11 @@ class JdkRequestFactory(
 
     eventSource.connect()
 
-    awaitClose { eventSource.close() }
+    awaitClose {
+      logger.debug("Stream closed or canceled")
+
+      eventSource.close()
+    }
   }
 
   override fun close() {

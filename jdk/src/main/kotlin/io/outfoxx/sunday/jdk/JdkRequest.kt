@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.jdk9.collect
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okio.Buffer
 import okio.BufferedSource
@@ -191,16 +192,12 @@ class JdkRequest(
       }
 
       override fun onNext(item: MutableList<ByteBuffer>) {
-        item.forEach { data ->
-          val dataBuffer = Buffer()
-          dataBuffer.write(data)
+        val buffer = Buffer()
+        item.forEach { buffer.write(it) }
 
-          val dataEvent = Request.Event.Data(dataBuffer)
+        val dataEvent = Request.Event.Data(buffer)
 
-          channel.trySend(dataEvent)
-            .onSuccess { logger.trace("Sent: data") }
-            .onFailure { logger.error("Failed to send: data") }
-        }
+        runBlocking { channel.send(dataEvent) }
       }
 
       override fun onError(throwable: Throwable) {

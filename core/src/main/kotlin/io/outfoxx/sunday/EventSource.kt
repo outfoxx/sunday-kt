@@ -33,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okio.Buffer
@@ -304,6 +305,13 @@ class EventSource(
       try {
 
         request.start()
+          .onCompletion {
+            if (it != null) {
+              logger.debug("Stream request failed", it)
+            } else {
+              logger.debug("Stream request completed")
+            }
+          }
           .collect { event ->
             when (event) {
               is Request.Event.Start -> {

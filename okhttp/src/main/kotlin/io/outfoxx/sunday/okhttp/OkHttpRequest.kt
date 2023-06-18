@@ -21,13 +21,13 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -116,10 +116,15 @@ class OkHttpRequest(
 
       logger.debug("Starting")
 
-      val call = httpClient.newCall(request)
-      call.enqueue(RequestCallback(this, httpClient, requestDispatcher))
+      val callback = RequestCallback(this, httpClient, requestDispatcher)
 
-      awaitClose { call.cancel() }
+      val call = httpClient.newCall(request)
+      call.enqueue(callback)
+
+      awaitClose {
+        call.cancel()
+        callback.cancel()
+      }
     }
   }
 
@@ -129,11 +134,17 @@ class OkHttpRequest(
     private val dispatcher: CoroutineDispatcher,
   ) : Callback {
 
+    private var reader: Job? = null
+
+    fun cancel() {
+      reader?.cancel()
+    }
+
     override fun onResponse(call: Call, response: okhttp3.Response) {
 
       logger.debug("Received response")
 
-      scope.launch(dispatcher) {
+      reader = scope.launch(dispatcher) {
 
         response.use {
 
@@ -152,7 +163,7 @@ class OkHttpRequest(
 
             logger.debug("Processing: response body")
 
-            while (true) {
+            while (isActive && scope.isActive) {
 
               val buffer = Buffer()
 

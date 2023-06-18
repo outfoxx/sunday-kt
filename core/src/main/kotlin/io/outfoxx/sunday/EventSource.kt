@@ -307,28 +307,12 @@ class EventSource(
         request.start()
           .onCompletion {
             if (it != null) {
-              logger.debug("Stream request failed", it)
+              receivedError(it)
             } else {
-              logger.debug("Stream request completed")
+              receivedComplete()
             }
           }
-          .collect { event ->
-            when (event) {
-              is Request.Event.Start -> {
-                if (!event.value.isSuccessful) {
-                  receivedError(Problems.forResponse(event.value))
-                }
-
-                receivedResponse(event.value)
-              }
-
-              is Request.Event.Data ->
-                receivedData(event.value)
-
-              is Request.Event.End ->
-                receivedComplete()
-            }
-          }
+          .collect(::dispatchEvent)
 
       } catch (ignored: CancellationException) {
         // do nothing
@@ -338,10 +322,37 @@ class EventSource(
     }
   }
 
+  private fun dispatchEvent(event: Request.Event) {
+    if (readyStateValue.isClosed) {
+      return
+    }
+
+    when (event) {
+      is Request.Event.Start -> {
+        if (!event.value.isSuccessful) {
+          receivedError(Problems.forResponse(event.value))
+        }
+
+        receivedResponse(event.value)
+      }
+
+      is Request.Event.Data ->
+        receivedData(event.value)
+
+      is Request.Event.End ->
+        receivedComplete()
+    }
+  }
+
   /**
    * Close and disconnect the [EventSource].
    */
   override fun close() {
+
+    if (readyStateValue.isClosed) {
+      return
+    }
+
     logger.debug("Closed")
 
     readyStateValue.resetReadyState(Closed)
@@ -439,7 +450,7 @@ class EventSource(
   private fun receivedData(data: Buffer) {
 
     if (readyStateValue.current != Open) {
-      logger.warn("Invalid state for receiving headers: {}", readyStateValue)
+      logger.warn("Invalid state for receiving headers: {}", readyStateValue.current)
 
       stateLock.read { errorHandler }?.invoke(EventSourceError(InvalidState))
 
@@ -495,6 +506,10 @@ class EventSource(
 
 
   private fun scheduleReconnect() {
+
+    if (readyStateValue.isClosed) {
+      return
+    }
 
     internalClose()
 

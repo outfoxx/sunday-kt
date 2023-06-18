@@ -46,7 +46,12 @@ import java.util.concurrent.TimeUnit.SECONDS
 @Timeout(30)
 abstract class EventSourceTest {
 
-  abstract fun createRequest(url: String, headers: Headers): Request
+  abstract fun createRequest(
+    url: String,
+    headers: Headers,
+    onStart: () -> Unit = {},
+    onCancel: () -> Unit = {}
+  ): Request
 
   @Test
   fun `test ignore double connect`() {
@@ -483,6 +488,58 @@ abstract class EventSourceTest {
         assertThat(completed.await(12, SECONDS), equalTo(true))
         assertThat(error?.reason, equalTo(EventTimeout))
       }
+    }
+  }
+
+  @Test
+  fun `cancellation closes connection`() {
+    val canceled = CountDownLatch(1)
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, EventStream)
+        .setChunkedBody(
+          """
+          |data: ${"x".repeat(100000)}
+          |
+          |
+          |data: ${"x".repeat(100000)}
+          |
+          |
+          |data: ${"x".repeat(100000)}
+          |
+          |
+          |data: ${"x".repeat(100000)}
+          |
+          |
+          """.trimMargin(),
+          3
+        )
+    )
+    server.start()
+    server.use {
+
+      val connected = CountDownLatch(1)
+
+      val eventSource =
+        EventSource(
+          { headers ->
+            createRequest(server.url("/test").toString(), headers, connected::countDown) {
+              println("### CANCELED")
+              canceled.countDown()
+            }
+          },
+        )
+
+      eventSource.connect()
+
+      assertThat(connected.await(12, SECONDS), equalTo(true))
+
+      eventSource.close()
+
+      assertThat(canceled.await(12, SECONDS), equalTo(true))
     }
   }
 

@@ -45,7 +45,7 @@ import kotlin.coroutines.resumeWithException
 /**
  * Okhttp implementation of [Request]
  */
-class OkHttpRequest(
+open class OkHttpRequest(
   private val request: okhttp3.Request,
   private val httpClient: OkHttpClient,
   private val requestDispatcher: CoroutineDispatcher = Dispatchers.IO,

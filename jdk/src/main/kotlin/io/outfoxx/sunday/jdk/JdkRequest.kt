@@ -48,7 +48,7 @@ import kotlin.coroutines.resumeWithException
 /**
  * JDK11 HTTP Client implementation of [Request].
  */
-class JdkRequest(
+open class JdkRequest(
   private val request: HttpRequest,
   private val httpClient: HttpClient,
 ) : Request {

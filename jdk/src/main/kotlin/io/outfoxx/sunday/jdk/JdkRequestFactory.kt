@@ -18,13 +18,11 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
-import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
-import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
@@ -40,16 +38,8 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
-import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import okio.buffer
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
@@ -210,54 +200,6 @@ class JdkRequestFactory(
   override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
 
     return EventSource(requestSupplier)
-  }
-
-  override fun <D : Any> eventStream(
-    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-    requestSupplier: suspend (Headers) -> Request
-  ): Flow<D> = callbackFlow {
-
-    val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
-    jsonDecoder as TextMediaTypeDecoder
-
-    val eventSource = eventSource(requestSupplier)
-
-    eventSource.onMessage = { event ->
-
-      val data = event.data
-      if (data != null) {
-
-        try {
-
-          val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
-          if (decodedEvent != null) {
-
-            trySendBlocking(decodedEvent)
-              .onFailure {
-                cancel("Event send failed", it)
-              }
-
-          }
-
-        } catch (x: Throwable) {
-          cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
-        }
-
-      }
-
-    }
-
-    eventSource.onError = { error ->
-      logger.warn("EventSource error encountered", error)
-    }
-
-    eventSource.connect()
-
-    awaitClose {
-      logger.debug("Stream closed or canceled")
-
-      eventSource.close()
-    }
   }
 
   override fun close() {

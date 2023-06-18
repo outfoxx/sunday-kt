@@ -16,6 +16,9 @@
 
 package io.outfoxx.sunday
 
+import io.outfoxx.sunday.MediaType.Companion.JSON
+import io.outfoxx.sunday.SundayError.Reason.EventDecodingFailed
+import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.http.HeaderParameters
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
@@ -32,7 +35,12 @@ import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
 import io.outfoxx.sunday.problems.NonStandardStatus
 import io.outfoxx.sunday.utils.from
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.onFailure
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import okio.BufferedSource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -510,10 +518,53 @@ abstract class RequestFactory : Closeable {
    * @param requestSupplier Function that provides [Request] for connecting to the SSE stream.
    * @return [Flow] of events.
    */
-  protected abstract fun <D : Any> eventStream(
+  fun <D : Any> eventStream(
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-    requestSupplier: suspend (Headers) -> Request,
-  ): Flow<D>
+    requestSupplier: suspend (Headers) -> Request
+  ): Flow<D> = callbackFlow {
+
+    val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
+    jsonDecoder as TextMediaTypeDecoder
+
+    val eventSource = eventSource(requestSupplier)
+
+    eventSource.onMessage = { event ->
+
+      val data = event.data
+      if (data != null) {
+
+        try {
+
+          val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
+          if (decodedEvent != null) {
+
+            trySendBlocking(decodedEvent)
+              .onFailure {
+                cancel("Event send failed", it)
+              }
+
+          }
+
+        } catch (x: Throwable) {
+          cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
+        }
+
+      }
+
+    }
+
+    eventSource.onError = { error ->
+      logger.warn("EventSource error encountered", error)
+    }
+
+    eventSource.connect()
+
+    awaitClose {
+      logger.debug("Stream closed or canceled")
+
+      eventSource.close()
+    }
+  }
 
   abstract fun close(cancelOutstandingRequests: Boolean)
 
@@ -543,7 +594,7 @@ abstract class RequestFactory : Closeable {
         )
 
     val contentTypeDecoder = mediaTypeDecoders.find(contentType)
-      ?: throw SundayError(SundayError.Reason.NoDecoder, contentType.value)
+      ?: throw SundayError(NoDecoder, contentType.value)
 
     try {
 
@@ -588,11 +639,11 @@ abstract class RequestFactory : Closeable {
   private fun parseProblemResponseBody(body: BufferedSource): ThrowableProblem {
     val problemDecoder =
       mediaTypeDecoders.find(MediaType.Problem)
-        ?: throw SundayError(SundayError.Reason.NoDecoder, MediaType.Problem.value)
+        ?: throw SundayError(NoDecoder, MediaType.Problem.value)
 
     problemDecoder as? StructuredMediaTypeDecoder
       ?: throw SundayError(
-        SundayError.Reason.NoDecoder,
+        NoDecoder,
         "'${MediaType.Problem}' decoder must support structured decoding"
       )
 

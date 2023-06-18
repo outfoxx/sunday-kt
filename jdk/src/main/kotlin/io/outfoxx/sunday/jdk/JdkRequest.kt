@@ -26,8 +26,8 @@ import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.jdk9.collect
+import kotlinx.coroutines.suspendCancellableCoroutine
 import okio.Buffer
 import okio.BufferedSource
 import org.slf4j.LoggerFactory
@@ -41,6 +41,8 @@ import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.Flow.Subscription
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * JDK11 HTTP Client implementation of [Request].
@@ -77,13 +79,21 @@ class JdkRequest(
   override suspend fun execute(): Response {
     logger.debug("Executing")
 
+    val handler = BufferedSourceBodyHandler()
+
     val response =
-      httpClient
-        .sendAsync(
-          request,
-          BufferedSourceBodyHandler()
-        )
-        .await()
+      suspendCancellableCoroutine { continuation ->
+        httpClient.sendAsync(request, handler)
+          .whenComplete { response, error ->
+            if (error != null) {
+              continuation.resumeWithException(error)
+            } else {
+              continuation.resume(response)
+            }
+          }
+
+        continuation.invokeOnCancellation { handler.cancel() }
+      }
 
     return JdkResponse(response, httpClient)
   }
@@ -93,14 +103,16 @@ class JdkRequest(
 
       logger.debug("Starting")
 
-      val future =
-        httpClient
-          .sendAsync(
-            request,
-            RequestEventBodyHandler(JdkRequest(request, httpClient), channel)
-          )
+      val handler = RequestEventBodyHandler(JdkRequest(request, httpClient), channel)
 
-      awaitClose { future.cancel(false) }
+      val future = httpClient.sendAsync(request, handler)
+
+      awaitClose {
+        logger.debug("Canceling request")
+
+        handler.cancel()
+        future.cancel(true)
+      }
     }
   }
 
@@ -110,8 +122,14 @@ class JdkRequest(
 
       private val buffer = Buffer()
       private var bodyFuture = CompletableFuture<BufferedSource>()
+      private var subscription: Subscription? = null
+
+      fun cancel() {
+        subscription?.cancel()
+      }
 
       override fun onSubscribe(subscription: Subscription) {
+        this.subscription = subscription
         subscription.request(Long.MAX_VALUE)
       }
 
@@ -133,8 +151,16 @@ class JdkRequest(
 
     }
 
-    override fun apply(responseInfo: HttpResponse.ResponseInfo?): BodySubscriber<BufferedSource> =
-      Subscriber()
+    private var subscriber: Subscriber? = null
+
+    fun cancel() {
+      subscriber?.cancel()
+    }
+
+    override fun apply(responseInfo: HttpResponse.ResponseInfo?): BodySubscriber<BufferedSource> {
+      subscriber = Subscriber()
+      return subscriber!!
+    }
 
   }
 
@@ -152,9 +178,15 @@ class JdkRequest(
       private val channel: SendChannel<Request.Event>,
     ) : BodySubscriber<Unit> {
 
-      val bodyFuture = CompletableFuture<Unit>()
+      private val bodyFuture = CompletableFuture<Unit>()
+      private var subscription: Subscription? = null
+
+      fun cancel() {
+        subscription?.cancel()
+      }
 
       override fun onSubscribe(subscription: Subscription) {
+        this.subscription = subscription
         subscription.request(Long.MAX_VALUE)
       }
 
@@ -192,6 +224,12 @@ class JdkRequest(
 
     }
 
+    private var subscriber: Subscriber? = null
+
+    fun cancel() {
+      subscriber?.cancel()
+    }
+
     override fun apply(responseInfo: HttpResponse.ResponseInfo): BodySubscriber<Unit> {
 
       val startEvent =
@@ -206,7 +244,8 @@ class JdkRequest(
         .onSuccess { logger.trace("Sent: start") }
         .onFailure { logger.error("Failed to send: start") }
 
-      return Subscriber(channel)
+      subscriber = Subscriber(channel)
+      return subscriber!!
     }
 
   }

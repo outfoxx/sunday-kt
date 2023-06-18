@@ -154,9 +154,7 @@ class OkHttpRequest(
 
           val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
 
-          scope.trySend(startEvent)
-            .onSuccess { logger.trace("Sent: start") }
-            .onFailure { logger.error("Failed to send: start") }
+          scope.send(startEvent)
 
           val body = response.body
           if (body != null) {
@@ -172,16 +170,15 @@ class OkHttpRequest(
                 break
               }
 
-              scope.trySend(Request.Event.Data(buffer))
-                .onSuccess { logger.trace("Sent: data") }
-                .onFailure { logger.error("Failed to send: data") }
+              scope.send(Request.Event.Data(buffer))
             }
 
           }
 
-          scope.trySend(Request.Event.End(response.trailers()))
-            .onSuccess { logger.trace("Sent: end") }
-            .onFailure { logger.error("Failed to send: end") }
+          if (isActive && scope.isActive) {
+
+            scope.send(Request.Event.End(response.trailers()))
+          }
         }
 
         scope.close()

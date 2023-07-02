@@ -1,0 +1,239 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>Builder</title>
+<link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../../";</script>    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/jetbrains-mono.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/clipboard.js" async></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../scripts/symbol-parameters-wrapper_deferred.js" defer></script></head>
+<body>
+<div class="navigation-wrapper" id="navigation-wrapper">
+    <div id="leftToggler"><span class="icon-toggler"></span></div>
+    <div class="library-name">
+<a href="../../../../index.html">
+<span>sunday</span>            </a>    </div>
+    <div>1.0.0-beta.23
+    </div>
+    <div class="pull-right d-flex">
+        <button id="theme-toggle-button"><span id="theme-toggle"></span></button>
+        <div id="searchBar"></div>
+    </div>
+</div>
+<div id="container">
+    <div id="leftColumn">
+        <div id="sideMenu"></div>
+    </div>
+    <div id="main">
+<div class="main-content" id="content" pageids="sunday-core::io.outfoxx.sunday.mediatypes.codecs/MediaTypeEncoders.Builder///PointingToDeclaration//-1398131682">
+  <div class="breadcrumbs"><a href="../../../index.html">sunday-core</a><span class="delimiter">/</span><a href="../../index.html">io.outfoxx.sunday.mediatypes.codecs</a><span class="delimiter">/</span><a href="../index.html">MediaTypeEncoders</a><span class="delimiter">/</span><span class="current">Builder</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Builder</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">Builder</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>registered<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../io.outfoxx.sunday/-media-type/index.html">MediaType</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../-media-type-encoder/index.html">MediaTypeEncoder</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mapOf()</span></span><span class="token punctuation">)</span></div><p class="paragraph">Builder for <a href="../index.html">MediaTypeEncoders</a>.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="Constructors">Constructors</button><button class="section-tab" data-togglable="Functions">Functions</button><button class="section-tab" data-togglable="Properties">Properties</button></div>
+    <div class="tabs-section-body">
+      <h2 class="tabbedcontent">Constructors</h2>
+      <div class="table" data-togglable="Constructors"><a data-name="2114335345%2FConstructors%2F-1398131682" anchor-label="Builder" id="2114335345%2FConstructors%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue TabbedContent">
+            <div class=""><span class="inline-flex">
+                <div><a href="-builder.html"><span><span>Builder</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2114335345%2FConstructors%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="-builder.html"><span class="token function">Builder</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">registered<span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../io.outfoxx.sunday/-media-type/index.html">MediaType</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../-media-type-encoder/index.html">MediaTypeEncoder</a><span class="token operator">&gt;</span><span class="token operator"> = </span>mapOf()</span></span><span class="token punctuation">)</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Functions</h2>
+      <div class="table" data-togglable="Functions"><a data-name="74886068%2FFunctions%2F-1398131682" anchor-label="build" id="74886068%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="build.html"><span><span>build</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="74886068%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="build.html"><span class="token function">build</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../index.html">MediaTypeEncoders</a></div><div class="brief "><p class="paragraph">Builds the immutable <a href="../index.html">MediaTypeEncoders</a> instance.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1136312810%2FFunctions%2F-1398131682" anchor-label="register" id="-1136312810%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register.html"><span><span>register</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1136312810%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register.html"><span class="token function">register</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">encoder<span class="token operator">: </span><a href="../../-media-type-encoder/index.html">MediaTypeEncoder</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">vararg </span>types<span class="token operator">: </span><a href="../../../io.outfoxx.sunday/-media-type/index.html">MediaType</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers an encoder with specific media types.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="754260723%2FFunctions%2F-1398131682" anchor-label="registerCBOR" id="754260723%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-c-b-o-r.html"><span>register</span><wbr><span><span>CBOR</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="754260723%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-c-b-o-r.html"><span class="token function">registerCBOR</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers the default CBOR encoder.</p></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-c-b-o-r.html"><span class="token function">registerCBOR</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">mapper<span class="token operator">: </span><span data-unresolved-link="com.fasterxml.jackson.dataformat.cbor.databind/CBORMapper///PointingToDeclaration/">CBORMapper</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers a custom CBOR encoder.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-1190468309%2FFunctions%2F-1398131682" anchor-label="registerData" id="-1190468309%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-data.html"><span>register</span><wbr><span><span>Data</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1190468309%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-data.html"><span class="token function">registerData</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers the default binary encoder.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="-995818621%2FFunctions%2F-1398131682" anchor-label="registerDefaults" id="-995818621%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-defaults.html"><span>register</span><wbr><span><span>Defaults</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-995818621%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-defaults.html"><span class="token function">registerDefaults</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers all the default encoders.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="479918204%2FFunctions%2F-1398131682" anchor-label="registerJSON" id="479918204%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-j-s-o-n.html"><span>register</span><wbr><span><span>JSON</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="479918204%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-j-s-o-n.html"><span class="token function">registerJSON</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers the default JSON encoder.</p></div><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-j-s-o-n.html"><span class="token function">registerJSON</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">mapper<span class="token operator">: </span><span data-unresolved-link="com.fasterxml.jackson.databind.json/JsonMapper///PointingToDeclaration/">JsonMapper</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers a custom JSON encoder.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="431143176%2FFunctions%2F-1398131682" anchor-label="registerText" id="431143176%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-text.html"><span>register</span><wbr><span><span>Text</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="431143176%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-text.html"><span class="token function">registerText</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers the default UTF-8 text encoder.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="575568285%2FFunctions%2F-1398131682" anchor-label="registerURL" id="575568285%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-u-r-l.html"><span>register</span><wbr><span><span>URL</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="575568285%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-u-r-l.html"><span class="token function">registerURL</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">arrayEncoding<span class="token operator">: </span><a href="../../-w-w-w-form-u-r-l-encoder/-array-encoding/index.html">WWWFormURLEncoder.ArrayEncoding</a><span class="token operator"> = </span>WWWFormURLEncoder.ArrayEncoding.Unbracketed<span class="token punctuation">, </span></span><span class="parameter ">boolEncoding<span class="token operator">: </span><a href="../../-w-w-w-form-u-r-l-encoder/-bool-encoding/index.html">WWWFormURLEncoder.BoolEncoding</a><span class="token operator"> = </span>WWWFormURLEncoder.BoolEncoding.Literal<span class="token punctuation">, </span></span><span class="parameter ">dateEncoding<span class="token operator">: </span><a href="../../-w-w-w-form-u-r-l-encoder/-date-encoding/index.html">WWWFormURLEncoder.DateEncoding</a><span class="token operator"> = </span>WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch<span class="token punctuation">, </span></span><span class="parameter ">mapper<span class="token operator">: </span><span data-unresolved-link="com.fasterxml.jackson.databind/ObjectMapper///PointingToDeclaration/">ObjectMapper</span><span class="token operator"> = </span>ObjectMapper().findAndRegisterModules()</span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Register a URL encoder.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+<a data-name="199101135%2FFunctions%2F-1398131682" anchor-label="registerX509" id="199101135%2FFunctions%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="register-x509.html"><span>register</span><wbr><span><span>X509</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="199101135%2FFunctions%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">fun </span><a href="register-x509.html"><span class="token function">registerX509</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="index.html">MediaTypeEncoders.Builder</a></div><div class="brief "><p class="paragraph">Registers a binary encoder for X509 types.</p></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <h2 class="">Properties</h2>
+      <div class="table" data-togglable="Properties"><a data-name="-1867676682%2FProperties%2F-1398131682" anchor-label="registered" id="-1867676682%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a>
+        <div class="table-row" data-filterable-current=":sunday-core:dokkaHtmlPartial/main" data-filterable-set=":sunday-core:dokkaHtmlPartial/main">
+          <div class="main-subrow keyValue ">
+            <div class=""><span class="inline-flex">
+                <div><a href="registered.html"><span><span>registered</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1867676682%2FProperties%2F-1398131682"></span>
+                  <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                </span></span></div>
+            <div>
+              <div class="title">
+                <div class="platform-hinted " data-platform-hinted="data-platform-hinted" data-togglable="Properties"><div class="content sourceset-dependent-content" data-active="" data-togglable=":sunday-core:dokkaHtmlPartial/main"><a data-name="-1867676682%2FProperties%2F-1398131682" anchor-label="registered" id="-1867676682%2FProperties%2F-1398131682" data-filterable-set=":sunday-core:dokkaHtmlPartial/main"></a><div class="symbol monospace"><span class="token keyword"></span><span class="token keyword">val </span><a href="registered.html">registered</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><span class="token keyword"></span><a href="../../../io.outfoxx.sunday/-media-type/index.html">MediaType</a><span class="token punctuation">, </span><span class="token keyword"></span><a href="../../-media-type-encoder/index.html">MediaTypeEncoder</a><span class="token operator">&gt;</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      <div class="footer">
+        <span class="go-to-top-icon"><a href="#content" id="go-to-top-link"></a></span><span>© 2023 Copyright</span><span class="pull-right"><span>Generated by </span><a href="https://github.com/Kotlin/dokka"><span>dokka</span><span class="padded-icon"></span></a></span>
+      </div>
+    </div>
+</div>
+
+</body></html>
+

@@ -34,7 +34,7 @@ class SundayError(
     ResponseDecodingFailed("Response decoding failed"),
     EventDecodingFailed("Event decoding failed"),
     InvalidBaseUri("Base URL is invalid after expanding template"),
-    NoSupportedContentTypes("None of the provided Content-Types for the request has a registered decoder"),
+    NoSupportedContentTypes("None of the provided Content-Types for the request has a registered encoder"),
     NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder"),
     InvalidHeaderValue("The encoded header value contains one or more invalid characters"),
   }

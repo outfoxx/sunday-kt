@@ -407,4 +407,11 @@ class MediaTypeTest {
     assertFalse(htmlWithCharset.compatible(MediaType.JSONStructured))
     assertTrue(htmlWithCharset.compatible(MediaType.Any))
   }
+
+  @Test
+  fun `test constructor`() {
+    val mediaType = MediaType(Application, Vendor, "test", Zip, "charset" to "utf-8")
+
+    assertEquals(mediaType.value, "application/vnd.test+zip;charset=utf-8")
+  }
 }

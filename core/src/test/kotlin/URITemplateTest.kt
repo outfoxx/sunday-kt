@@ -32,6 +32,17 @@ class URITemplateTest {
   }
 
   @Test
+  fun `test encoding`() {
+    val path =
+      URITemplate("http://example.com/{enum}")
+        .resolve(parameters = mapOf("enum" to TestEnum.TestValue))
+        .toURI()
+        .toString()
+
+    assertThat(path, equalTo("http://example.com/test-value"))
+  }
+
+  @Test
   fun `test enum encoding`() {
     val path =
       URITemplate("http://example.com/{enum}", mapOf("enum" to TestEnum.TestValue))

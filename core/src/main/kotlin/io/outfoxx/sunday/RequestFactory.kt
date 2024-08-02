@@ -599,7 +599,7 @@ abstract class RequestFactory : Closeable {
       response.contentType?.let { MediaType.from(it.toString()) }
         ?: throw SundayError(
           SundayError.Reason.InvalidContentType,
-          response.contentType?.value ?: "",
+          response.contentType?.value ?: "<none provided>",
         )
 
     val contentTypeDecoder =

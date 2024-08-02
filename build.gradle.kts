@@ -11,7 +11,7 @@ plugins {
   id("com.github.breadmoirai.github-release")
   id("org.sonarqube")
   id("io.github.gradle-nexus.publish-plugin")
-
+  id("org.jetbrains.kotlinx.kover")
 
   kotlin("jvm") apply (false)
   id("org.cadixdev.licenser") apply (false)
@@ -47,11 +47,11 @@ allprojects {
 configure(moduleNames.map { project(":sunday-$it") }) {
 
   apply(plugin = "java-library")
-  apply(plugin = "jacoco")
   apply(plugin = "maven-publish")
   apply(plugin = "signing")
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
+  apply(plugin = "org.jetbrains.kotlinx.kover")
   apply(plugin = "org.jetbrains.dokka")
   apply(plugin = "org.cadixdev.licenser")
   apply(plugin = "org.jmailen.kotlinter")
@@ -105,10 +105,6 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   // TEST
   //
 
-  configure<JacocoPluginExtension> {
-    toolVersion = "0.8.12"
-  }
-
   tasks.named<Test>("test").configure {
 
     useJUnitPlatform()
@@ -120,8 +116,6 @@ configure(moduleNames.map { project(":sunday-$it") }) {
     }
 
     reports.junitXml.required.set(true)
-
-    finalizedBy("jacocoTestReport")
   }
 
 
@@ -284,7 +278,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
       property("sonar.jacoco.reportPaths", "")
       property(
         "sonar.coverage.jacoco.xmlReportPaths",
-        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
+        "$rootDir/code-coverage/build/reports/kover/report.xml",
       )
     }
   }

@@ -50,7 +50,7 @@ class URITemplate(
   fun resolve(
     relative: String? = null,
     parameters: Parameters? = null,
-    encoders: Map<KClass<*>, PathEncoder> = mapOf(),
+    encoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   ): URIBuilder {
     val template = URITemplate(join(template, relative))
 

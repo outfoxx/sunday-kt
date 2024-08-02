@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
+import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
@@ -27,6 +32,9 @@ import okio.Source
 import okio.buffer
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.not
+import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -142,4 +150,29 @@ class MediaTypeCodecTest {
     }
   }
 
+  @Test
+  fun `test encoders builder registers specific codecs`() {
+    val encoders =
+      MediaTypeEncoders
+        .Builder()
+        .registerJSON(JsonMapper())
+        .registerCBOR(CBORMapper())
+        .build()
+
+    assertThat(encoders.find(MediaType.JSON), `is`(not(nullValue())))
+    assertThat(encoders.find(MediaType.CBOR), `is`(not(nullValue())))
+  }
+
+  @Test
+  fun `test decoders builder registers specific codecs`() {
+    val decoders =
+      MediaTypeDecoders
+        .Builder()
+        .registerJSON(JsonMapper())
+        .registerCBOR(CBORMapper())
+        .build()
+
+    assertThat(decoders.find(MediaType.JSON), `is`(not(nullValue())))
+    assertThat(decoders.find(MediaType.CBOR), `is`(not(nullValue())))
+  }
 }

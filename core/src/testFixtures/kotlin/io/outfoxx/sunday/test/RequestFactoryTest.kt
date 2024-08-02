@@ -23,6 +23,7 @@ import io.outfoxx.sunday.MediaType.Companion.CBOR
 import io.outfoxx.sunday.MediaType.Companion.EventStream
 import io.outfoxx.sunday.MediaType.Companion.HTML
 import io.outfoxx.sunday.MediaType.Companion.JSON
+import io.outfoxx.sunday.MediaType.Companion.Plain
 import io.outfoxx.sunday.MediaType.Companion.Problem
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.RequestFactory
@@ -356,6 +357,42 @@ abstract class RequestFactoryTest {
   }
 
   @Test
+  fun `fetches typed results with body`() {
+    data class Tester(
+      val name: String,
+      val count: Int,
+    )
+
+    val tester = Tester("Test", 10)
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, JSON)
+        .setBody(objectMapper.writeValueAsString(tester)),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          val result =
+            runBlocking {
+              requestFactory.resultResponse<Unit, Tester>(
+                Method.Get,
+                "",
+                body = null,
+              )
+            }
+
+          assertThat(result.headers, hasItem(ContentType to "application/json"))
+          assertThat(result.result, equalTo(tester))
+        }
+    }
+  }
+
+  @Test
   fun `executes requests with empty responses`() {
     val server = MockWebServer()
     server.enqueue(
@@ -401,6 +438,30 @@ abstract class RequestFactoryTest {
   }
 
   @Test
+  fun `executes manual requests with body for responses`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setHeader(ContentType, JSON)
+        .setBody("[]"),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          val response =
+            runBlocking {
+              requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
+            }
+
+          assertThat(response.body?.readByteArray(), equalTo("[]".encodeToByteArray()))
+        }
+    }
+  }
+
+  @Test
   fun `error responses with non standard status codes are handled`() {
     val server = MockWebServer()
     server.enqueue(
@@ -417,7 +478,7 @@ abstract class RequestFactoryTest {
           val problem =
             assertThrows<ThrowableProblem> {
               runBlocking {
-                requestFactory.result<List<String>>(Method.Get, "")
+                requestFactory.result<Unit, List<String>>(Method.Get, "", body = null)
               }
             }
 
@@ -480,6 +541,32 @@ abstract class RequestFactoryTest {
   }
 
   @Test
+  fun `fails when response content-type is missing`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setBody("some stuff"),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          val error =
+            assertThrows<SundayError> {
+              runBlocking {
+                requestFactory.result<Array<String>>(Method.Get, "")
+              }
+            }
+
+          assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
+          assertThat(error.message, containsString("<none provided>"))
+        }
+    }
+  }
+
+  @Test
   fun `fails when response content-type is invalid`() {
     val server = MockWebServer()
     server.enqueue(
@@ -501,6 +588,7 @@ abstract class RequestFactoryTest {
             }
 
           assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
+          assertThat(error.message, containsString("bad/x-unknown"))
         }
     }
   }
@@ -796,6 +884,40 @@ abstract class RequestFactoryTest {
   }
 
   @Test
+  fun `builds event sources with explicit body`() {
+    val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, EventStream)
+        .setBody(encodedEvent),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          runBlocking {
+            withTimeout(5000) {
+              val eventSource = requestFactory.eventSource<Unit>(Method.Get, "", body = null)
+              eventSource.use {
+                suspendCancellableCoroutine<Unit> { continuation ->
+                  eventSource.onMessage = { _ ->
+                    continuation.resume(Unit)
+                  }
+                  eventSource.connect()
+                }
+
+              }
+            }
+          }
+        }
+    }
+  }
+
+  @Test
   fun `builds event streams`() {
     val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
@@ -818,6 +940,50 @@ abstract class RequestFactoryTest {
                   requestFactory.eventStream(
                     Method.Get,
                     "",
+                    decoder = { decoder, event, _, data, logger ->
+                      when (event) {
+                        "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                        else -> {
+                          logger.error("unsupported event type")
+                          null
+                        }
+                      }
+                    },
+                  )
+
+                eventStream.first()
+              }
+            }
+
+          assertThat(result, hasEntry("target", "world"))
+        }
+    }
+  }
+
+  @Test
+  fun `builds event streams with explicit body`() {
+    val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(ContentType, EventStream)
+        .setBody(encodedEvent),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          val result =
+            runBlocking {
+              withTimeout(50000) {
+                val eventStream =
+                  requestFactory.eventStream<Unit, Map<String, Any>>(
+                    Method.Get,
+                    "",
+                    body = null,
                     decoder = { decoder, event, _, data, logger ->
                       when (event) {
                         "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())

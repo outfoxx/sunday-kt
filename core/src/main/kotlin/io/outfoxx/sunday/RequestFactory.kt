@@ -81,7 +81,7 @@ abstract class RequestFactory : Closeable {
     /**
      * Request will be used for Server-Sent Events connections.
      */
-    Events
+    Events,
   }
 
   /**
@@ -94,7 +94,10 @@ abstract class RequestFactory : Closeable {
    * @param typeId Problem type id to register.
    * @param problemType [Problem] subclass to map to [typeId].
    */
-  abstract fun registerProblem(typeId: String, problemType: KClass<out ThrowableProblem>)
+  abstract fun registerProblem(
+    typeId: String,
+    problemType: KClass<out ThrowableProblem>,
+  )
 
   abstract val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
   abstract val mediaTypeEncoders: MediaTypeEncoders
@@ -111,7 +114,7 @@ abstract class RequestFactory : Closeable {
     queryParameters: Parameters? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Parameters? = null
+    headers: Parameters? = null,
   ) = request(
     method,
     pathTemplate,
@@ -120,7 +123,7 @@ abstract class RequestFactory : Closeable {
     null as Unit?,
     contentTypes,
     acceptTypes,
-    headers
+    headers,
   )
 
   /**
@@ -135,7 +138,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    purpose: RequestPurpose = RequestPurpose.Normal
+    purpose: RequestPurpose = RequestPurpose.Normal,
   ): Request
 
   /**
@@ -159,7 +162,7 @@ abstract class RequestFactory : Closeable {
     queryParameters: Parameters? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Parameters? = null
+    headers: Parameters? = null,
   ) = response(
     method,
     pathTemplate,
@@ -168,7 +171,7 @@ abstract class RequestFactory : Closeable {
     null as Unit?,
     contentTypes,
     acceptTypes,
-    headers
+    headers,
   )
 
   /**
@@ -185,7 +188,7 @@ abstract class RequestFactory : Closeable {
     body: B? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Parameters? = null
+    headers: Parameters? = null,
   ): Response {
     val request =
       request(
@@ -196,7 +199,7 @@ abstract class RequestFactory : Closeable {
         body,
         contentTypes,
         acceptTypes,
-        headers
+        headers,
       )
 
     return response(request)
@@ -217,17 +220,18 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): R = result(
-    method,
-    pathTemplate,
-    pathParameters,
-    queryParameters,
-    body,
-    contentTypes,
-    acceptTypes,
-    headers,
-    typeOf<R>()
-  )
+  ): R =
+    result(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      contentTypes,
+      acceptTypes,
+      headers,
+      typeOf<R>(),
+    )
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -243,17 +247,18 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): R = result(
-    method,
-    pathTemplate,
-    pathParameters,
-    queryParameters,
-    null as Unit?,
-    contentTypes,
-    acceptTypes,
-    headers,
-    typeOf<R>()
-  )
+  ): R =
+    result(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      null as Unit?,
+      contentTypes,
+      acceptTypes,
+      headers,
+      typeOf<R>(),
+    )
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -270,18 +275,19 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    resultType: KType
-  ): R = resultResponse<B, R>(
-    method,
-    pathTemplate,
-    pathParameters,
-    queryParameters,
-    body,
-    contentTypes,
-    acceptTypes,
-    headers,
-    resultType,
-  ).result
+    resultType: KType,
+  ): R =
+    resultResponse<B, R>(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      contentTypes,
+      acceptTypes,
+      headers,
+      resultType,
+    ).result
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -299,17 +305,18 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ResultResponse<R> = resultResponse(
-    method,
-    pathTemplate,
-    pathParameters,
-    queryParameters,
-    body,
-    contentTypes,
-    acceptTypes,
-    headers,
-    typeOf<R>()
-  )
+  ): ResultResponse<R> =
+    resultResponse(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      contentTypes,
+      acceptTypes,
+      headers,
+      typeOf<R>(),
+    )
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -326,17 +333,18 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ResultResponse<R> = resultResponse(
-    method,
-    pathTemplate,
-    pathParameters,
-    queryParameters,
-    null as Unit?,
-    contentTypes,
-    acceptTypes,
-    headers,
-    typeOf<R>()
-  )
+  ): ResultResponse<R> =
+    resultResponse(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      null as Unit?,
+      contentTypes,
+      acceptTypes,
+      headers,
+      typeOf<R>(),
+    )
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -354,9 +362,8 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    resultType: KType
+    resultType: KType,
   ): ResultResponse<R> {
-
     val response =
       response(
         method,
@@ -366,7 +373,7 @@ abstract class RequestFactory : Closeable {
         body,
         contentTypes,
         acceptTypes,
-        headers
+        headers,
       )
 
     if (isFailureResponse(response)) {
@@ -382,7 +389,7 @@ abstract class RequestFactory : Closeable {
         response,
         resultType,
       ),
-      response
+      response,
     )
   }
 
@@ -400,19 +407,20 @@ abstract class RequestFactory : Closeable {
     body: B? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Parameters? = null
-  ): EventSource = eventSource {
-    request(
-      method,
-      pathTemplate,
-      pathParameters,
-      queryParameters,
-      body,
-      contentTypes,
-      acceptTypes,
-      headers
-    )
-  }
+    headers: Parameters? = null,
+  ): EventSource =
+    eventSource {
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        body,
+        contentTypes,
+        acceptTypes,
+        headers,
+      )
+    }
 
   /**
    * Creates an [EventSource] that uses the provided request parameters to supply
@@ -427,21 +435,22 @@ abstract class RequestFactory : Closeable {
     queryParameters: Parameters? = null,
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
-    headers: Parameters? = null
-  ): EventSource = eventSource { eventSourceHeaders ->
-    request(
-      method,
-      pathTemplate,
-      pathParameters,
-      queryParameters,
-      null as Unit?,
-      contentTypes,
-      acceptTypes,
-      eventSourceHeaders.let { esHeaders ->
-        (headers?.let { esHeaders + HeaderParameters.encode(headers) } ?: esHeaders).toMap()
-      }
-    )
-  }
+    headers: Parameters? = null,
+  ): EventSource =
+    eventSource { eventSourceHeaders ->
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        null as Unit?,
+        contentTypes,
+        acceptTypes,
+        eventSourceHeaders.let { esHeaders ->
+          (headers?.let { esHeaders + HeaderParameters.encode(headers) } ?: esHeaders).toMap()
+        },
+      )
+    }
 
   /**
    * Creates an [EventSource] that uses the provided [requestSupplier] to supply the [Request]
@@ -468,18 +477,19 @@ abstract class RequestFactory : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-  ): Flow<D> = eventStream(decoder) {
-    request(
-      method,
-      pathTemplate,
-      pathParameters,
-      queryParameters,
-      body,
-      contentTypes,
-      acceptTypes,
-      headers
-    )
-  }
+  ): Flow<D> =
+    eventStream(decoder) {
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        body,
+        contentTypes,
+        acceptTypes,
+        headers,
+      )
+    }
 
   /**
    * Creates an [Flow] of events that uses the provided request parameters to supply
@@ -497,18 +507,19 @@ abstract class RequestFactory : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-  ): Flow<D> = eventStream(decoder) {
-    request(
-      method,
-      pathTemplate,
-      pathParameters,
-      queryParameters,
-      null as Unit?,
-      contentTypes,
-      acceptTypes,
-      headers
-    )
-  }
+  ): Flow<D> =
+    eventStream(decoder) {
+      request(
+        method,
+        pathTemplate,
+        pathParameters,
+        queryParameters,
+        null as Unit?,
+        contentTypes,
+        acceptTypes,
+        headers,
+      )
+    }
 
   /**
    * Creates a [Flow] of events that uses the provided [requestSupplier] to supply the [Request]
@@ -520,59 +531,57 @@ abstract class RequestFactory : Closeable {
    */
   fun <D : Any> eventStream(
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-    requestSupplier: suspend (Headers) -> Request
-  ): Flow<D> = callbackFlow {
+    requestSupplier: suspend (Headers) -> Request,
+  ): Flow<D> =
+    callbackFlow {
+      val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
+      jsonDecoder as TextMediaTypeDecoder
 
-    val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
-    jsonDecoder as TextMediaTypeDecoder
+      val eventSource = eventSource(requestSupplier)
 
-    val eventSource = eventSource(requestSupplier)
+      eventSource.onMessage = { event ->
 
-    eventSource.onMessage = { event ->
+        val data = event.data
+        if (data != null) {
+          try {
+            val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
+            if (decodedEvent != null) {
+              trySendBlocking(decodedEvent)
+                .onFailure {
+                  cancel("Event send failed", it)
+                }
 
-      val data = event.data
-      if (data != null) {
+            }
 
-        try {
-
-          val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
-          if (decodedEvent != null) {
-
-            trySendBlocking(decodedEvent)
-              .onFailure {
-                cancel("Event send failed", it)
-              }
-
+          } catch (x: Throwable) {
+            cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
           }
 
-        } catch (x: Throwable) {
-          cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
         }
 
       }
 
+      eventSource.onError = { error ->
+        logger.warn("EventSource error encountered", error)
+      }
+
+      eventSource.connect()
+
+      awaitClose {
+        logger.debug("Stream closed or canceled")
+
+        eventSource.close()
+      }
     }
-
-    eventSource.onError = { error ->
-      logger.warn("EventSource error encountered", error)
-    }
-
-    eventSource.connect()
-
-    awaitClose {
-      logger.debug("Stream closed or canceled")
-
-      eventSource.close()
-    }
-  }
 
   abstract fun close(cancelOutstandingRequests: Boolean)
 
-  private fun isFailureResponse(response: Response) =
-    failureStatusCodes.contains(response.statusCode)
+  private fun isFailureResponse(response: Response) = failureStatusCodes.contains(response.statusCode)
 
-  private fun <T : Any> parseSuccess(response: Response, resultType: KType): T {
-
+  private fun <T : Any> parseSuccess(
+    response: Response,
+    resultType: KType,
+  ): T {
     val body = response.body
     if (emptyDataStatusCodes.contains(response.statusCode)) {
       if (resultType != typeOf<Unit>()) {
@@ -590,14 +599,14 @@ abstract class RequestFactory : Closeable {
       response.contentType?.let { MediaType.from(it.toString()) }
         ?: throw SundayError(
           SundayError.Reason.InvalidContentType,
-          response.contentType?.value ?: ""
+          response.contentType?.value ?: "",
         )
 
-    val contentTypeDecoder = mediaTypeDecoders.find(contentType)
-      ?: throw SundayError(NoDecoder, contentType.value)
+    val contentTypeDecoder =
+      mediaTypeDecoders.find(contentType)
+        ?: throw SundayError(NoDecoder, contentType.value)
 
     try {
-
       return contentTypeDecoder.decode(body, resultType)
     } catch (x: Throwable) {
       throw SundayError(SundayError.Reason.ResponseDecodingFailed, cause = x)
@@ -605,7 +614,6 @@ abstract class RequestFactory : Closeable {
   }
 
   private fun parseFailure(response: Response): ThrowableProblem {
-
     val status =
       try {
         Status.valueOf(response.statusCode)
@@ -616,12 +624,13 @@ abstract class RequestFactory : Closeable {
     return parseFailureResponseBody(response, status)
   }
 
-  private fun parseFailureResponseBody(response: Response, status: StatusType): ThrowableProblem {
-
+  private fun parseFailureResponseBody(
+    response: Response,
+    status: StatusType,
+  ): ThrowableProblem {
     val body = response.body
 
     return if (body != null && response.contentLength != 0L) {
-
       val contentType =
         response.contentType?.let { MediaType.from(it.toString()) }
           ?: MediaType.OctetStream
@@ -644,7 +653,7 @@ abstract class RequestFactory : Closeable {
     problemDecoder as? StructuredMediaTypeDecoder
       ?: throw SundayError(
         NoDecoder,
-        "'${MediaType.Problem}' decoder must support structured decoding"
+        "'${MediaType.Problem}' decoder must support structured decoding",
       )
 
     val decoded: Map<String, Any> = problemDecoder.decode(body)
@@ -658,15 +667,17 @@ abstract class RequestFactory : Closeable {
   private fun parseUnknownFailureResponseBody(
     contentType: MediaType,
     body: BufferedSource,
-    status: StatusType
+    status: StatusType,
   ): ThrowableProblem {
     val (responseText, responseData) =
-      if (contentType.compatible(MediaType.AnyText))
+      if (contentType.compatible(MediaType.AnyText)) {
         body.readString(Charsets.from(contentType)) to null
-      else
+      } else {
         null to body.readByteArray()
+      }
 
-    return Problem.builder()
+    return Problem
+      .builder()
       .withStatus(status)
       .withTitle(status.reasonPhrase)
       .apply {
@@ -676,8 +687,7 @@ abstract class RequestFactory : Closeable {
         if (responseData != null) {
           with("responseData", responseData)
         }
-      }
-      .build()
+      }.build()
   }
 
 }

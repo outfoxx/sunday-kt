@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.json.JsonMapper
  *
  * @see [ObjectMapperEncoder]
  */
-class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper) {
+class JSONEncoder(
+  jsonMapper: JsonMapper,
+) : ObjectMapperEncoder(jsonMapper) {
 
   companion object {
 
@@ -37,7 +39,7 @@ class JSONEncoder(jsonMapper: JsonMapper) : ObjectMapperEncoder(jsonMapper) {
         JsonMapper()
           .findAndRegisterModules()
           .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper,
       )
 
   }

@@ -56,7 +56,8 @@ class OkHttpRequestFactory(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-) : RequestFactory(), Closeable {
+) : RequestFactory(),
+  Closeable {
 
   companion object {
 
@@ -67,7 +68,10 @@ class OkHttpRequestFactory(
     get() = registeredProblemTypesStorage
   private val registeredProblemTypesStorage = mutableMapOf<String, KClass<out ThrowableProblem>>()
 
-  override fun registerProblem(typeId: String, problemType: KClass<out ThrowableProblem>) {
+  override fun registerProblem(
+    typeId: String,
+    problemType: KClass<out ThrowableProblem>,
+  ) {
     registeredProblemTypesStorage[typeId] = problemType
   }
 
@@ -85,21 +89,24 @@ class OkHttpRequestFactory(
     logger.trace("Building request")
 
     val urlBuilder =
-      baseURI.resolve(pathTemplate, pathParameters, pathEncoders)
-        .toURI().toHttpUrlOrNull()?.newBuilder()
+      baseURI
+        .resolve(pathTemplate, pathParameters, pathEncoders)
+        .toURI()
+        .toHttpUrlOrNull()
+        ?.newBuilder()
         ?: throw SundayError(InvalidBaseUri)
 
     if (!queryParameters.isNullOrEmpty()) {
-
       // Encode & add query parameters to url
 
-      val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded)
-        ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
+      val urlQueryEncoder =
+        mediaTypeEncoders.find(WWWFormUrlEncoded)
+          ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
 
       urlQueryEncoder as? URLQueryParamsEncoder
         ?: throw SundayError(
           NoDecoder,
-          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}"
+          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}",
         )
 
       urlBuilder.encodedQuery(urlQueryEncoder.encodeQueryString(queryParameters))
@@ -128,16 +135,18 @@ class OkHttpRequestFactory(
     // Add `Content-Type` header (even if body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.addHeader(ContentType, contentType.toString()) }
 
-    var requestBody = body?.let {
-      contentType ?: throw SundayError(NoSupportedContentTypes)
+    var requestBody =
+      body?.let {
+        contentType ?: throw SundayError(NoSupportedContentTypes)
 
-      val mediaTypeEncoder = mediaTypeEncoders.find(contentType)
-        ?: error("Cannot find encoder that was reported as supported")
+        val mediaTypeEncoder =
+          mediaTypeEncoders.find(contentType)
+            ?: error("Cannot find encoder that was reported as supported")
 
-      val encodedBody = mediaTypeEncoder.encode(body).buffer().readByteString()
+        val encodedBody = mediaTypeEncoder.encode(body).buffer().readByteString()
 
-      encodedBody.toRequestBody(contentType.value.toMediaType())
-    }
+        encodedBody.toRequestBody(contentType.value.toMediaType())
+      }
 
     if (requestBody == null && method.requiresBody) {
       requestBody = byteArrayOf().toRequestBody()
@@ -165,10 +174,7 @@ class OkHttpRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
-
-    return EventSource(requestSupplier)
-  }
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
 
   override fun close() {
     close(true)

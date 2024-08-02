@@ -43,7 +43,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder decodes text`() {
-
       val decoder = TextDecoder.default
 
       assertThat(decoder.decode<String>("testing".buffer()), equalTo("testing"))
@@ -52,7 +51,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder fails to decode non text`() {
-
       val decoder = TextDecoder.default
 
       assertThrows<IllegalArgumentException> {
@@ -62,7 +60,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder encodes text`() {
-
       val encoder = TextEncoder.default
 
       assertThat(encoder.encode("testing"), equalTo("testing".buffer()))
@@ -71,7 +68,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder fails to encode non text values`() {
-
       val encoder = TextEncoder.default
 
       assertThrows<IllegalArgumentException> {
@@ -86,7 +82,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder decodes binary values`() {
-
       val decoder = BinaryDecoder()
 
       val buffer = "testing".buffer()
@@ -94,21 +89,20 @@ class MediaTypeCodecTest {
       assertThat(decoder.decode<ByteString>(buffer.copy()), equalTo(buffer.copy().readByteString()))
       assertThat(
         decoder.decode<InputStream>(buffer.copy()).readAllBytes(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
       assertThat(
         decoder.decode<Source>(buffer.copy()).buffer().readByteArray(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
       assertThat(
         decoder.decode<BufferedSource>(buffer.copy()).readByteArray(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
     }
 
     @Test
     fun `test decoder fails to decode non binary`() {
-
       val decoder = BinaryDecoder()
 
       assertThrows<IllegalArgumentException> {
@@ -118,30 +112,28 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder encodes binary values`() {
-
       val encoder = BinaryEncoder()
 
       assertThat(
         encoder.encode(byteArrayOf(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(ByteString.of(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(ByteArrayInputStream(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(Buffer().write(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
     }
 
     @Test
     fun `test encoder fails to encode non binary values`() {
-
       val encoder = BinaryEncoder()
 
       assertThrows<IllegalArgumentException> {

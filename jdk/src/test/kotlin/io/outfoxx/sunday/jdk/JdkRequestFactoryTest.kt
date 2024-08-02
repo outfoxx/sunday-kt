@@ -43,7 +43,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
   override fun createRequestFactory(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
-    decoders: MediaTypeDecoders
+    decoders: MediaTypeDecoders,
   ): RequestFactory =
     JdkRequestFactory(
       uriTemplate,
@@ -52,168 +52,181 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
     )
 
   @Test
-  fun `adapt a an HTTP request`() = runBlocking {
-
-    val factory =
-      JdkRequestFactory(
-        URITemplate("http://example.com"),
-        adapter = { request ->
-          request.copyToBuilder()
-            .header("Authorization", "Bearer 12345")
-            .build()
-        }
-      )
-
-    val request = factory.request(Method.Get, "test")
-
-    assertThat(request.headers, hasItem("Authorization" to "Bearer 12345"))
-  }
-
-  @Test
-  fun `copying requests to builder`() = runBlocking {
-
-    val headers =
-      HttpHeaders.of(
-        mapOf(
-          Authorization to listOf("Bearer 12345"),
-          ContentType to listOf("application/json", "application/cbor")
+  fun `adapt a an HTTP request`() =
+    runBlocking {
+      val factory =
+        JdkRequestFactory(
+          URITemplate("http://example.com"),
+          adapter = { request ->
+            request
+              .copyToBuilder()
+              .header("Authorization", "Bearer 12345")
+              .build()
+          },
         )
-      ) { _, _ -> true }
 
-    val get =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .GET()
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val getCopy = assertDoesNotThrow { get.copyToBuilder().build() }
-    assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(getCopy.method(), equalTo("GET"))
-    assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
-    assertThat(getCopy.headers(), equalTo(headers))
+      val request = factory.request(Method.Get, "test")
 
-    val delete =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .DELETE()
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val deleteCopy = assertDoesNotThrow { delete.copyToBuilder().build() }
-    assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(deleteCopy.method(), equalTo("DELETE"))
-    assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
-    assertThat(deleteCopy.headers(), equalTo(headers))
-
-    val post =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .POST(BodyPublishers.noBody())
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val postCopy = assertDoesNotThrow { post.copyToBuilder().build() }
-    assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(postCopy.method(), equalTo("POST"))
-    assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(postCopy.headers(), equalTo(headers))
-
-    val put =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .PUT(BodyPublishers.ofString("test"))
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val putCopy = assertDoesNotThrow { put.copyToBuilder().build() }
-    assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(putCopy.method(), equalTo("PUT"))
-    assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(putCopy.headers(), equalTo(headers))
-
-    val custom =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .method("TEST", BodyPublishers.noBody())
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val customCopy = assertDoesNotThrow { custom.copyToBuilder().build() }
-    assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(customCopy.method(), equalTo("TEST"))
-    assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(customCopy.headers(), equalTo(headers))
-  }
+      assertThat(request.headers, hasItem("Authorization" to "Bearer 12345"))
+    }
 
   @Test
-  fun `copying requests to builder without headers`() = runBlocking {
+  @Suppress("LongMethod")
+  fun `copying requests to builder`() =
+    runBlocking {
+      val headers =
+        HttpHeaders.of(
+          mapOf(
+            Authorization to listOf("Bearer 12345"),
+            ContentType to listOf("application/json", "application/cbor"),
+          ),
+        ) { _, _ -> true }
 
-    val headers = HttpHeaders.of(mapOf()) { _, _ -> true }
+      val get =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .GET()
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val getCopy = assertDoesNotThrow { get.copyToBuilder().build() }
+      assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(getCopy.method(), equalTo("GET"))
+      assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
+      assertThat(getCopy.headers(), equalTo(headers))
 
-    val get =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .GET()
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val getCopy = assertDoesNotThrow { get.copyToBuilder(includeHeaders = false).build() }
-    assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(getCopy.method(), equalTo("GET"))
-    assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
-    assertThat(getCopy.headers(), equalTo(headers))
+      val delete =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .DELETE()
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val deleteCopy = assertDoesNotThrow { delete.copyToBuilder().build() }
+      assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(deleteCopy.method(), equalTo("DELETE"))
+      assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
+      assertThat(deleteCopy.headers(), equalTo(headers))
 
-    val delete =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .DELETE()
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val deleteCopy = assertDoesNotThrow { delete.copyToBuilder(includeHeaders = false).build() }
-    assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(deleteCopy.method(), equalTo("DELETE"))
-    assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
-    assertThat(deleteCopy.headers(), equalTo(headers))
+      val post =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .POST(BodyPublishers.noBody())
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val postCopy = assertDoesNotThrow { post.copyToBuilder().build() }
+      assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(postCopy.method(), equalTo("POST"))
+      assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(postCopy.headers(), equalTo(headers))
 
-    val post =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .POST(BodyPublishers.noBody())
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val postCopy = assertDoesNotThrow { post.copyToBuilder(includeHeaders = false).build() }
-    assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(postCopy.method(), equalTo("POST"))
-    assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(postCopy.headers(), equalTo(headers))
+      val put =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .PUT(BodyPublishers.ofString("test"))
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val putCopy = assertDoesNotThrow { put.copyToBuilder().build() }
+      assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(putCopy.method(), equalTo("PUT"))
+      assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(putCopy.headers(), equalTo(headers))
 
-    val put =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .PUT(BodyPublishers.ofString("test"))
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val putCopy = assertDoesNotThrow { put.copyToBuilder(includeHeaders = false).build() }
-    assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(putCopy.method(), equalTo("PUT"))
-    assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(putCopy.headers(), equalTo(headers))
+      val custom =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .method("TEST", BodyPublishers.noBody())
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val customCopy = assertDoesNotThrow { custom.copyToBuilder().build() }
+      assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(customCopy.method(), equalTo("TEST"))
+      assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(customCopy.headers(), equalTo(headers))
+    }
 
-    val custom =
-      HttpRequest.newBuilder(URI("http://example.com"))
-        .method("TEST", BodyPublishers.noBody())
-        .header(Authorization, "Bearer 12345")
-        .header(ContentType, "application/json")
-        .header(ContentType, "application/cbor")
-        .build()
-    val customCopy = assertDoesNotThrow { custom.copyToBuilder(includeHeaders = false).build() }
-    assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
-    assertThat(customCopy.method(), equalTo("TEST"))
-    assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
-    assertThat(customCopy.headers(), equalTo(headers))
-  }
+  @Test
+  @Suppress("LongMethod")
+  fun `copying requests to builder without headers`() =
+    runBlocking {
+      val headers = HttpHeaders.of(mapOf()) { _, _ -> true }
+
+      val get =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .GET()
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val getCopy = assertDoesNotThrow { get.copyToBuilder(includeHeaders = false).build() }
+      assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(getCopy.method(), equalTo("GET"))
+      assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
+      assertThat(getCopy.headers(), equalTo(headers))
+
+      val delete =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .DELETE()
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val deleteCopy = assertDoesNotThrow { delete.copyToBuilder(includeHeaders = false).build() }
+      assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(deleteCopy.method(), equalTo("DELETE"))
+      assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
+      assertThat(deleteCopy.headers(), equalTo(headers))
+
+      val post =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .POST(BodyPublishers.noBody())
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val postCopy = assertDoesNotThrow { post.copyToBuilder(includeHeaders = false).build() }
+      assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(postCopy.method(), equalTo("POST"))
+      assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(postCopy.headers(), equalTo(headers))
+
+      val put =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .PUT(BodyPublishers.ofString("test"))
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val putCopy = assertDoesNotThrow { put.copyToBuilder(includeHeaders = false).build() }
+      assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(putCopy.method(), equalTo("PUT"))
+      assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(putCopy.headers(), equalTo(headers))
+
+      val custom =
+        HttpRequest
+          .newBuilder(URI("http://example.com"))
+          .method("TEST", BodyPublishers.noBody())
+          .header(Authorization, "Bearer 12345")
+          .header(ContentType, "application/json")
+          .header(ContentType, "application/cbor")
+          .build()
+      val customCopy = assertDoesNotThrow { custom.copyToBuilder(includeHeaders = false).build() }
+      assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
+      assertThat(customCopy.method(), equalTo("TEST"))
+      assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
+      assertThat(customCopy.headers(), equalTo(headers))
+    }
 }

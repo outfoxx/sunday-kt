@@ -27,8 +27,10 @@ import java.nio.charset.Charset
  * @param default If [mediaType] doesn't have a `charset` parameter, this value is returned.
  * @return Charset from the [mediaType] or the [default].
  */
-fun Charsets.from(mediaType: MediaType, default: Charset = UTF_8): Charset {
-
+fun Charsets.from(
+  mediaType: MediaType,
+  default: Charset = UTF_8,
+): Charset {
   val encoding = mediaType.parameter(CharSet) ?: return default
 
   return Charset.forName(encoding)

@@ -16,11 +16,16 @@
 
 package io.outfoxx.sunday
 
-class SundayError(message: String, val reason: Reason? = null, cause: Throwable? = null) :
-  RuntimeException(message, cause) {
+class SundayError(
+  message: String,
+  val reason: Reason? = null,
+  cause: Throwable? = null,
+) : RuntimeException(message, cause) {
 
-  /* ktlint-disable max-line-length */
-  enum class Reason(val message: String) {
+  @Suppress("ktlint:standard:max-line-length")
+  enum class Reason(
+    val message: String,
+  ) {
     UnexpectedEmptyResponse("Unexpected empty reason"),
     NoData("No data in response when method requires it"),
     InvalidContentType("Invalid Content-Type"),
@@ -31,9 +36,8 @@ class SundayError(message: String, val reason: Reason? = null, cause: Throwable?
     InvalidBaseUri("Base URL is invalid after expanding template"),
     NoSupportedContentTypes("None of the provided Content-Types for the request has a registered decoder"),
     NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder"),
-    InvalidHeaderValue("The encoded header value contains one or more invalid characters")
+    InvalidHeaderValue("The encoded header value contains one or more invalid characters"),
   }
-  /* ktlint-enable max-line-length */
 
   constructor(reason: Reason, extraMessage: String? = null, cause: Throwable? = null) :
     this("${reason.message}${extraMessage?.let { " $it" } ?: ""}", reason, cause)

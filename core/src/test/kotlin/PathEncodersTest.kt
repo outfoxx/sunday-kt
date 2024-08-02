@@ -25,14 +25,12 @@ class PathEncodersTest {
 
   @Test
   fun `adding implicitly typed encoders`() {
-
     val encoders = PathEncoders.default.add(UUID::toString)
     assertThat(encoders, Matchers.aMapWithSize(2))
   }
 
   @Test
   fun `adding explicitly typed encoders`() {
-
     val encoders = PathEncoders.default.add(UUID::class, UUID::toString)
     assertThat(encoders, Matchers.aMapWithSize(2))
   }

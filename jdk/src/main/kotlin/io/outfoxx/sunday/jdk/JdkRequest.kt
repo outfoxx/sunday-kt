@@ -84,7 +84,8 @@ open class JdkRequest(
 
     val response =
       suspendCancellableCoroutine { continuation ->
-        httpClient.sendAsync(request, handler)
+        httpClient
+          .sendAsync(request, handler)
           .whenComplete { response, error ->
             if (error != null) {
               continuation.resumeWithException(error)
@@ -99,9 +100,8 @@ open class JdkRequest(
     return JdkResponse(response, httpClient)
   }
 
-  override fun start(): Flow<Request.Event> {
-    return callbackFlow {
-
+  override fun start(): Flow<Request.Event> =
+    callbackFlow {
       logger.debug("Starting")
 
       val handler = RequestEventBodyHandler(JdkRequest(request, httpClient), channel)
@@ -115,7 +115,6 @@ open class JdkRequest(
         future.cancel(true)
       }
     }
-  }
 
   class BufferedSourceBodyHandler : BodyHandler<BufferedSource> {
 
@@ -146,9 +145,7 @@ open class JdkRequest(
         bodyFuture.complete(buffer)
       }
 
-      override fun getBody(): CompletionStage<BufferedSource> {
-        return bodyFuture
-      }
+      override fun getBody(): CompletionStage<BufferedSource> = bodyFuture
 
     }
 
@@ -205,19 +202,17 @@ open class JdkRequest(
       }
 
       override fun onComplete() {
-
         val endEvent = Request.Event.End(emptyList())
 
-        channel.trySend(endEvent)
+        channel
+          .trySend(endEvent)
           .onSuccess { logger.trace("Sent: end") }
           .onFailure { logger.error("Failed to send: end") }
 
         bodyFuture.complete(Unit)
       }
 
-      override fun getBody(): CompletionStage<Unit> {
-        return bodyFuture
-      }
+      override fun getBody(): CompletionStage<Unit> = bodyFuture
 
     }
 
@@ -228,16 +223,16 @@ open class JdkRequest(
     }
 
     override fun apply(responseInfo: HttpResponse.ResponseInfo): BodySubscriber<Unit> {
-
       val startEvent =
         Request.Event.Start(
           JdkResponseInfo(
             responseInfo,
             originalRequest,
-          )
+          ),
         )
 
-      channel.trySend(startEvent)
+      channel
+        .trySend(startEvent)
         .onSuccess { logger.trace("Sent: start") }
         .onFailure { logger.error("Failed to send: start") }
 

@@ -50,7 +50,7 @@ abstract class EventSourceTest {
     url: String,
     headers: Headers,
     onStart: () -> Unit = {},
-    onCancel: () -> Unit = {}
+    onCancel: () -> Unit = {},
   ): Request
 
   @Test
@@ -66,13 +66,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
-        .setBodyDelay(500, MILLISECONDS)
+          5,
+        ).setBodyDelay(500, MILLISECONDS),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
@@ -87,7 +85,6 @@ abstract class EventSourceTest {
       }
 
       eventSource.use {
-
         eventSource.connect()
         eventSource.connect()
 
@@ -111,12 +108,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
@@ -128,7 +124,6 @@ abstract class EventSourceTest {
       }
 
       eventSource.use {
-
         eventSource.connect()
 
         assertTrue(completed.await(300, SECONDS))
@@ -157,12 +152,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
@@ -174,7 +168,6 @@ abstract class EventSourceTest {
       }
 
       eventSource.use {
-
         eventSource.connect()
 
         assertTrue(completed.await(3, SECONDS))
@@ -208,20 +201,19 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-        )
+        ),
     )
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .setHeader(ContentType, Problem)
+        .setHeader(ContentType, Problem),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
-          retryTime = Duration.ofMillis(100)
+          retryTime = Duration.ofMillis(100),
         )
 
       val opened = CountDownLatch(1)
@@ -244,7 +236,6 @@ abstract class EventSourceTest {
       assertThat(eventSource.onError, not(nullValue()))
 
       eventSource.use {
-
         eventSource.connect()
 
         assertTrue(opened.await(3, SECONDS), "Did not received open callback")
@@ -256,7 +247,6 @@ abstract class EventSourceTest {
 
   @Test
   fun `test listener add & remove`() {
-
     val eventSource = EventSource({ headers -> createRequest("http://example.com", headers) })
 
     val handler: (EventSource.Event) -> Unit = { }
@@ -280,12 +270,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
@@ -296,7 +285,6 @@ abstract class EventSourceTest {
       }
 
       eventSource.use {
-
         eventSource.connect()
 
         assertTrue(completed.await(3, SECONDS))
@@ -319,12 +307,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
@@ -335,7 +322,6 @@ abstract class EventSourceTest {
       }
 
       eventSource.use {
-
         eventSource.connect()
 
         assertTrue(completed.await(3, SECONDS))
@@ -358,21 +344,19 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.enqueue(
       MockResponse()
-        .setResponseCode(503)
+        .setResponseCode(503),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
       eventSource.use {
-
         eventSource.connect()
 
         server.takeRequest(3, SECONDS)
@@ -398,8 +382,8 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.enqueue(
       MockResponse()
@@ -412,24 +396,22 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
+          5,
+        ),
     )
     server.enqueue(
       MockResponse()
-        .setResponseCode(503)
+        .setResponseCode(503),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
-          retryTime = Duration.ofMillis(100)
+          retryTime = Duration.ofMillis(100),
         )
 
       eventSource.use {
-
         eventSource.connect()
 
         server.takeRequest(3, SECONDS)
@@ -458,18 +440,16 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          5
-        )
-        .throttleBody(20, 2, SECONDS)
+          5,
+        ).throttleBody(20, 2, SECONDS),
     )
     server.start()
     server.use {
-
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           eventTimeout = Duration.ofMillis(500),
-          eventTimeoutCheckInterval = Duration.ofMillis(100)
+          eventTimeoutCheckInterval = Duration.ofMillis(100),
         )
 
       val completed = CountDownLatch(1)
@@ -515,12 +495,11 @@ abstract class EventSourceTest {
           |
           |
           """.trimMargin(),
-          3
-        )
+          3,
+        ),
     )
     server.start()
     server.use {
-
       val connected = CountDownLatch(1)
 
       val eventSource =

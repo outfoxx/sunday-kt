@@ -28,12 +28,11 @@ class URITemplateTest {
 
   enum class TestEnum {
     @JsonProperty("test-value")
-    TestValue
+    TestValue,
   }
 
   @Test
   fun `test enum encoding`() {
-
     val path =
       URITemplate("http://example.com/{enum}", mapOf("enum" to TestEnum.TestValue))
         .resolve(encoders = PathEncoders.default)
@@ -45,10 +44,9 @@ class URITemplateTest {
 
   @Test
   fun `test custom encoding`() {
-
     val encoders: Map<KClass<*>, PathEncoder> =
       mapOf(
-        UUID::class to { (it as UUID).toString().replace("-", "") }
+        UUID::class to { (it as UUID).toString().replace("-", "") },
       )
 
     val id = UUID.randomUUID()
@@ -60,7 +58,7 @@ class URITemplateTest {
 
     assertThat(
       path,
-      equalTo("http://example.com/objects/${id.toString().replace("-", "")}")
+      equalTo("http://example.com/objects/${id.toString().replace("-", "")}"),
     )
   }
 

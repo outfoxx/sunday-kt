@@ -49,9 +49,14 @@ abstract class GeneratedAPITests {
     decoders: MediaTypeDecoders = MediaTypeDecoders.default,
   ): RequestFactory
 
-  class API(private val requestFactory: RequestFactory) {
+  class API(
+    private val requestFactory: RequestFactory,
+  ) {
 
-    data class TestResult(val message: String, val count: Int)
+    data class TestResult(
+      val message: String,
+      val count: Int,
+    )
 
     suspend fun testResult(): TestResult =
       requestFactory.result(
@@ -77,7 +82,6 @@ abstract class GeneratedAPITests {
 
   @Test
   fun `generated style API result method`() {
-
     val testResult = API.TestResult("Test", 10)
 
     val server = MockWebServer()
@@ -85,11 +89,10 @@ abstract class GeneratedAPITests {
       MockResponse()
         .setResponseCode(200)
         .addHeader(ContentType, JSON)
-        .setBody(objectMapper.writeValueAsString(testResult))
+        .setBody(objectMapper.writeValueAsString(testResult)),
     )
     server.start()
     server.use {
-
       val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
 
       val result = runBlocking { api.testResult() }
@@ -100,7 +103,6 @@ abstract class GeneratedAPITests {
 
   @Test
   fun `generated style API result response method`() {
-
     val testResult = API.TestResult("Test", 10)
 
     val server = MockWebServer()
@@ -108,11 +110,10 @@ abstract class GeneratedAPITests {
       MockResponse()
         .setResponseCode(200)
         .addHeader(ContentType, JSON)
-        .setBody(objectMapper.writeValueAsString(testResult))
+        .setBody(objectMapper.writeValueAsString(testResult)),
     )
     server.start()
     server.use {
-
       val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
 
       val resultResponse = runBlocking { api.testResultResponse() }
@@ -120,23 +121,21 @@ abstract class GeneratedAPITests {
       assertThat(resultResponse.result, equalTo(testResult))
       assertThat(
         resultResponse.headers.map { it.first.lowercase() to it.second.lowercase() },
-        hasItems(ContentType to JSON.value, ContentLength to "29")
+        hasItems(ContentType to JSON.value, ContentLength to "29"),
       )
     }
   }
 
   @Test
   fun `generated style API unit result response method`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .addHeader(ContentLength, "0")
-        .setResponseCode(204)
+        .setResponseCode(204),
     )
     server.start()
     server.use {
-
       val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
 
       val responseResult = runBlocking { api.testVoidResultResponse() }
@@ -144,7 +143,7 @@ abstract class GeneratedAPITests {
       assertThat(responseResult.result, equalTo(Unit))
       assertThat(
         responseResult.headers.map { it.first.lowercase() to it.second.lowercase() },
-        hasItems(ContentLength to "0")
+        hasItems(ContentLength to "0"),
       )
     }
   }

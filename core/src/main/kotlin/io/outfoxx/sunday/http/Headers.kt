@@ -27,16 +27,14 @@ typealias Headers = Iterable<Pair<String, String>>
  * @param name Name of the header to find; names are compared case insensitively.
  * @throws NoSuchElementException Thrown when no header with the given name was found.
  */
-fun Headers.getFirst(name: String): String =
-  first { it.first.equals(name, ignoreCase = true) }.second
+fun Headers.getFirst(name: String): String = first { it.first.equals(name, ignoreCase = true) }.second
 
 /**
  * Retrieves the first header matching the given name or returns null.
  *
  * @param name Name of the header to find; names are compared case insensitively.
  */
-fun Headers.getFirstOrNull(name: String): String? =
-  firstOrNull { it.first.equals(name, ignoreCase = true) }?.second
+fun Headers.getFirstOrNull(name: String): String? = firstOrNull { it.first.equals(name, ignoreCase = true) }?.second
 
 /**
  * Retrieves all the headers matching the given name.
@@ -51,5 +49,4 @@ fun Headers.getAll(name: String): Iterable<String> =
 /**
  * Converts the header list into an equivalent multi-map.
  */
-fun Headers.toMultiMap(): Map<String, List<String>> =
-  groupBy({ it.first.lowercase() }, { it.second })
+fun Headers.toMultiMap(): Map<String, List<String>> = groupBy({ it.first.lowercase() }, { it.second })

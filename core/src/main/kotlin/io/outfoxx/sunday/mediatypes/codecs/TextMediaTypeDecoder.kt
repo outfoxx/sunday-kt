@@ -31,7 +31,10 @@ interface TextMediaTypeDecoder : MediaTypeDecoder {
    * @param data Text data.
    * @param type Target Java/Kotlin type.
    */
-  fun <T : Any> decode(data: String, type: KType): T
+  fun <T : Any> decode(
+    data: String,
+    type: KType,
+  ): T
 }
 
 /**
@@ -40,5 +43,4 @@ interface TextMediaTypeDecoder : MediaTypeDecoder {
  * @param data Text data.
  * @param type Target Java/Kotlin type.
  */
-inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T =
-  decode(data, typeOf<T>())
+inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T = decode(data, typeOf<T>())

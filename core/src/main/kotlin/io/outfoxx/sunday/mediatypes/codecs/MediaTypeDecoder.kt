@@ -35,7 +35,10 @@ interface MediaTypeDecoder {
    * @param type Target Java/Kotlin type.
    * @return Instance of [T].
    */
-  fun <T : Any> decode(data: Source, type: KType): T
+  fun <T : Any> decode(
+    data: Source,
+    type: KType,
+  ): T
 }
 
 /**

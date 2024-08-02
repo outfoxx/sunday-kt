@@ -42,7 +42,7 @@ class EventParser {
     /**
      * SSE data field.
      */
-    var data: String? = null
+    var data: String? = null,
   ) {
 
     fun toEvent(origin: String) = EventSource.Event(event, id, data, origin)
@@ -61,8 +61,10 @@ class EventParser {
    * @param data Latest data to process
    * @param dispatcher Handler for parsed events.
    */
-  fun process(data: Buffer, dispatcher: (EventInfo) -> Unit) {
-
+  fun process(
+    data: Buffer,
+    dispatcher: (EventInfo) -> Unit,
+  ) {
     unprocessedData.write(data, data.size)
 
     val eventStrings = extractEventStrings()
@@ -75,11 +77,9 @@ class EventParser {
 
   @Suppress("LoopWithTooManyJumpStatements")
   private fun extractEventStrings(): List<String> {
-
     val eventStrings = mutableListOf<String>()
 
     while (!unprocessedData.exhausted()) {
-
       val eventSeparatorRange =
         findEventSeparator(unprocessedData)
           ?: break
@@ -112,9 +112,7 @@ class EventParser {
 
     private fun findEventSeparator(data: Buffer): Pair<Long, Long>? {
       for (idx in 0 until data.size) {
-
         when (data[idx]) {
-
           // line-feed
           LF -> {
             // if next char is same,
@@ -152,16 +150,18 @@ class EventParser {
 
     private fun parseAndDispatchEvents(
       eventStrings: List<String>,
-      dispatcher: (EventInfo) -> Unit
+      dispatcher: (EventInfo) -> Unit,
     ) {
-
       for (eventString in eventStrings) {
         parseAndDispatchEvent(eventString, dispatcher)
       }
 
     }
 
-    private fun parseAndDispatchEvent(eventString: String, dispatcher: (EventInfo) -> Unit) {
+    private fun parseAndDispatchEvent(
+      eventString: String,
+      dispatcher: (EventInfo) -> Unit,
+    ) {
       if (eventString.isEmpty()) {
         return
       }
@@ -175,11 +175,9 @@ class EventParser {
 
     @Suppress("LoopWithTooManyJumpStatements")
     private fun parseEvent(string: String): EventInfo {
-
       val info = EventInfo()
 
       for (line in string.split(linSeparators)) {
-
         val keyValueSeparatorIdx = line.indexOf(':')
         val (key, value) =
           if (keyValueSeparatorIdx != -1) {
@@ -190,7 +188,6 @@ class EventParser {
           }
 
         when (key) {
-
           "retry" -> info.retry = trimEventField(string = value)
 
           "event" -> info.event = trimEventField(string = value)

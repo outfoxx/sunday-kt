@@ -33,15 +33,16 @@ import io.outfoxx.sunday.MediaType.Companion.X509UserCert
  * Container for [MediaTypeEncoder]s that allows registering and
  * locating encoders for specific [media types][MediaType].
  */
-class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>) {
+class MediaTypeEncoders(
+  private val registered: Map<MediaType, MediaTypeEncoder>,
+) {
 
   /**
    * Check if the given [media type][MediaType] has an encoder registered.
    *
    * @return `true` if an encoder is available.
    */
-  fun supports(mediaType: MediaType) =
-    registered.keys.any { mediaType.compatible(it) }
+  fun supports(mediaType: MediaType) = registered.keys.any { mediaType.compatible(it) }
 
   /**
    * Locates a compatible encoder for the given [media type][MediaType].
@@ -49,13 +50,14 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
    * @param mediaType Media type to locate encoder for.
    * @return Compatible [MediaTypeEncoder] or null if none found.
    */
-  fun find(mediaType: MediaType) =
-    registered.entries.firstOrNull { it.key.compatible(mediaType) }?.value
+  fun find(mediaType: MediaType) = registered.entries.firstOrNull { it.key.compatible(mediaType) }?.value
 
   /**
    * Builder for [MediaTypeEncoders].
    */
-  class Builder(val registered: Map<MediaType, MediaTypeEncoder> = mapOf()) {
+  class Builder(
+    val registered: Map<MediaType, MediaTypeEncoder> = mapOf(),
+  ) {
 
     /**
      * Registers all the default encoders.
@@ -87,11 +89,11 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
         WWWFormURLEncoder.BoolEncoding.Literal,
       dateEncoding: WWWFormURLEncoder.DateEncoding =
         WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch,
-      mapper: ObjectMapper = ObjectMapper().findAndRegisterModules()
+      mapper: ObjectMapper = ObjectMapper().findAndRegisterModules(),
     ): Builder =
       register(
         WWWFormURLEncoder(arrayEncoding, boolEncoding, dateEncoding, mapper),
-        WWWFormUrlEncoded
+        WWWFormUrlEncoded,
       )
 
     /**
@@ -99,16 +101,14 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
      *
      * @return Fluent builder.
      */
-    fun registerData() =
-      register(BinaryEncoder.default, OctetStream)
+    fun registerData() = register(BinaryEncoder.default, OctetStream)
 
     /**
      * Registers the default JSON encoder.
      *
      * @return Fluent builder.
      */
-    fun registerJSON() =
-      register(JSONEncoder.default, JSON, JSONStructured)
+    fun registerJSON() = register(JSONEncoder.default, JSON, JSONStructured)
 
     /**
      * Registers a custom JSON encoder.
@@ -116,16 +116,14 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
      * @param mapper Jackson mapper to use for encoding.
      * @return Fluent builder.
      */
-    fun registerJSON(mapper: JsonMapper) =
-      register(JSONEncoder(mapper), JSON, JSONStructured)
+    fun registerJSON(mapper: JsonMapper) = register(JSONEncoder(mapper), JSON, JSONStructured)
 
     /**
      * Registers the default CBOR encoder.
      *
      * @return Fluent builder.
      */
-    fun registerCBOR() =
-      register(CBOREncoder.default, CBOR)
+    fun registerCBOR() = register(CBOREncoder.default, CBOR)
 
     /**
      * Registers a custom CBOR encoder.
@@ -133,24 +131,21 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
      * @param mapper Jackson mapper to use for encoding.
      * @return Fluent builder.
      */
-    fun registerCBOR(mapper: CBORMapper) =
-      register(CBOREncoder(mapper), CBOR)
+    fun registerCBOR(mapper: CBORMapper) = register(CBOREncoder(mapper), CBOR)
 
     /**
      * Registers the default UTF-8 text encoder.
      *
      * @return Fluent builder.
      */
-    fun registerText() =
-      register(TextEncoder.default, AnyText)
+    fun registerText() = register(TextEncoder.default, AnyText)
 
     /**
      * Registers a binary encoder for X509 types.
      *
      * @return Fluent builder.
      */
-    fun registerX509() =
-      register(BinaryEncoder.default, X509CACert, X509UserCert)
+    fun registerX509() = register(BinaryEncoder.default, X509CACert, X509UserCert)
 
     /**
      * Registers an encoder with specific media types.
@@ -159,8 +154,10 @@ class MediaTypeEncoders(private val registered: Map<MediaType, MediaTypeEncoder>
      * @param types Media types to associate with [encoder].
      * @return Fluent builder.
      */
-    fun register(encoder: MediaTypeEncoder, vararg types: MediaType) =
-      Builder(registered.plus(types.map { it to encoder }))
+    fun register(
+      encoder: MediaTypeEncoder,
+      vararg types: MediaType,
+    ) = Builder(registered.plus(types.map { it to encoder }))
 
     /**
      * Builds the immutable [MediaTypeEncoders] instance.

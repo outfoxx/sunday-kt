@@ -25,7 +25,9 @@ import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
  *
  * @see [ObjectMapperEncoder]
  */
-class CBOREncoder(cborMapper: CBORMapper) : ObjectMapperEncoder(cborMapper) {
+class CBOREncoder(
+  cborMapper: CBORMapper,
+) : ObjectMapperEncoder(cborMapper) {
 
   companion object {
 
@@ -37,7 +39,7 @@ class CBOREncoder(cborMapper: CBORMapper) : ObjectMapperEncoder(cborMapper) {
         CBORMapper()
           .findAndRegisterModules()
           .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as CBORMapper,
       )
 
   }

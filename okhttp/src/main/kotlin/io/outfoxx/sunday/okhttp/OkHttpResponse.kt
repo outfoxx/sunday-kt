@@ -26,7 +26,7 @@ import okio.BufferedSource
  */
 class OkHttpResponse(
   private val response: okhttp3.Response,
-  private val httpClient: OkHttpClient
+  private val httpClient: OkHttpClient,
 ) : Response {
 
   override val statusCode: Int

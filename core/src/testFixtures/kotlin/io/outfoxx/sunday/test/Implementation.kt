@@ -18,5 +18,5 @@ package io.outfoxx.sunday.test
 
 enum class Implementation {
   JDK,
-  OkHttp
+  OkHttp,
 }

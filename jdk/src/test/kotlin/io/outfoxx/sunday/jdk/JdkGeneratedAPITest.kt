@@ -27,7 +27,7 @@ class JdkGeneratedAPITest : GeneratedAPITests() {
   override fun createRequestFactory(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
-    decoders: MediaTypeDecoders
+    decoders: MediaTypeDecoders,
   ): RequestFactory =
     JdkRequestFactory(
       uriTemplate,

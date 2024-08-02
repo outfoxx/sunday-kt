@@ -31,5 +31,6 @@ data class NonStandardStatus(
     this(response.statusCode, response.reasonPhrase)
 
   override fun getStatusCode() = statusCode
+
   override fun getReasonPhrase() = reasonPhrase
 }

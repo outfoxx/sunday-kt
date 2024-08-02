@@ -25,7 +25,10 @@ package io.outfoxx.sunday.http
  * Constants are provided for the common methods
  * [Options], [Get], [Head], [Post], [Put], [Patch], [Delete], [Trace], and [Connect].
  */
-data class Method(val name: String, val requiresBody: Boolean = false) {
+data class Method(
+  val name: String,
+  val requiresBody: Boolean = false,
+) {
 
   companion object {
 

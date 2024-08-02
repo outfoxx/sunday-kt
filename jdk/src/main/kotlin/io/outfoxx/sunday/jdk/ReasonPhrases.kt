@@ -19,8 +19,8 @@ package io.outfoxx.sunday.jdk
 object ReasonPhrases {
 
   @Suppress("MagicNumber", "LongMethod")
-  fun lookup(statusCode: Int): String? {
-    return when (statusCode) {
+  fun lookup(statusCode: Int): String? =
+    when (statusCode) {
       100 -> "Continue"
       101 -> "Switching Protocols"
       102 -> "Processing"
@@ -91,5 +91,4 @@ object ReasonPhrases {
 
       else -> null
     }
-  }
 }

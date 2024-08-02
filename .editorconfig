@@ -1,6 +1,8 @@
 [*.{kt,kts}]
 indent_size=2
 insert_final_newline=true
-max_line_length=100
+max_line_length=120
+kotlin_code_style=ktlint_official
 ktlint_standard_no-consecutive-blank-lines=disabled
+ktlint_standard_no-empty-first-line-in-class-body=disabled
 ktlint_standard_no-blank-line-before-rbrace=disabled

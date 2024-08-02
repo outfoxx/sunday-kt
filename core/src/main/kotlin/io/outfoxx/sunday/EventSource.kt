@@ -67,7 +67,7 @@ class EventSource(
   retryTime: Duration = retryTimeDefault,
   private val eventTimeout: Duration? = eventTimeoutDefault,
   private val eventTimeoutCheckInterval: Duration = eventTimeoutCheckIntervalDefault,
-  private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java)
+  private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java),
 ) : Closeable {
 
   /**
@@ -89,7 +89,7 @@ class EventSource(
     /**
      * SSE origin.
      */
-    val origin: String
+    val origin: String,
   )
 
   companion object {
@@ -137,7 +137,7 @@ class EventSource(
     private fun createRequestEventScope(): CoroutineScope =
       CoroutineScope(CoroutineName("EventSource - Request Processor"))
 
-    private const val MaxRetryTimeMultiple = 30.0
+    private const val MAX_RETRY_TIME_MULTIPLE = 30.0
   }
 
   /**
@@ -158,7 +158,7 @@ class EventSource(
     /**
      * [EventSource] is closed.
      */
-    Closed
+    Closed,
   }
 
   private val stateLock = ReentrantReadWriteLock()
@@ -197,7 +197,7 @@ class EventSource(
   private val eventParser = EventParser()
 
 
-  /**
+  /*
    * Event Listening
    */
 
@@ -239,19 +239,25 @@ class EventSource(
   /**
    * Add an event listener for a specific event type.
    */
-  fun addEventListener(event: String, handler: (Event) -> Unit) {
+  fun addEventListener(
+    event: String,
+    handler: (Event) -> Unit,
+  ) {
     stateLock.write { eventListenersInternal[event] = handler }
   }
 
   /**
    * Removed a previously added event listener.
    */
-  fun removeEventListener(event: String, handler: (Event) -> Unit) {
+  fun removeEventListener(
+    event: String,
+    handler: (Event) -> Unit,
+  ) {
     stateLock.write { eventListenersInternal.remove(event, handler) }
   }
 
 
-  /**
+  /*
    * Connection Management
    */
 
@@ -264,7 +270,6 @@ class EventSource(
    * [close] is called.
    */
   fun connect() {
-
     if (readyStateValue.isNotClosed) {
       return
     }
@@ -277,7 +282,6 @@ class EventSource(
   }
 
   private suspend fun internalConnect() {
-
     if (readyStateValue.isClosed) {
       logger.debug("Skipping connect due to close")
       return
@@ -287,9 +291,10 @@ class EventSource(
 
     // Build default headers for passing to request builder
 
-    var headers = listOf(
-      Accept to EventStream.value,
-    )
+    var headers =
+      listOf(
+        Accept to EventStream.value,
+      )
 
     // Add last-event-id if we are reconnecting
 
@@ -301,25 +306,25 @@ class EventSource(
 
     val request = requestSupplier(headers)
 
-    currentRequest = createRequestEventScope().launch {
-      try {
+    currentRequest =
+      createRequestEventScope().launch {
+        try {
+          request
+            .start()
+            .onCompletion {
+              if (it != null) {
+                receivedError(it)
+              } else {
+                receivedComplete()
+              }
+            }.collect(::dispatchEvent)
 
-        request.start()
-          .onCompletion {
-            if (it != null) {
-              receivedError(it)
-            } else {
-              receivedComplete()
-            }
-          }
-          .collect(::dispatchEvent)
-
-      } catch (ignored: CancellationException) {
-        // do nothing
-      } catch (error: Throwable) {
-        receivedError(error)
+        } catch (ignored: CancellationException) {
+          // do nothing
+        } catch (error: Throwable) {
+          receivedError(error)
+        }
       }
-    }
   }
 
   private fun dispatchEvent(event: Request.Event) {
@@ -348,7 +353,6 @@ class EventSource(
    * Close and disconnect the [EventSource].
    */
   override fun close() {
-
     if (readyStateValue.isClosed) {
       return
     }
@@ -392,7 +396,6 @@ class EventSource(
   }
 
   private fun stopEventTimeoutCheck() {
-
     eventTimeoutTimerTask?.cancel()
     eventTimeoutTimerTask = null
   }
@@ -425,7 +428,6 @@ class EventSource(
 
 
   private fun receivedResponse(response: Response) {
-
     if (!readyStateValue.updateIfNotClosed(Open)) {
       logger.warn("Invalid state for receiving headers: {}", readyStateValue.current)
 
@@ -448,7 +450,6 @@ class EventSource(
   }
 
   private fun receivedData(data: Buffer) {
-
     if (readyStateValue.current != Open) {
       logger.warn("Invalid state for receiving headers: {}", readyStateValue.current)
 
@@ -461,7 +462,6 @@ class EventSource(
     logger.debug("Received: data")
 
     try {
-
       eventParser.process(data, ::dispatchParsedEvent)
 
     } catch (x: SocketException) {
@@ -474,7 +474,6 @@ class EventSource(
   }
 
   private fun receivedError(t: Throwable?) {
-
     if (readyStateValue.isClosed) {
       return
     }
@@ -489,7 +488,6 @@ class EventSource(
   }
 
   private fun receivedComplete() {
-
     if (readyStateValue.isClosed) {
       return
     }
@@ -506,7 +504,6 @@ class EventSource(
 
 
   private fun scheduleReconnect() {
-
     if (readyStateValue.isClosed) {
       return
     }
@@ -547,9 +544,8 @@ class EventSource(
   private fun calculateRetryDelay(
     retryAttempt: Int,
     retryTime: Duration,
-    lastConnectTime: Duration
+    lastConnectTime: Duration,
   ): Duration {
-
     val retryTimeMs = retryTime.toMillis()
 
     // calculate total delay
@@ -557,13 +553,12 @@ class EventSource(
     var retryDelayMs =
       min(
         retryTimeMs + backOffDelayMs,
-        retryTimeMs * MaxRetryTimeMultiple
+        retryTimeMs * MAX_RETRY_TIME_MULTIPLE,
       )
 
     // Adjust delay by amount of time last connect
     // cycle took, except on the first attempt
     if (retryAttempt > 0) {
-
       retryDelayMs -= lastConnectTime.toMillis()
 
       // Ensure delay is at least as large as
@@ -581,16 +576,13 @@ class EventSource(
 
 
   private fun dispatchParsedEvent(info: EventParser.EventInfo) {
-
     lastEventReceivedTime = Instant.now()
 
     // Update retry time if it's a valid integer
     val retry = info.retry
     if (retry != null) {
-
       val retryTime = retry.trim().toLongOrNull(radix = 10)
       if (retryTime != null) {
-
         logger.debug("update retry timeout: retryTime=$retryTime")
 
         this.retryTimeValue = Duration.ofMillis(retryTime)
@@ -608,10 +600,8 @@ class EventSource(
     // Save event id, if it does not contain null
     val eventId = info.id
     if (eventId != null) {
-
       // Check for NULL as it is not allowed
       if (!eventId.contains(0.toChar())) {
-
         lastEventId = eventId
       } else {
         logger.warn("event id contains null, unable to use for last-event-id")

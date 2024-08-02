@@ -62,18 +62,19 @@ class JdkRequestFactory(
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
-  private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault
-) : RequestFactory(), Closeable {
+  private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault,
+) : RequestFactory(),
+  Closeable {
 
   companion object {
 
     fun defaultHttpClient(authenticator: Authenticator? = null): HttpClient =
-      HttpClient.newBuilder()
+      HttpClient
+        .newBuilder()
         .followRedirects(HttpClient.Redirect.NORMAL)
         .apply {
           authenticator?.let { authenticator(authenticator) }
-        }
-        .build()
+        }.build()
 
     val requestTimeoutDefault: Duration = Duration.ofSeconds(10)
 
@@ -92,7 +93,10 @@ class JdkRequestFactory(
     get() = registeredProblemTypesStorage
   private val registeredProblemTypesStorage = mutableMapOf<String, KClass<out ThrowableProblem>>()
 
-  override fun registerProblem(typeId: String, problemType: KClass<out ThrowableProblem>) {
+  override fun registerProblem(
+    typeId: String,
+    problemType: KClass<out ThrowableProblem>,
+  ) {
     registeredProblemTypesStorage[typeId] = problemType
   }
 
@@ -105,34 +109,11 @@ class JdkRequestFactory(
     contentTypes: List<MediaType>?,
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
-    purpose: RequestPurpose
+    purpose: RequestPurpose,
   ): Request {
     logger.trace("Building request")
 
-    var uri =
-      try {
-        baseURI.resolve(pathTemplate, pathParameters, pathEncoders).toURI()
-      } catch (x: Throwable) {
-        throw SundayError(InvalidBaseUri, cause = x)
-      }
-
-    if (!queryParameters.isNullOrEmpty()) {
-
-      // Encode & add query parameters to url
-
-      val urlQueryEncoder = mediaTypeEncoders.find(WWWFormUrlEncoded)
-        ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
-
-      urlQueryEncoder as? URLQueryParamsEncoder
-        ?: throw SundayError(
-          NoDecoder,
-          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}"
-        )
-
-      val uriQuery = urlQueryEncoder.encodeQueryString(queryParameters)
-
-      uri = uri.replaceQuery(uriQuery)
-    }
+    val uri = uri(pathTemplate, pathParameters, queryParameters)
 
     val requestBuilder = HttpRequest.newBuilder(uri)
 
@@ -157,16 +138,18 @@ class JdkRequestFactory(
     // Add `Content-Type` header (even if body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.header(ContentType, contentType.toString()) }
 
-    var requestBodyPublisher = body?.let {
-      contentType ?: throw SundayError(NoSupportedContentTypes)
+    var requestBodyPublisher =
+      body?.let {
+        contentType ?: throw SundayError(NoSupportedContentTypes)
 
-      val mediaTypeEncoder = mediaTypeEncoders.find(contentType)
-        ?: error("Cannot find encoder that was reported as supported")
+        val mediaTypeEncoder =
+          mediaTypeEncoders.find(contentType)
+            ?: error("Cannot find encoder that was reported as supported")
 
-      val encodedBody = mediaTypeEncoder.encode(body)
+        val encodedBody = mediaTypeEncoder.encode(body)
 
-      BodyPublishers.ofInputStream { encodedBody.buffer().inputStream() }
-    }
+        BodyPublishers.ofInputStream { encodedBody.buffer().inputStream() }
+      }
 
     if (requestBodyPublisher == null && method.requiresBody) {
       requestBodyPublisher = BodyPublishers.ofByteArray(byteArrayOf())
@@ -179,16 +162,48 @@ class JdkRequestFactory(
           when (purpose) {
             RequestPurpose.Normal -> requestTimeout
             RequestPurpose.Events -> eventRequestTimeout
-          }
-        )
-        .build()
+          },
+        ).build()
 
     logger.debug("Built request: {}", request)
 
     return JdkRequest(
       adapter.invoke(request),
-      httpClient
+      httpClient,
     )
+  }
+
+  private fun uri(
+    pathTemplate: String,
+    pathParameters: Parameters?,
+    queryParameters: Parameters?,
+  ): URI? {
+    val uri =
+      try {
+        baseURI.resolve(pathTemplate, pathParameters, pathEncoders).toURI()
+      } catch (x: Throwable) {
+        throw SundayError(InvalidBaseUri, cause = x)
+      }
+
+    if (!queryParameters.isNullOrEmpty()) {
+      // Encode & add query parameters to url
+
+      val urlQueryEncoder =
+        mediaTypeEncoders.find(WWWFormUrlEncoded)
+          ?: throw SundayError(NoDecoder, WWWFormUrlEncoded.value)
+
+      urlQueryEncoder as? URLQueryParamsEncoder
+        ?: throw SundayError(
+          NoDecoder,
+          "'$WWWFormUrlEncoded' encoder must implement ${URLQueryParamsEncoder::class.simpleName}",
+        )
+
+      val uriQuery = urlQueryEncoder.encodeQueryString(queryParameters)
+
+      return uri.replaceQuery(uriQuery)
+    } else {
+      return uri
+    }
   }
 
   override suspend fun response(request: Request): Response {
@@ -197,10 +212,7 @@ class JdkRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource {
-
-    return EventSource(requestSupplier)
-  }
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
 
   override fun close() {
     close(true)

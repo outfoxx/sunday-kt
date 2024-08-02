@@ -19,8 +19,8 @@ package io.outfoxx.sunday.http
 /**
  * Commonly used HTTP header names.
  */
+@Suppress("ktlint")
 object HeaderNames {
-
   const val Accept = "accept"
   const val Authorization = "authorization"
   const val Connection = "connection"

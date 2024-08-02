@@ -74,27 +74,28 @@ class PatchingTest {
 
   companion object {
 
-    private val mapper = jacksonObjectMapper()
-      .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+    private val mapper =
+      jacksonObjectMapper()
+        .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
   }
 
   @Test
   fun simple() {
-
     val patch =
       DeviceUpdate.patch {
         name = set("test")
-        security = Security.merge {
-          type = set(17)
-          enc = set(Base64.getUrlEncoder().encodeToString(byteArrayOf(1, 2, 3)))
-          sig = delete()
-        }
+        security =
+          Security.merge {
+            type = set(17)
+            enc = set(Base64.getUrlEncoder().encodeToString(byteArrayOf(1, 2, 3)))
+            sig = delete()
+          }
       }
 
     val json = mapper.writeValueAsString(patch)
     assertThat(
       json,
-      equalTo("""{"name":"test","security":{"type":17,"enc":"AQID","sig":null}}""")
+      equalTo("""{"name":"test","security":{"type":17,"enc":"AQID","sig":null}}"""),
     )
 
     val encodedJSON = mapper.writeValueAsString(patch)

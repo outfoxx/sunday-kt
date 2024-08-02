@@ -88,7 +88,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `allows overriding defaults constructor`() {
-
     val specialEncoders = MediaTypeEncoders.Builder().build()
     val specialDecoders = MediaTypeDecoders.Builder().build()
 
@@ -107,7 +106,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `encodes path parameters`() {
-
     createRequestFactory(URITemplate("http://example.com/{id}"))
       .use { requestFactory ->
 
@@ -120,20 +118,19 @@ abstract class RequestFactoryTest {
               body = null,
               contentTypes = null,
               acceptTypes = null,
-              headers = null
+              headers = null,
             )
           }
 
         assertThat(
           request.uri,
-          equalTo(URI("http://example.com/123/encoded-params"))
+          equalTo(URI("http://example.com/123/encoded-params")),
         )
       }
   }
 
   @Test
   fun `encodes query parameters`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -147,47 +144,27 @@ abstract class RequestFactoryTest {
               body = null,
               contentTypes = null,
               acceptTypes = null,
-              headers = null
+              headers = null,
             )
           }
 
         assertThat(
           request.uri,
-          equalTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202"))
+          equalTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202")),
         )
       }
   }
 
   @Test
   fun `fails when no query parameter encoder is registered and query params are provided`() {
-
     createRequestFactory(
       URITemplate("http://example.com"),
-      encoders = MediaTypeEncoders.Builder().registerData().registerJSON().build()
-    )
-      .use { requestFactory ->
-
-        val error =
-          assertThrows<SundayError> {
-            runBlocking {
-              requestFactory.request(
-                Method.Get,
-                "/encode-query-params",
-                queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
-              )
-            }
-          }
-
-        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
-      }
-  }
-
-  @Test
-  fun `fails url query parameter encoder is not a URLQueryParamsEncoder`() {
-
-    createRequestFactory(
-      URITemplate("http://example.com"),
-      encoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build()
+      encoders =
+        MediaTypeEncoders
+          .Builder()
+          .registerData()
+          .registerJSON()
+          .build(),
     ).use { requestFactory ->
 
       val error =
@@ -196,7 +173,29 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Get,
               "/encode-query-params",
-              queryParameters = mapOf("limit" to 5, "search" to "1 & 2")
+              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+            )
+          }
+        }
+
+      assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+    }
+  }
+
+  @Test
+  fun `fails url query parameter encoder is not a URLQueryParamsEncoder`() {
+    createRequestFactory(
+      URITemplate("http://example.com"),
+      encoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build(),
+    ).use { requestFactory ->
+
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/encode-query-params",
+              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
             )
           }
         }
@@ -208,7 +207,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `adds custom headers`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -217,7 +215,7 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Get,
               "/add-custom-headers",
-              headers = mapOf(HeaderNames.Authorization to "Bearer 12345")
+              headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
             )
           }
 
@@ -227,7 +225,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `adds accept headers`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -236,44 +233,41 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Get,
               "/add-accept-headers",
-              acceptTypes = listOf(JSON, CBOR)
+              acceptTypes = listOf(JSON, CBOR),
             )
           }
 
         assertThat(
           request.headers,
-          contains(HeaderNames.Accept to "application/json , application/cbor")
+          contains(HeaderNames.Accept to "application/json , application/cbor"),
         )
       }
   }
 
   @Test
   fun `fails if none of the accept types has a decoder`() {
-
     createRequestFactory(
       URITemplate("http://example.com"),
-      decoders = MediaTypeDecoders.Builder().build()
-    )
-      .use { requestFactory ->
+      decoders = MediaTypeDecoders.Builder().build(),
+    ).use { requestFactory ->
 
-        val error =
-          assertThrows<SundayError> {
-            runBlocking {
-              requestFactory.request(
-                Method.Get,
-                "/add-accept-headers",
-                acceptTypes = listOf(JSON, CBOR)
-              )
-            }
+      val error =
+        assertThrows<SundayError> {
+          runBlocking {
+            requestFactory.request(
+              Method.Get,
+              "/add-accept-headers",
+              acceptTypes = listOf(JSON, CBOR),
+            )
           }
+        }
 
-        assertThat(error.reason, equalTo(NoSupportedAcceptTypes))
-      }
+      assertThat(error.reason, equalTo(NoSupportedAcceptTypes))
+    }
   }
 
   @Test
   fun `fails if none of the content types has an encoder for the body`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -284,7 +278,7 @@ abstract class RequestFactoryTest {
                 Method.Post,
                 "/add-accept-headers",
                 body = "a body",
-                contentTypes = listOf(MediaType.from("application/x-unknown"))
+                contentTypes = listOf(MediaType.from("application/x-unknown")),
               )
             }
           }
@@ -295,7 +289,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `attaches encoded body based on content-type`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -305,7 +298,7 @@ abstract class RequestFactoryTest {
               Method.Post,
               "/attach-body",
               body = mapOf("a" to 5),
-              contentTypes = listOf(JSON)
+              contentTypes = listOf(JSON),
             )
           }
 
@@ -316,7 +309,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `set content-type when body is non-existent`() {
-
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
@@ -325,7 +317,7 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Post,
               "/attach-body",
-              contentTypes = listOf(JSON)
+              contentTypes = listOf(JSON),
             )
           }
 
@@ -339,10 +331,9 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fetches typed results`() {
-
     data class Tester(
       val name: String,
-      val count: Int
+      val count: Int,
     )
 
     val tester = Tester("Test", 10)
@@ -352,11 +343,10 @@ abstract class RequestFactoryTest {
       MockResponse()
         .setResponseCode(200)
         .addHeader(ContentType, JSON)
-        .setBody(objectMapper.writeValueAsString(tester))
+        .setBody(objectMapper.writeValueAsString(tester)),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -370,7 +360,7 @@ abstract class RequestFactoryTest {
                 body = null,
                 contentTypes = null,
                 acceptTypes = null,
-                headers = null
+                headers = null,
               )
             }
 
@@ -382,15 +372,13 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `executes requests with empty responses`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(204)
+        .setResponseCode(204),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -405,17 +393,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `executes manual requests for responses`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
         .setHeader(ContentType, JSON)
-        .setBody("[]")
+        .setBody("[]"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -431,17 +417,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `error responses with non standard status codes are handled`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setStatus("HTTP/1.1 484 Special Status")
         .setHeader(ContentType, JSON)
-        .setBody("[]")
+        .setBody("[]"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -464,15 +448,13 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails when no data and non empty result types`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(204)
+        .setResponseCode(204),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -490,15 +472,13 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails when a result is expected and no data is returned in response`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(200)
+        .setResponseCode(200),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -516,17 +496,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails when response content-type is invalid`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
         .setHeader(ContentType, "bad/x-unknown")
-        .setBody("some stuff")
+        .setBody("some stuff"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -544,17 +522,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails when response content-type is unsupported`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
         .setHeader(ContentType, "application/x-unknown")
-        .setBody("some data")
+        .setBody("some data"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -572,17 +548,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test decoding fails when no decoder for content-type`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
         .addHeader(ContentType, "application/x-unknown-type")
-        .setBody("<test>Test</Test>")
+        .setBody("<test>Test</Test>"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -598,17 +572,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test decoding errors are translated to SundayError`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
         .addHeader(ContentType, JSON)
-        .setBody("<test>Test</Test>")
+        .setBody("<test>Test</Test>"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -628,7 +600,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test registered problems decode as typed problems`() {
-
     val testProblem = TestProblem("Some Extra", URI.create("id:12345"))
 
     val server = MockWebServer()
@@ -636,11 +607,10 @@ abstract class RequestFactoryTest {
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
         .addHeader(ContentType, Problem)
-        .setBody(objectMapper.writeValueAsString(testProblem))
+        .setBody(objectMapper.writeValueAsString(testProblem)),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
           requestFactory.registerProblem(TestProblem.TYPE, TestProblem::class)
@@ -663,7 +633,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test unregistered problems decode as generic problems`() {
-
     val testProblem = TestProblem("Some Extra", URI.create("id:12345"))
 
     val server = MockWebServer()
@@ -671,11 +640,10 @@ abstract class RequestFactoryTest {
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
         .addHeader(ContentType, Problem)
-        .setBody(objectMapper.writeValueAsString(testProblem))
+        .setBody(objectMapper.writeValueAsString(testProblem)),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -696,17 +664,15 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test non problem error responses are translated to predefined problems`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
         .addHeader(ContentType, HTML)
-        .setBody("<error>An Error Occurred</error>")
+        .setBody("<error>An Error Occurred</error>"),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -727,16 +693,14 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test problem responses with empty bodies are translated to predefined problems`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, Problem)
+        .addHeader(ContentType, Problem),
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -757,58 +721,53 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `test problem responses fail with SundayError when no JSON decoder`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
         .addHeader(ContentType, Problem)
-        .setBody(objectMapper.writeValueAsString(TestProblem("test")))
+        .setBody(objectMapper.writeValueAsString(TestProblem("test"))),
     )
     server.start()
     server.use {
-
       createRequestFactory(
         URITemplate(server.url("/").toString()),
-        decoders = MediaTypeDecoders.Builder().build()
-      )
-        .use { requestFactory ->
+        decoders = MediaTypeDecoders.Builder().build(),
+      ).use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
 
-          assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
-        }
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+      }
     }
   }
 
   @Test
   fun `test problem responses fail when registered JSON decoder is not a structured decoder`() {
-
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
         .setResponseCode(TestProblem.STATUS.statusCode)
         .addHeader(ContentType, Problem)
-        .setBody(objectMapper.writeValueAsString(TestProblem("test")))
+        .setBody(objectMapper.writeValueAsString(TestProblem("test"))),
     )
     server.start()
     server.use {
       createRequestFactory(
         URITemplate(server.url("/").toString()),
-        decoders = MediaTypeDecoders.Builder().register(TextDecoder.default, JSON).build()
-      )
-        .use { requestFactory ->
+        decoders = MediaTypeDecoders.Builder().register(TextDecoder.default, JSON).build(),
+      ).use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
+        val error =
+          assertThrows<SundayError> {
+            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
+          }
 
-          assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
-        }
+        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+      }
     }
   }
 
@@ -819,7 +778,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `builds event sources`() {
-
     val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
     val server = MockWebServer()
@@ -831,7 +789,6 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
@@ -839,7 +796,6 @@ abstract class RequestFactoryTest {
             withTimeout(5000) {
               val eventSource = requestFactory.eventSource(Method.Get, "")
               eventSource.use {
-
                 suspendCancellableCoroutine<Unit> { continuation ->
                   eventSource.onMessage = { _ ->
                     continuation.resume(Unit)
@@ -856,7 +812,6 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `builds event streams`() {
-
     val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
     val server = MockWebServer()
@@ -868,26 +823,26 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
           val result =
             runBlocking {
               withTimeout(50000) {
-                val eventStream = requestFactory.eventStream(
-                  Method.Get,
-                  "",
-                  decoder = { decoder, event, _, data, logger ->
-                    when (event) {
-                      "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
-                      else -> {
-                        logger.error("unsupported event type")
-                        null
+                val eventStream =
+                  requestFactory.eventStream(
+                    Method.Get,
+                    "",
+                    decoder = { decoder, event, _, data, logger ->
+                      when (event) {
+                        "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                        else -> {
+                          logger.error("unsupported event type")
+                          null
+                        }
                       }
-                    }
-                  }
-                )
+                    },
+                  )
 
                 eventStream.first()
               }
@@ -900,14 +855,14 @@ abstract class RequestFactoryTest {
 
   class TestProblem(
     @JsonProperty("extra") val extra: String,
-    instance: URI? = null
+    instance: URI? = null,
   ) : AbstractThrowableProblem(
-    URI.create(TYPE),
-    TITLE,
-    STATUS,
-    DETAIL,
-    instance,
-  ) {
+      URI.create(TYPE),
+      TITLE,
+      STATUS,
+      DETAIL,
+      instance,
+    ) {
 
     companion object {
 

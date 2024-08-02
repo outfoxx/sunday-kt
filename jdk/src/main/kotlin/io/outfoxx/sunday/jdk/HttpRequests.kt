@@ -19,12 +19,12 @@ package io.outfoxx.sunday.jdk
 import io.outfoxx.sunday.http.Headers
 import java.net.http.HttpRequest
 
-internal fun HttpRequest.Builder.headers(headers: Headers) = apply {
-  headers.forEach { header(it.first, it.second) }
-}
+internal fun HttpRequest.Builder.headers(headers: Headers) =
+  apply {
+    headers.forEach { header(it.first, it.second) }
+  }
 
 fun HttpRequest.copyToBuilder(includeHeaders: Boolean = true): HttpRequest.Builder {
-
   val builder = HttpRequest.newBuilder()
   builder.uri(uri())
   builder.expectContinue(expectContinue())
@@ -45,7 +45,7 @@ fun HttpRequest.copyToBuilder(includeHeaders: Boolean = true): HttpRequest.Build
         "DELETE" -> builder.DELETE()
         else -> builder.method(method, HttpRequest.BodyPublishers.noBody())
       }
-    }
+    },
   )
 
   return builder

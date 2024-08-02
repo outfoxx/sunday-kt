@@ -27,7 +27,7 @@ class MediaType(
   val tree: Tree = Tree.Standard,
   subtype: String = "*",
   val suffix: Suffix? = null,
-  parameters: Map<String, String> = emptyMap()
+  parameters: Map<String, String> = emptyMap(),
 ) {
 
   constructor(
@@ -35,20 +35,24 @@ class MediaType(
     tree: Tree = Tree.Standard,
     subtype: String = "*",
     suffix: Suffix? = null,
-    vararg parameters: Pair<String, String>
+    vararg parameters: Pair<String, String>,
   ) : this(type, tree, subtype, suffix, mapOf(*parameters))
 
   /**
    * Standard parameter names.
    */
-  enum class StandardParameterName(val code: String) {
-    CharSet("charset")
+  enum class StandardParameterName(
+    val code: String,
+  ) {
+    CharSet("charset"),
   }
 
   /**
    * Allowed types of media type.
    */
-  enum class Type(val code: String) {
+  enum class Type(
+    val code: String,
+  ) {
     Application("application"),
     Audio("audio"),
     Example("example"),
@@ -59,7 +63,8 @@ class MediaType(
     Multipart("multipart"),
     Text("text"),
     Video("video"),
-    Any("*");
+    Any("*"),
+    ;
 
     companion object {
 
@@ -76,13 +81,16 @@ class MediaType(
   /**
    * Allowed trees of media type.
    */
-  enum class Tree(val code: String) {
+  enum class Tree(
+    val code: String,
+  ) {
     Standard(""),
     Vendor("vnd."),
     Personal("prs."),
     Unregistered("x."),
     Obsolete("x-"),
-    Any("*");
+    Any("*"),
+    ;
 
     companion object {
 
@@ -99,7 +107,9 @@ class MediaType(
   /**
    * Allowed suffixes of media type.
    */
-  enum class Suffix(val code: String) {
+  enum class Suffix(
+    val code: String,
+  ) {
     XML("xml"),
     JSON("json"),
     BER("ber"),
@@ -107,7 +117,8 @@ class MediaType(
     FastInfoSet("fastinfoset"),
     WBXML("wbxml"),
     Zip("zip"),
-    CBOR("cbor");
+    CBOR("cbor"),
+    ;
 
     companion object {
 
@@ -140,9 +151,7 @@ class MediaType(
    * @param name Standard parameter name to lookup.
    * @return Value of parameter if it exists or null.
    */
-  fun parameter(name: StandardParameterName): String? {
-    return parameters[name.code]
-  }
+  fun parameter(name: StandardParameterName): String? = parameters[name.code]
 
   /**
    * Looks up a parameter.
@@ -150,9 +159,7 @@ class MediaType(
    * @param name Parameter name to lookup.
    * @return Value of parameter if it exists or null.
    */
-  fun parameter(name: String): String? {
-    return parameters[name]
-  }
+  fun parameter(name: String): String? = parameters[name]
 
   /**
    * Builds a new [MediaType] overriding one or more of the properties.
@@ -167,15 +174,14 @@ class MediaType(
     type: Type? = null,
     tree: Tree? = null,
     subtype: String? = null,
-    parameters: Map<String, String>? = null
-  ) =
-    MediaType(
-      type ?: this.type,
-      tree ?: this.tree,
-      subtype ?: this.subtype,
-      suffix,
-      parameters ?: this.parameters
-    )
+    parameters: Map<String, String>? = null,
+  ) = MediaType(
+    type ?: this.type,
+    tree ?: this.tree,
+    subtype ?: this.subtype,
+    suffix,
+    parameters ?: this.parameters,
+  )
 
   /**
    * Builds a new [MediaType] overriding a parameter value.
@@ -184,8 +190,10 @@ class MediaType(
    * @param value Overridden parameter value.
    * @return [MediaType] instance with the overridden parameter.
    */
-  fun with(parameter: StandardParameterName, value: String) =
-    with(parameters = parameters + mapOf(parameter.code to value))
+  fun with(
+    parameter: StandardParameterName,
+    value: String,
+  ) = with(parameters = parameters + mapOf(parameter.code to value))
 
   /**
    * Builds a new [MediaType] overriding a parameter value.
@@ -194,8 +202,10 @@ class MediaType(
    * @param value Overridden parameter value.
    * @return [MediaType] instance with the overridden parameter.
    */
-  fun with(parameter: String, value: String) =
-    with(parameters = parameters + mapOf(parameter to value))
+  fun with(
+    parameter: String,
+    value: String,
+  ) = with(parameters = parameters + mapOf(parameter to value))
 
   /**
    * Encoded media type.
@@ -205,7 +215,10 @@ class MediaType(
       val type = this.type.code
       val tree = this.tree.code
       val suffix = this.suffix?.let { "+${it.name.lowercase(ENGLISH)}" } ?: ""
-      val parameters = this.parameters.keys.sorted().joinToString("") { ";$it=${parameters[it]}" }
+      val parameters =
+        this.parameters.keys
+          .sorted()
+          .joinToString("") { ";$it=${parameters[it]}" }
       return "$type/$tree$subtype$suffix$parameters"
     }
 
@@ -215,17 +228,17 @@ class MediaType(
    * @see other [MediaType] to check for compatibility.
    * @return `true` if [other] is compatible with this instance.
    */
-  fun compatible(other: MediaType): Boolean {
-    return when {
+  fun compatible(other: MediaType): Boolean =
+    when {
       this.type != Type.Any && other.type != Type.Any && this.type != other.type -> false
       this.tree != Tree.Any && other.tree != Tree.Any && this.tree != other.tree -> false
       this.subtype != "*" && other.subtype != "*" && this.subtype != other.subtype -> false
       this.suffix != other.suffix -> false
       else ->
-        this.parameters.keys.intersect(other.parameters.keys)
+        this.parameters.keys
+          .intersect(other.parameters.keys)
           .all { this.parameters[it] == other.parameters[it] }
     }
-  }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -261,9 +274,8 @@ class MediaType(
      * @param acceptHeaders Accept headers to parse into media types.
      * @return List of [media types][MediaType] parsed from the given Accept headers.
      */
-    fun from(acceptHeaders: List<String>): List<MediaType> {
-      return acceptHeaders.flatMap { header -> header.split(",") }.map { from(it.trim()) }
-    }
+    fun from(acceptHeaders: List<String>): List<MediaType> =
+      acceptHeaders.flatMap { header -> header.split(",") }.map { from(it.trim()) }
 
     /**
      * Parse a string into a [media type][MediaType].
@@ -271,8 +283,10 @@ class MediaType(
      * @param string String media type to parse.
      * @return [MediaType] parsed from the given string.
      */
-    fun from(string: String, default: MediaType? = null): MediaType {
-
+    fun from(
+      string: String,
+      default: MediaType? = null,
+    ): MediaType {
       fun default(): MediaType {
         if (default == null) {
           throw SundayError(SundayError.Reason.InvalidContentType, string)
@@ -284,31 +298,44 @@ class MediaType(
       val match = fullRegex.matchEntire(string) ?: return default()
 
       val type =
-        match.groupValues.getOrNull(1)?.lowercase(ENGLISH)?.let { Type.fromCode(it) }
+        match.groupValues
+          .getOrNull(1)
+          ?.lowercase(ENGLISH)
+          ?.let { Type.fromCode(it) }
           ?: return default()
 
       val tree =
-        match.groupValues.getOrNull(2)?.lowercase(ENGLISH)?.let { Tree.fromCode(it) }
+        match.groupValues
+          .getOrNull(2)
+          ?.lowercase(ENGLISH)
+          ?.let { Tree.fromCode(it) }
           ?: Tree.Standard
 
       val subType = match.groupValues.getOrNull(3)?.lowercase(ENGLISH) ?: return default()
 
-      val suffix = match.groupValues.getOrNull(4)?.lowercase(ENGLISH)?.let { Suffix.fromCode(it) }
+      val suffix =
+        match.groupValues
+          .getOrNull(4)
+          ?.lowercase(ENGLISH)
+          ?.let { Suffix.fromCode(it) }
 
       val parameters =
         match.groupValues.getOrNull(5)?.let { params ->
-          paramRegex.findAll(params).mapNotNull { param ->
-            val key = param.groupValues.getOrNull(1) ?: return@mapNotNull null
-            val value = param.groupValues.getOrNull(2) ?: return@mapNotNull null
-            key.lowercase(ENGLISH) to value.lowercase(ENGLISH)
-          }.toMap()
+          paramRegex
+            .findAll(params)
+            .mapNotNull { param ->
+              val key = param.groupValues.getOrNull(1) ?: return@mapNotNull null
+              val value = param.groupValues.getOrNull(2) ?: return@mapNotNull null
+              key.lowercase(ENGLISH) to value.lowercase(ENGLISH)
+            }.toMap()
         } ?: emptyMap()
 
       return MediaType(type, tree, subType, suffix, parameters)
     }
 
     private val fullRegex =
-      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs|x)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$""" // ktlint-disable max-line-length
+      @Suppress("ktlint:standard:max-line-length")
+      """^([a-z]+|\*)/(x(?:-|\\.)|(?:vnd|prs|x)\.|\*)?([a-z0-9\-.]+|\*)(?:\+([a-z]+))?( *(?:; *[\w.-]+ *= *[\w.-]+ *)*)$"""
         .toRegex(option = IGNORE_CASE)
     private val paramRegex = """ *; *([\w.-]+) *= *([\w.-]+)""".toRegex(option = IGNORE_CASE)
 

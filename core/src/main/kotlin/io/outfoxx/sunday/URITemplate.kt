@@ -50,16 +50,16 @@ class URITemplate(
   fun resolve(
     relative: String? = null,
     parameters: Parameters? = null,
-    encoders: Map<KClass<*>, PathEncoder> = mapOf()
+    encoders: Map<KClass<*>, PathEncoder> = mapOf(),
   ): URIBuilder {
-
     val template = URITemplate(join(template, relative))
 
     val allParameters =
-      if (parameters != null)
+      if (parameters != null) {
         this.parameters + parameters
-      else
+      } else {
         this.parameters
+      }
 
     val allStringParameters =
       allParameters
@@ -68,24 +68,27 @@ class URITemplate(
           value!!
           encoders.entries
             .firstOrNull { it.key.isInstance(value) }
-            ?.value?.invoke(value)
+            ?.value
+            ?.invoke(value)
             ?: value.toString()
         }
 
     return template.expand(allStringParameters).toBuilder()
   }
 
-  private fun join(base: String, relative: String?) =
-    if (relative != null) {
-      if (base.endsWith("/") && relative.startsWith("/")) {
-        base + relative.removePrefix("/")
-      } else if (base.endsWith("/") || relative.startsWith("/")) {
-        base + relative
-      } else {
-        "$base/$relative"
-      }
+  private fun join(
+    base: String,
+    relative: String?,
+  ) = if (relative != null) {
+    if (base.endsWith("/") && relative.startsWith("/")) {
+      base + relative.removePrefix("/")
+    } else if (base.endsWith("/") || relative.startsWith("/")) {
+      base + relative
     } else {
-      base
+      "$base/$relative"
     }
+  } else {
+    base
+  }
 
 }

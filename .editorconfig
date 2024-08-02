@@ -2,4 +2,5 @@
 indent_size=2
 insert_final_newline=true
 max_line_length=100
-disabled_rules=no-consecutive-blank-lines,no-blank-line-before-rbrace
+ktlint_standard_no-consecutive-blank-lines=disabled
+ktlint_standard_no-blank-line-before-rbrace=disabled

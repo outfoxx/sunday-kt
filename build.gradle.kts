@@ -2,7 +2,8 @@ import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
 
@@ -88,13 +89,14 @@ configure(moduleNames.map { project(":sunday-$it") }) {
     withJavadocJar()
   }
 
-  tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-      kotlinOptions {
-        languageVersion = kotlinVersion
-        apiVersion = kotlinVersion
-      }
-      jvmTarget = javaVersion
+  configure<KotlinJvmProjectExtension> {
+    jvmToolchain {
+      languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    }
+    compilerOptions {
+      jvmTarget.set(JvmTarget.valueOf("JVM_$javaVersion"))
+      javaParameters.set(true)
+      freeCompilerArgs.add("-Xjvm-default=all")
     }
   }
 
@@ -152,7 +154,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   tasks.named<DokkaTask>("dokkaHtml") {
     failOnWarning.set(true)
     suppressObviousFunctions.set(false)
-    outputDirectory.set(file("$buildDir/dokka/${project.version}"))
+    outputDirectory.set(file("${layout.buildDirectory.get()}/dokka/${project.version}"))
   }
 
   tasks.named<DokkaTask>("dokkaJavadoc") {
@@ -309,7 +311,7 @@ sonarqube {
 //
 
 tasks.dokkaHtmlMultiModule.configure {
-  outputDirectory.set(buildDir.resolve("dokka/${releaseVersion}"))
+  outputDirectory.set(layout.buildDirectory.dir("dokka/${releaseVersion}"))
 }
 
 

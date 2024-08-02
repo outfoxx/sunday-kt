@@ -135,9 +135,9 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   }
 
   configure<DetektExtension> {
-    source = files("src/main/kotlin")
+    source.from("src/main/kotlin")
 
-    config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
+    config.from("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
     buildUponDefaultConfig = true
     baseline = file("src/main/detekt/detekt-baseline.xml")
   }
@@ -273,7 +273,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   // ANALYSIS
   //
 
-  sonarqube {
+  sonar {
     properties {
       property("sonar.sources", "src/main")
       property("sonar.tests", "src/test")
@@ -296,7 +296,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
 // ANALYSIS
 //
 
-sonarqube {
+sonar {
   properties {
     property("sonar.projectName", "sunday-kt")
     property("sonar.projectKey", "outfoxx_sunday-kt")
@@ -320,25 +320,23 @@ tasks.dokkaHtmlMultiModule.configure {
 //
 
 githubRelease {
-  owner("outfoxx")
-  repo("sunday-kt")
-  tagName(releaseVersion)
-  targetCommitish("main")
-  releaseName("🚀 v${releaseVersion}")
-  generateReleaseNotes(true)
-  draft(false)
-  prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
-  releaseAssets(
+  owner = "outfoxx"
+  repo = "sunday-kt"
+  tagName = releaseVersion
+  targetCommitish = "main"
+  releaseName = "🚀 v${releaseVersion}"
+  generateReleaseNotes = true
+  draft = false
+  prerelease = !releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex())
+  releaseAssets.from(
     moduleNames.flatMap { moduleName ->
       listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/sunday-$moduleName-$releaseVersion$suffix.jar")
       }
     }
   )
-  overwrite(true)
-  authorization(
-    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
-  )
+  overwrite = true
+  authorization = "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
 }
 
 nexusPublishing {

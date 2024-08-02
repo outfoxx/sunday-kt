@@ -106,7 +106,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   //
 
   configure<JacocoPluginExtension> {
-    toolVersion = "0.8.7"
+    toolVersion = "0.8.12"
   }
 
   tasks.named<Test>("test").configure {

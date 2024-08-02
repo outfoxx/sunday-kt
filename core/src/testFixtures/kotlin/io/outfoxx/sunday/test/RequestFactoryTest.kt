@@ -115,10 +115,6 @@ abstract class RequestFactoryTest {
               Method.Get,
               "/encoded-params",
               pathParameters = mapOf("id" to 123),
-              body = null,
-              contentTypes = null,
-              acceptTypes = null,
-              headers = null,
             )
           }
 
@@ -139,12 +135,7 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Get,
               "/encode-query-params",
-              pathParameters = null,
               queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
-              body = null,
-              contentTypes = null,
-              acceptTypes = null,
-              headers = null,
             )
           }
 
@@ -352,15 +343,9 @@ abstract class RequestFactoryTest {
 
           val result =
             runBlocking {
-              requestFactory.resultResponse<Void, Tester>(
+              requestFactory.resultResponse<Tester>(
                 Method.Get,
                 "",
-                pathParameters = null,
-                queryParameters = null,
-                body = null,
-                contentTypes = null,
-                acceptTypes = null,
-                headers = null,
               )
             }
 

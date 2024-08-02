@@ -17,27 +17,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/setup-java@v3
+    - uses: actions/setup-java@v4
       with:
-        java-version: '11'
-        distribution: adopt
+        java-version: '21'
+        distribution: temurin
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Build Artifacts & Documentation
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk11-build-test
-        arguments: build dokkaHtmlMultiModule -x test
+      run: ./gradlew build dokkaHtmlMultiModule -x test
 
     - name: Publish Maven Artifacts (Snapshot)
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk11-build-test
-        arguments: publishToSonatype
-        properties: |
-          sonatypeUsername=${{ secrets.OSSRH_USER }}
-          sonatypePassword=${{ secrets.OSSRH_PASS }}
+      run: >-
+        ./gradlew
+        -PsonatypeUsername=${{ secrets.OSSRH_USER }}
+        -PsonatypePassword=${{ secrets.OSSRH_PASS }}
+        publishToSonatype
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4

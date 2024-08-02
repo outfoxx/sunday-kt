@@ -17,34 +17,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - uses: actions/setup-java@v3
+    - uses: actions/setup-java@v4
       with:
-        java-version: '11'
-        distribution: adopt
+        java-version: '21'
+        distribution: temurin
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Build Artifacts & Documentation
-      uses: burrunan/gradle-cache-action@v1
-      with:
-        job-id: jdk11-build-test
-        arguments: build dokkaHtmlMultiModule -x test
-        properties: |
-          releaseVersion=${{ github.ref_name }}
+      run: >-
+        ./gradlew
+        -PreleaseVersion=${{ github.ref_name }}
+        build dokkaHtmlMultiModule
+        -x test
 
     - name: Publish Maven Release
-      uses: burrunan/gradle-cache-action@v1
+      run: >-
+        ./gradlew
+        -PreleaseVersion=${{ github.ref_name }}
+        -PsonatypeUsername=${{ secrets.OSSRH_USER }} -PsonatypePassword=${{ secrets.OSSRH_PASS }}
+        publishToSonatype closeAndReleaseSonatypeStagingRepository
+        -x test
       env:
         ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
         ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
         ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-      with:
-        job-id: jdk11-build-test
-        arguments: publishToSonatype closeAndReleaseSonatypeStagingRepository -x test
-        properties: |
-          releaseVersion=${{ github.ref_name }}
-          sonatypeUsername=${{ secrets.OSSRH_USER }}
-          sonatypePassword=${{ secrets.OSSRH_PASS }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4
@@ -54,14 +54,9 @@ jobs:
         folder: build/dokka
 
     - name: Publish GitHub Release
-      uses: burrunan/gradle-cache-action@v1
-      env:
-        ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
-        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-      with:
-        job-id: jdk11-build-test
-        arguments: githubRelease -x test
-        properties: |
-          releaseVersion=${{ github.ref_name }}
-          github.token=${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        ./gradlew
+        -PreleaseVersion=${{ github.ref_name }}
+        -Pgithub.token=${{ secrets.GITHUB_TOKEN }}
+        githubRelease
+        -x test

@@ -33,8 +33,7 @@ jobs:
     - name: Publish Maven Artifacts (Snapshot)
       run: >-
         ./gradlew
-        -PsonatypeUsername=${{ secrets.OSSRH_USER }}
-        -PsonatypePassword=${{ secrets.OSSRH_PASS }}
+        -PsonatypeUsername=${{ secrets.OSSRH_TOKEN_USER }} -PsonatypePassword=${{ secrets.OSSRH_TOKEN_PASS }}
         publishToSonatype
 
     - name: Publish Documentation

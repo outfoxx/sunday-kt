@@ -54,20 +54,19 @@ class MediaTypeTest {
 
   @Test
   fun `extracts from headers`() {
-
-    val mediaTypes = MediaType.from(
-      listOf(
-        "${MediaType.JSON.value} , ${MediaType.CBOR.value}",
-        MediaType.HTML.value
+    val mediaTypes =
+      MediaType.from(
+        listOf(
+          "${MediaType.JSON.value} , ${MediaType.CBOR.value}",
+          MediaType.HTML.value,
+        ),
       )
-    )
 
     assertThat(mediaTypes, containsInAnyOrder(MediaType.JSON, MediaType.CBOR, MediaType.HTML))
   }
 
   @Test
   fun `test equality`() {
-
     val mediaType = MediaType.HTML.with(CharSet, "utf-8")
     assertEquals(mediaType, mediaType)
 
@@ -104,6 +103,7 @@ class MediaTypeTest {
   }
 
   @Test
+  @Suppress("LongMethod")
   fun `test compatibility`() {
     assertTrue(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
@@ -112,9 +112,9 @@ class MediaTypeTest {
           Vendor,
           "plain",
           JSON,
-          mapOf("a" to "b")
-        )
-      )
+          mapOf("a" to "b"),
+        ),
+      ),
     ) { "Test compatibility" }
 
     assertFalse(
@@ -124,9 +124,9 @@ class MediaTypeTest {
           Vendor,
           "plain",
           JSON,
-          mapOf("a" to "b")
-        )
-      )
+          mapOf("a" to "b"),
+        ),
+      ),
     ) { "Test incompatibility in types" }
 
     assertFalse(
@@ -136,9 +136,9 @@ class MediaTypeTest {
           Personal,
           "plain",
           JSON,
-          mapOf("a" to "b")
-        )
-      )
+          mapOf("a" to "b"),
+        ),
+      ),
     ) { "Test incompatibility in trees" }
 
     assertFalse(
@@ -148,9 +148,9 @@ class MediaTypeTest {
           Vendor,
           "html",
           JSON,
-          mapOf("a" to "b")
-        )
-      )
+          mapOf("a" to "b"),
+        ),
+      ),
     ) { "Test incompatibility in subtypes" }
 
     assertFalse(
@@ -160,9 +160,9 @@ class MediaTypeTest {
           Vendor,
           "plain",
           XML,
-          mapOf("a" to "b")
-        )
-      )
+          mapOf("a" to "b"),
+        ),
+      ),
     ) { "Test incompatibility in suffixes" }
 
     assertFalse(
@@ -172,9 +172,9 @@ class MediaTypeTest {
           Vendor,
           "plain",
           JSON,
-          mapOf("a" to "c")
-        )
-      )
+          mapOf("a" to "c"),
+        ),
+      ),
     ) { "Test incompatibility in parameter values" }
 
     assertFalse(
@@ -183,9 +183,9 @@ class MediaTypeTest {
           Text,
           Vendor,
           "plain",
-          parameters = mapOf("a" to "c")
-        )
-      )
+          parameters = mapOf("a" to "c"),
+        ),
+      ),
     ) { "Test incompatibility in parameter values missing suffix" }
 
     assertTrue(
@@ -193,11 +193,12 @@ class MediaTypeTest {
         MediaType(
           Text,
           subtype = "html",
-          parameters = mapOf(
-            "charset" to "utf-8"
-          )
-        )
-      )
+          parameters =
+            mapOf(
+              "charset" to "utf-8",
+            ),
+        ),
+      ),
     ) { "Test compatibility with different parameters" }
 
     assertTrue(
@@ -205,11 +206,12 @@ class MediaTypeTest {
         MediaType(
           Text,
           subtype = "html",
-          parameters = mapOf(
-            "CHARSET" to "UTF-8"
-          )
-        )
-      )
+          parameters =
+            mapOf(
+              "CHARSET" to "UTF-8",
+            ),
+        ),
+      ),
     ) { "Test compatibility with different parameter cases" }
 
     assertTrue(
@@ -217,11 +219,12 @@ class MediaTypeTest {
         MediaType(
           Text,
           subtype = "html",
-          parameters = mapOf(
-            "test" to "it"
-          )
-        )
-      )
+          parameters =
+            mapOf(
+              "test" to "it",
+            ),
+        ),
+      ),
     ) { "Test compatibility with different parameters" }
 
     assertFalse(
@@ -229,59 +232,61 @@ class MediaTypeTest {
         MediaType(
           Text,
           subtype = "html",
-          parameters = mapOf(
-            "charset" to "utf-16"
-          )
-        )
-      )
+          parameters =
+            mapOf(
+              "charset" to "utf-16",
+            ),
+        ),
+      ),
     ) { "Test compatibility with different parameter values" }
 
     assertTrue(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Any,
-          subtype = "*"
-        )
-      )
+          subtype = "*",
+        ),
+      ),
     ) { "Test compatibility with wildcard type & subtype" }
 
     assertTrue(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Any,
-          subtype = "html"
-        )
-      )
+          subtype = "html",
+        ),
+      ),
     ) { "Test compatibility with wildcard type" }
 
     assertTrue(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Text,
-          subtype = "*"
-        )
-      )
+          subtype = "*",
+        ),
+      ),
     ) { "Test compatibility with wildcard subtype" }
   }
 
   @Test
+  @Suppress("LongMethod")
   fun `test parse`() {
     assertThat(
       "Test parsing",
       MediaType(Application, Standard, "problem", JSON, mapOf("charset" to "utf-8")),
-      equalTo(MediaType.from("application/problem+json;charset=utf-8"))
+      equalTo(MediaType.from("application/problem+json;charset=utf-8")),
     )
 
     assertThat(
       "Test parsing with non-standard tree",
       MediaType(Application, Obsolete, "www-form-urlencoded"),
-      equalTo(MediaType.from("application/x-www-form-urlencoded"))
+      equalTo(MediaType.from("application/x-www-form-urlencoded")),
     )
 
     assertThat(
       "Test parsing with non-standard tree and complexs subtype",
       MediaType(Application, Obsolete, "x509-ca-cert"),
-      equalTo(MediaType.from("application/x-x509-ca-cert"))
+      equalTo(MediaType.from("application/x-x509-ca-cert")),
     )
 
     assertThat(
@@ -290,9 +295,9 @@ class MediaTypeTest {
         Application,
         Vendor,
         "yaml",
-        parameters = mapOf("charset" to "utf-8", "something" to "else")
+        parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("application/vnd.yaml;charset=utf-8;something=else"))
+      equalTo(MediaType.from("application/vnd.yaml;charset=utf-8;something=else")),
     )
 
     assertThat(
@@ -301,9 +306,9 @@ class MediaTypeTest {
         Application,
         Vendor,
         "yaml",
-        parameters = mapOf("charset" to "utf-8", "something" to "else")
+        parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("APPLICATION/VND.YAML;CHARSET=UTF-8;SOMETHING=ELSE"))
+      equalTo(MediaType.from("APPLICATION/VND.YAML;CHARSET=UTF-8;SOMETHING=ELSE")),
     )
 
     assertThat(
@@ -312,9 +317,9 @@ class MediaTypeTest {
         Application,
         Vendor,
         "yaml",
-        parameters = mapOf("charset" to "utf-8", "something" to "else")
+        parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("APPLICATION/VND.YAML  ;  CHARSET=UTF-8 ; SOMETHING=ELSE   "))
+      equalTo(MediaType.from("APPLICATION/VND.YAML  ;  CHARSET=UTF-8 ; SOMETHING=ELSE   ")),
     )
 
     assertThat(MediaType.from("application/*").type, equalTo(Application))
@@ -354,13 +359,12 @@ class MediaTypeTest {
         "yaml",
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ).value,
-      "application/vnd.yaml;charset=utf-8;something=else"
+      "application/vnd.yaml;charset=utf-8;something=else",
     )
   }
 
   @Test
   fun `test parameter access`() {
-
     val mediaType =
       MediaType.HTML.with(CharSet, "utf-8").with("test", "123")
 
@@ -371,20 +375,19 @@ class MediaTypeTest {
 
   @Test
   fun `test parameter override`() {
-
     assertEquals(
       MediaType.HTML
         .with("test", "123")
         .with("test", "456")
         .parameter("test"),
-      "456"
+      "456",
     )
     assertEquals(
       MediaType.HTML
         .with("test", "456")
         .with("test", "123")
         .parameter("test"),
-      "123"
+      "123",
     )
   }
 
@@ -403,5 +406,12 @@ class MediaTypeTest {
     assertFalse(htmlWithCharset.compatible(MediaType.JSON))
     assertFalse(htmlWithCharset.compatible(MediaType.JSONStructured))
     assertTrue(htmlWithCharset.compatible(MediaType.Any))
+  }
+
+  @Test
+  fun `test constructor`() {
+    val mediaType = MediaType(Application, Vendor, "test", Zip, "charset" to "utf-8")
+
+    assertEquals(mediaType.value, "application/vnd.test+zip;charset=utf-8")
   }
 }

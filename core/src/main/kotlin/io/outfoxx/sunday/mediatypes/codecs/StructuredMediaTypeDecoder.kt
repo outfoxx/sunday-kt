@@ -31,7 +31,10 @@ interface StructuredMediaTypeDecoder : MediaTypeDecoder {
    * @param data Structured map to decode.
    * @param type Target Java/Kotlin type.
    */
-  fun <T : Any> decode(data: Map<String, Any>, type: KType): T
+  fun <T : Any> decode(
+    data: Map<String, Any>,
+    type: KType,
+  ): T
 }
 
 /**
@@ -41,5 +44,4 @@ interface StructuredMediaTypeDecoder : MediaTypeDecoder {
  *
  * @param data Structured map to decode.
  */
-inline fun <reified T : Any> StructuredMediaTypeDecoder.decode(data: Map<String, Any>): T =
-  decode(data, typeOf<T>())
+inline fun <reified T : Any> StructuredMediaTypeDecoder.decode(data: Map<String, Any>): T = decode(data, typeOf<T>())

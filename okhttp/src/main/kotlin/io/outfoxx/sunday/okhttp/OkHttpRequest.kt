@@ -87,8 +87,10 @@ open class OkHttpRequest(
       }
       call.enqueue(
         object : Callback {
-          override fun onResponse(call: Call, response: okhttp3.Response) {
-
+          override fun onResponse(
+            call: Call,
+            response: okhttp3.Response,
+          ) {
             logger.debug("Received response")
 
             // Don't bother with resuming the continuation if it is already cancelled.
@@ -97,8 +99,10 @@ open class OkHttpRequest(
             continuation.resume(OkHttpResponse(response, httpClient))
           }
 
-          override fun onFailure(call: Call, e: IOException) {
-
+          override fun onFailure(
+            call: Call,
+            e: IOException,
+          ) {
             logger.debug("Received error")
 
             // Don't bother with resuming the continuation if it is already cancelled.
@@ -106,14 +110,13 @@ open class OkHttpRequest(
 
             continuation.resumeWithException(e)
           }
-        }
+        },
       )
     }
   }
 
-  override fun start(): Flow<Request.Event> {
-    return callbackFlow {
-
+  override fun start(): Flow<Request.Event> =
+    callbackFlow {
       logger.debug("Starting")
 
       val callback = RequestCallback(this, httpClient, requestDispatcher)
@@ -126,7 +129,6 @@ open class OkHttpRequest(
         callback.cancel()
       }
     }
-  }
 
   class RequestCallback(
     private val scope: ProducerScope<Request.Event>,
@@ -140,55 +142,55 @@ open class OkHttpRequest(
       reader?.cancel()
     }
 
-    override fun onResponse(call: Call, response: okhttp3.Response) {
-
+    override fun onResponse(
+      call: Call,
+      response: okhttp3.Response,
+    ) {
       logger.debug("Received response")
 
-      reader = scope.launch(dispatcher) {
+      reader =
+        scope.launch(dispatcher) {
+          response.use {
+            // Because they called `start`, this is a long-lived response,
+            // cancel full-call timeouts.
+            (call as? RealCall)?.timeoutEarlyExit()
 
-        response.use {
+            val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
 
-          // Because they called `start`, this is a long-lived response,
-          // cancel full-call timeouts.
-          (call as? RealCall)?.timeoutEarlyExit()
+            scope.send(startEvent)
 
-          val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
+            val body = response.body
+            if (body != null) {
+              logger.debug("Processing: response body")
 
-          scope.send(startEvent)
+              while (isActive && scope.isActive) {
+                val buffer = Buffer()
 
-          val body = response.body
-          if (body != null) {
+                val bytesRead = body.source().read(buffer, READ_SIZE)
+                if (bytesRead == EOF) {
+                  break
+                }
 
-            logger.debug("Processing: response body")
-
-            while (isActive && scope.isActive) {
-
-              val buffer = Buffer()
-
-              val bytesRead = body.source().read(buffer, READ_SIZE)
-              if (bytesRead == EOF) {
-                break
+                scope.send(Request.Event.Data(buffer))
               }
 
-              scope.send(Request.Event.Data(buffer))
             }
 
+            if (isActive && scope.isActive) {
+              scope.send(Request.Event.End(response.trailers()))
+            }
           }
 
-          if (isActive && scope.isActive) {
+          scope.close()
 
-            scope.send(Request.Event.End(response.trailers()))
-          }
+          logger.debug("Closed: response events")
         }
-
-        scope.close()
-
-        logger.debug("Closed: response events")
-      }
     }
 
-    override fun onFailure(call: Call, e: IOException) {
-
+    override fun onFailure(
+      call: Call,
+      e: IOException,
+    ) {
       logger.debug("Received error")
 
       scope.cancel("Call failed", e)

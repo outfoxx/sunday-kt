@@ -40,7 +40,10 @@ class BinaryDecoder : MediaTypeDecoder {
 
   }
 
-  override fun <T : Any> decode(data: Source, type: KType): T =
+  override fun <T : Any> decode(
+    data: Source,
+    type: KType,
+  ): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
       ByteArray::class -> data.buffer().readByteArray() as T

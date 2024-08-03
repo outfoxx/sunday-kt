@@ -19,5 +19,4 @@ package io.outfoxx.sunday.utils
 import okio.Buffer
 import java.nio.charset.Charset
 
-internal fun String.buffer(charset: Charset = Charsets.UTF_8): Buffer =
-  Buffer().writeString(this, charset)
+internal fun String.buffer(charset: Charset = Charsets.UTF_8): Buffer = Buffer().writeString(this, charset)

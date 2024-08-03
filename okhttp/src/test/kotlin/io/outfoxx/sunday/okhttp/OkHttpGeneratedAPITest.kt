@@ -27,7 +27,7 @@ class OkHttpGeneratedAPITest : GeneratedAPITests() {
   override fun createRequestFactory(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
-    decoders: MediaTypeDecoders
+    decoders: MediaTypeDecoders,
   ): RequestFactory =
     OkHttpRequestFactory(
       uriTemplate,

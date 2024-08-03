@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-import io.outfoxx.sunday.PathEncoders
-import io.outfoxx.sunday.add
+package io.outfoxx.sunday.jdk
+
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
-import java.util.UUID
 
-class PathEncodersTest {
-
-  @Test
-  fun `adding implicitly typed encoders`() {
-    val encoders = PathEncoders.default.add(UUID::toString)
-    assertThat(encoders, Matchers.aMapWithSize(2))
-  }
+class ReasonPhrasesTest {
 
   @Test
-  fun `adding explicitly typed encoders`() {
-    val encoders = PathEncoders.default.add(UUID::class, UUID::toString)
-    assertThat(encoders, Matchers.aMapWithSize(2))
+  fun `test lookups`() {
+    assertThat(ReasonPhrases.lookup(99), `is`(nullValue()))
+    assertThat(ReasonPhrases.lookup(100), equalTo("Continue"))
+    assertThat(ReasonPhrases.lookup(200), equalTo("OK"))
+    assertThat(ReasonPhrases.lookup(300), equalTo("Multiple Choices"))
+    assertThat(ReasonPhrases.lookup(400), equalTo("Bad Request"))
+    assertThat(ReasonPhrases.lookup(500), equalTo("Server Error"))
+    assertThat(ReasonPhrases.lookup(600), `is`(nullValue()))
   }
 
 }

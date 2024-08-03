@@ -24,8 +24,9 @@ import okio.Source
  * Common Jackson [ObjectMapper] encoder that supports encoding
  * Java/Kotlin values into binary data.
  */
-open class ObjectMapperEncoder(private val objectMapper: ObjectMapper) : MediaTypeEncoder {
+open class ObjectMapperEncoder(
+  private val objectMapper: ObjectMapper,
+) : MediaTypeEncoder {
 
-  override fun <B> encode(value: B): Source =
-    Buffer().write(objectMapper.writeValueAsBytes(value))
+  override fun <B> encode(value: B): Source = Buffer().write(objectMapper.writeValueAsBytes(value))
 }

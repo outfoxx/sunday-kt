@@ -25,7 +25,9 @@ import java.nio.charset.Charset
  *
  * Encoding from [String], and [CharSequence] is supported.
  */
-class TextEncoder(private val charset: Charset) : MediaTypeEncoder {
+class TextEncoder(
+  private val charset: Charset,
+) : MediaTypeEncoder {
 
   companion object {
 

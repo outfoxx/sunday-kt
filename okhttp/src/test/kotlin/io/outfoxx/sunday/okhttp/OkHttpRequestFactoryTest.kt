@@ -30,7 +30,7 @@ class OkHttpRequestFactoryTest : RequestFactoryTest() {
   override fun createRequestFactory(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
-    decoders: MediaTypeDecoders
+    decoders: MediaTypeDecoders,
   ): RequestFactory =
     OkHttpRequestFactory(
       uriTemplate,

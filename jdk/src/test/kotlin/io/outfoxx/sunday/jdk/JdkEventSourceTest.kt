@@ -35,33 +35,33 @@ class JdkEventSourceTest : EventSourceTest() {
     private val onStart: () -> Unit,
     private val onCancel: () -> Unit,
   ) : JdkRequest(
-    request,
-    httpClient,
-  ) {
+      request,
+      httpClient,
+    ) {
 
-    override fun start(): Flow<Request.Event> {
-      return super.start()
+    override fun start(): Flow<Request.Event> =
+      super
+        .start()
         .onEach {
           if (it is Request.Event.Start) {
             onStart()
           }
-        }
-        .onCompletion {
+        }.onCompletion {
           if (it is CancellationException) {
             onCancel()
           }
         }
-    }
   }
 
   override fun createRequest(
     url: String,
     headers: Headers,
     onStart: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
   ): Request =
     JdkTrackingRequest(
-      HttpRequest.newBuilder(URI(url))
+      HttpRequest
+        .newBuilder(URI(url))
         .headers(headers)
         .build(),
       HttpClient.newHttpClient(),

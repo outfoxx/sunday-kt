@@ -31,8 +31,10 @@ import kotlin.reflect.jvm.javaType
  * Common Jackson [ObjectMapper] decoder that supports decoding
  * from binary data and structured [map][Map] data.
  */
-open class ObjectMapperDecoder(objectMapper: ObjectMapper) :
-  MediaTypeDecoder, StructuredMediaTypeDecoder {
+open class ObjectMapperDecoder(
+  objectMapper: ObjectMapper,
+) : MediaTypeDecoder,
+  StructuredMediaTypeDecoder {
 
   class CustomDeserializationProblemHandler : DeserializationProblemHandler() {
 
@@ -41,7 +43,7 @@ open class ObjectMapperDecoder(objectMapper: ObjectMapper) :
       baseType: JavaType?,
       subTypeId: String?,
       idResolver: TypeIdResolver?,
-      failureMsg: String?
+      failureMsg: String?,
     ): JavaType? {
       // Ensure deserialization of Problem subclasses can be done explicitly without
       // registration
@@ -53,15 +55,21 @@ open class ObjectMapperDecoder(objectMapper: ObjectMapper) :
   }
 
   val objectMapper: ObjectMapper =
-    objectMapper.copy()
+    objectMapper
+      .copy()
       .addHandler(CustomDeserializationProblemHandler())
 
-  override fun <T : Any> decode(data: Source, type: KType): T =
+  override fun <T : Any> decode(
+    data: Source,
+    type: KType,
+  ): T =
     objectMapper.readValue(
       data.buffer().inputStream(),
-      objectMapper.typeFactory.constructType(type.javaType)
+      objectMapper.typeFactory.constructType(type.javaType),
     )
 
-  override fun <T : Any> decode(data: Map<String, Any>, type: KType): T =
-    objectMapper.convertValue(data, objectMapper.typeFactory.constructType(type.javaType))
+  override fun <T : Any> decode(
+    data: Map<String, Any>,
+    type: KType,
+  ): T = objectMapper.convertValue(data, objectMapper.typeFactory.constructType(type.javaType))
 }

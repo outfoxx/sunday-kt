@@ -26,7 +26,9 @@ import kotlin.reflect.KType
  *
  * Decoding to [String], and [CharSequence] is supported.
  */
-class TextDecoder(private val charset: Charset) : TextMediaTypeDecoder {
+class TextDecoder(
+  private val charset: Charset,
+) : TextMediaTypeDecoder {
 
   companion object {
 
@@ -37,14 +39,20 @@ class TextDecoder(private val charset: Charset) : TextMediaTypeDecoder {
 
   }
 
-  override fun <T : Any> decode(data: Source, type: KType): T =
+  override fun <T : Any> decode(
+    data: Source,
+    type: KType,
+  ): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
       String::class, CharSequence::class -> data.buffer().readString(charset) as T
       else -> throw IllegalArgumentException("Unsupported type for text decode")
     }
 
-  override fun <T : Any> decode(data: String, type: KType): T =
+  override fun <T : Any> decode(
+    data: String,
+    type: KType,
+  ): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
       String::class, CharSequence::class -> data as T

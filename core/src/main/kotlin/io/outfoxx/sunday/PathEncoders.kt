@@ -25,9 +25,10 @@ typealias PathEncoderMap = Map<KClass<*>, PathEncoder>
 object PathEncoders {
 
   val default: PathEncoderMap
-    get() = mapOf(
-      Enum::class to { encodeEnum(it as Enum<*>) }
-    )
+    get() =
+      mapOf(
+        Enum::class to { encodeEnum(it as Enum<*>) },
+      )
 
   fun <E : Enum<E>> encodeEnum(value: Enum<E>) =
     value.javaClass
@@ -40,13 +41,8 @@ object PathEncoders {
 
 inline fun <reified T : Any> PathEncoderMap.add(
   type: KClass<T>,
-  crossinline encoder: (T) -> String
-): PathEncoderMap {
-  return this + mapOf(type to { encoder.invoke(it as T) })
-}
+  crossinline encoder: (T) -> String,
+): PathEncoderMap = this + mapOf(type to { encoder.invoke(it as T) })
 
-inline fun <reified T : Any> PathEncoderMap.add(
-  crossinline encoder: (T) -> String
-): PathEncoderMap {
-  return add(T::class, encoder)
-}
+inline fun <reified T : Any> PathEncoderMap.add(crossinline encoder: (T) -> String): PathEncoderMap =
+  add(T::class, encoder)

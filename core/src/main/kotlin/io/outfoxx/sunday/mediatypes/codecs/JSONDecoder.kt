@@ -30,7 +30,10 @@ import kotlin.reflect.jvm.javaType
  *
  * @see [ObjectMapperDecoder]
  */
-class JSONDecoder(jsonMapper: JsonMapper) : ObjectMapperDecoder(jsonMapper), TextMediaTypeDecoder {
+class JSONDecoder(
+  jsonMapper: JsonMapper,
+) : ObjectMapperDecoder(jsonMapper),
+  TextMediaTypeDecoder {
 
   companion object {
 
@@ -44,14 +47,15 @@ class JSONDecoder(jsonMapper: JsonMapper) : ObjectMapperDecoder(jsonMapper), Tex
           .setBase64Variant(
             Base64Variants.MIME_NO_LINEFEEDS
               .withReadPadding(Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED)
-              .withWritePadding(false)
-          )
-          .enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
-          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper
+              .withWritePadding(false),
+          ).enable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+          .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper,
       )
 
   }
 
-  override fun <T : Any> decode(data: String, type: KType): T =
-    objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
+  override fun <T : Any> decode(
+    data: String,
+    type: KType,
+  ): T = objectMapper.readValue(data, TypeFactory.defaultInstance().constructType(type.javaType))
 }

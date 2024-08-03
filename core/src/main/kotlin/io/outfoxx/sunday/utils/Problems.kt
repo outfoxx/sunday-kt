@@ -24,10 +24,12 @@ import org.zalando.problem.ThrowableProblem
 
 internal object Problems {
 
-  fun forResponse(response: Response): ThrowableProblem =
-    forStatus(response.statusCode, response.reasonPhrase)
+  fun forResponse(response: Response): ThrowableProblem = forStatus(response.statusCode, response.reasonPhrase)
 
-  fun forStatus(statusCode: Int, reasonPhrase: String?): ThrowableProblem {
+  fun forStatus(
+    statusCode: Int,
+    reasonPhrase: String?,
+  ): ThrowableProblem {
     val status =
       try {
         Status.valueOf(statusCode)

@@ -7,6 +7,7 @@ pluginManagement {
   }
 
   val kotlinPluginVersion: String by settings
+  val koverPluginVersion: String by settings
   val dokkaPluginVersion: String by settings
   val licenserPluginVersion: String by settings
   val kotlinterPluginVersion: String by settings
@@ -17,6 +18,7 @@ pluginManagement {
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
+    id("org.jetbrains.kotlinx.kover") version koverPluginVersion
     id("org.jetbrains.dokka") version dokkaPluginVersion
     id("org.cadixdev.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion

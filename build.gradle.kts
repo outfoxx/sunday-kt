@@ -2,7 +2,8 @@ import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cadixdev.gradle.licenser.LicenseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
 
@@ -10,7 +11,7 @@ plugins {
   id("com.github.breadmoirai.github-release")
   id("org.sonarqube")
   id("io.github.gradle-nexus.publish-plugin")
-
+  id("org.jetbrains.kotlinx.kover")
 
   kotlin("jvm") apply (false)
   id("org.cadixdev.licenser") apply (false)
@@ -46,11 +47,11 @@ allprojects {
 configure(moduleNames.map { project(":sunday-$it") }) {
 
   apply(plugin = "java-library")
-  apply(plugin = "jacoco")
   apply(plugin = "maven-publish")
   apply(plugin = "signing")
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
+  apply(plugin = "org.jetbrains.kotlinx.kover")
   apply(plugin = "org.jetbrains.dokka")
   apply(plugin = "org.cadixdev.licenser")
   apply(plugin = "org.jmailen.kotlinter")
@@ -88,13 +89,14 @@ configure(moduleNames.map { project(":sunday-$it") }) {
     withJavadocJar()
   }
 
-  tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-      kotlinOptions {
-        languageVersion = kotlinVersion
-        apiVersion = kotlinVersion
-      }
-      jvmTarget = javaVersion
+  configure<KotlinJvmProjectExtension> {
+    jvmToolchain {
+      languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    }
+    compilerOptions {
+      jvmTarget.set(JvmTarget.valueOf("JVM_$javaVersion"))
+      javaParameters.set(true)
+      freeCompilerArgs.add("-Xjvm-default=all")
     }
   }
 
@@ -102,10 +104,6 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   //
   // TEST
   //
-
-  configure<JacocoPluginExtension> {
-    toolVersion = "0.8.7"
-  }
 
   tasks.named<Test>("test").configure {
 
@@ -118,8 +116,6 @@ configure(moduleNames.map { project(":sunday-$it") }) {
     }
 
     reports.junitXml.required.set(true)
-
-    finalizedBy("jacocoTestReport")
   }
 
 
@@ -133,9 +129,9 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   }
 
   configure<DetektExtension> {
-    source = files("src/main/kotlin")
+    source.from("src/main/kotlin")
 
-    config = files("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
+    config.from("${rootProject.layout.projectDirectory}/src/main/detekt/detekt.yml")
     buildUponDefaultConfig = true
     baseline = file("src/main/detekt/detekt-baseline.xml")
   }
@@ -152,7 +148,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   tasks.named<DokkaTask>("dokkaHtml") {
     failOnWarning.set(true)
     suppressObviousFunctions.set(false)
-    outputDirectory.set(file("$buildDir/dokka/${project.version}"))
+    outputDirectory.set(file("${layout.buildDirectory.get()}/dokka/${project.version}"))
   }
 
   tasks.named<DokkaTask>("dokkaJavadoc") {
@@ -271,7 +267,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   // ANALYSIS
   //
 
-  sonarqube {
+  sonar {
     properties {
       property("sonar.sources", "src/main")
       property("sonar.tests", "src/test")
@@ -282,7 +278,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
       property("sonar.jacoco.reportPaths", "")
       property(
         "sonar.coverage.jacoco.xmlReportPaths",
-        "$rootDir/code-coverage/build/reports/jacoco/testCoverageReport/testCoverageReport.xml",
+        "$rootDir/code-coverage/build/reports/kover/report.xml",
       )
     }
   }
@@ -294,7 +290,7 @@ configure(moduleNames.map { project(":sunday-$it") }) {
 // ANALYSIS
 //
 
-sonarqube {
+sonar {
   properties {
     property("sonar.projectName", "sunday-kt")
     property("sonar.projectKey", "outfoxx_sunday-kt")
@@ -309,7 +305,7 @@ sonarqube {
 //
 
 tasks.dokkaHtmlMultiModule.configure {
-  outputDirectory.set(buildDir.resolve("dokka/${releaseVersion}"))
+  outputDirectory.set(layout.buildDirectory.dir("dokka/${releaseVersion}"))
 }
 
 
@@ -318,25 +314,23 @@ tasks.dokkaHtmlMultiModule.configure {
 //
 
 githubRelease {
-  owner("outfoxx")
-  repo("sunday-kt")
-  tagName(releaseVersion)
-  targetCommitish("main")
-  releaseName("🚀 v${releaseVersion}")
-  generateReleaseNotes(true)
-  draft(false)
-  prerelease(!releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex()))
-  releaseAssets(
+  owner = "outfoxx"
+  repo = "sunday-kt"
+  tagName = releaseVersion
+  targetCommitish = "main"
+  releaseName = "🚀 v${releaseVersion}"
+  generateReleaseNotes = true
+  draft = false
+  prerelease = !releaseVersion.matches("""^\d+\.\d+\.\d+$""".toRegex())
+  releaseAssets.from(
     moduleNames.flatMap { moduleName ->
       listOf("", "-javadoc", "-sources").map { suffix ->
         file("$rootDir/$moduleName/build/libs/sunday-$moduleName-$releaseVersion$suffix.jar")
       }
     }
   )
-  overwrite(true)
-  authorization(
-    "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
-  )
+  overwrite = true
+  authorization = "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
 }
 
 nexusPublishing {

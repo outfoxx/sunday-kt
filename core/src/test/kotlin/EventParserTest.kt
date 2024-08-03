@@ -87,7 +87,7 @@ class EventParserTest {
         |data: Hello World!
         |
         |
-        """.trimMargin()
+        """.trimMargin(),
       )
 
     val events = run(EventParser(), eventBuffer)
@@ -99,7 +99,7 @@ class EventParserTest {
         EventInfo(null, "hello", "12345", "Hello World!"),
         EventInfo(null, "hello", "67890", "Hello World!"),
         EventInfo(null, "hello", "abcde", "Hello World!"),
-      )
+      ),
     )
   }
 
@@ -186,7 +186,7 @@ class EventParserTest {
         |
         |
         |
-        """.trimMargin()
+      """.trimMargin()
 
     val eventBuffers = mutableListOf<Buffer>()
     while (eventStream.isNotEmpty()) {
@@ -211,13 +211,16 @@ class EventParserTest {
         EventInfo(null, "hello", "3-12345", "Hello World!"),
         EventInfo(null, "hello", "4-12345", "Hello World!"),
         EventInfo(null, "hello", "5-12345", "Hello World!"),
-      )
+      ),
     )
   }
 
   private fun source(data: String): Buffer = data.buffer()
 
-  private fun run(parser: EventParser, source: Buffer): List<EventInfo> {
+  private fun run(
+    parser: EventParser,
+    source: Buffer,
+  ): List<EventInfo> {
     val events = mutableListOf<EventInfo>()
     parser.process(source) { events.add(it) }
     return events

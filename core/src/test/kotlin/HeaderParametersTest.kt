@@ -29,29 +29,26 @@ class HeaderParametersTest {
 
   @Test
   fun `test encodes array values as repeated headers`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to arrayOf(MediaType.JSON, MediaType.CBOR)))
 
     assertThat(
       headers,
-      containsInAnyOrder("test" to "application/json", "test" to "application/cbor")
+      containsInAnyOrder("test" to "application/json", "test" to "application/cbor"),
     )
   }
 
   @Test
   fun `test encodes iterables as repeated headers`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to listOf(MediaType.JSON, MediaType.CBOR)))
 
     assertThat(
       headers,
-      containsInAnyOrder("test" to "application/json", "test" to "application/cbor")
+      containsInAnyOrder("test" to "application/json", "test" to "application/cbor"),
     )
   }
 
   @Test
   fun `test string encoding`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to "header"))
 
     assertThat(headers, containsInAnyOrder("test" to "header"))
@@ -59,7 +56,6 @@ class HeaderParametersTest {
 
   @Test
   fun `test integer encoding`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to 123456789))
 
     assertThat(headers, containsInAnyOrder("test" to "123456789"))
@@ -67,7 +63,6 @@ class HeaderParametersTest {
 
   @Test
   fun `test decimal encoding`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to 12345.6789))
 
     assertThat(headers, containsInAnyOrder("test" to "12345.6789"))
@@ -75,7 +70,6 @@ class HeaderParametersTest {
 
   @Test
   fun `test null values are ignored`() {
-
     val headers = HeaderParameters.encode(mapOf("test" to null))
 
     assertThat(headers, emptyIterable())
@@ -83,20 +77,19 @@ class HeaderParametersTest {
 
   @Test
   fun `test nested null values are ignored`() {
-
-    val headers = HeaderParameters.encode(
-      mapOf(
-        "test1" to listOf<String?>(null),
-        "test2" to arrayOf<Int?>(null),
+    val headers =
+      HeaderParameters.encode(
+        mapOf(
+          "test1" to listOf<String?>(null),
+          "test2" to arrayOf<Int?>(null),
+        ),
       )
-    )
 
     assertThat(headers, emptyIterable())
   }
 
   @Test
   fun `test fails on invalid header values`() {
-
     val nullError =
       assertThrows<SundayError> {
         HeaderParameters.encode(mapOf("test" to "a${0.toChar()}b"))

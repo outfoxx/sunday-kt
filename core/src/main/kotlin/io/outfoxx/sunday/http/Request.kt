@@ -66,19 +66,25 @@ interface Request {
      * and [Response.trailers] will not be available. The response body data,
      * if any, will be provided in [Data] events that follow.
      */
-    data class Start(val value: Response) : Event
+    data class Start(
+      val value: Response,
+    ) : Event
 
     /**
      * HTTP response body data has been received.
      */
-    data class Data(val value: Buffer) : Event
+    data class Data(
+      val value: Buffer,
+    ) : Event
 
     /**
      * HTTP response has completed.
      *
      * Response trailers are provided, if any were delivered.
      */
-    data class End(val trailers: Headers) : Event
+    data class End(
+      val trailers: Headers,
+    ) : Event
   }
 
   /**

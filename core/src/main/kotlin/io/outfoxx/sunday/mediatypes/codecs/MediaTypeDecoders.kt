@@ -32,15 +32,16 @@ import io.outfoxx.sunday.MediaType.Companion.X509UserCert
  * Container for [MediaTypeDecoder]s that allows registering and
  * locating decoders for specific [media types][MediaType].
  */
-class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>) {
+class MediaTypeDecoders(
+  private val registered: Map<MediaType, MediaTypeDecoder>,
+) {
 
   /**
    * Check if the given [media type][MediaType] has a decoder registered.
    *
    * @return `true` if a decoder is available.
    */
-  fun supports(mediaType: MediaType) =
-    registered.keys.any { mediaType.compatible(it) }
+  fun supports(mediaType: MediaType) = registered.keys.any { mediaType.compatible(it) }
 
   /**
    * Locates a compatible decoder for the given [media type][MediaType].
@@ -48,13 +49,14 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
    * @param mediaType Media type to locate decoder for.
    * @return Compatible [MediaTypeDecoder] or null if none found.
    */
-  fun find(mediaType: MediaType) =
-    registered.entries.firstOrNull { it.key.compatible(mediaType) }?.value
+  fun find(mediaType: MediaType) = registered.entries.firstOrNull { it.key.compatible(mediaType) }?.value
 
   /**
    * Builder for [MediaTypeDecoders].
    */
-  class Builder(private val registered: Map<MediaType, MediaTypeDecoder> = mapOf()) {
+  class Builder(
+    private val registered: Map<MediaType, MediaTypeDecoder> = mapOf(),
+  ) {
 
     /**
      * Registers all the default decoders.
@@ -75,16 +77,14 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
      *
      * @return Fluent builder.
      */
-    fun registerData() =
-      register(BinaryDecoder(), OctetStream)
+    fun registerData() = register(BinaryDecoder(), OctetStream)
 
     /**
      * Registers the default JSON decoder.
      *
      * @return Fluent builder.
      */
-    fun registerJSON() =
-      register(JSONDecoder.default, JSON, JSONStructured)
+    fun registerJSON() = register(JSONDecoder.default, JSON, JSONStructured)
 
     /**
      * Registers a custom JSON decoder.
@@ -92,16 +92,14 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
      * @param mapper Jackson mapper to use for decoding.
      * @return Fluent builder.
      */
-    fun registerJSON(mapper: JsonMapper) =
-      register(JSONDecoder(mapper), JSON, JSONStructured)
+    fun registerJSON(mapper: JsonMapper) = register(JSONDecoder(mapper), JSON, JSONStructured)
 
     /**
      * Registers the default JSON decoder.
      *
      * @return Fluent builder.
      */
-    fun registerCBOR() =
-      register(CBORDecoder.default, CBOR)
+    fun registerCBOR() = register(CBORDecoder.default, CBOR)
 
     /**
      * Registers a custom CBOR encoder.
@@ -109,16 +107,14 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
      * @param mapper Jackson mapper to use for decoding.
      * @return Fluent builder.
      */
-    fun registerCBOR(mapper: CBORMapper) =
-      register(CBORDecoder(mapper), CBOR)
+    fun registerCBOR(mapper: CBORMapper) = register(CBORDecoder(mapper), CBOR)
 
     /**
      * Registers the default UTF-8 text decoder.
      *
      * @return Fluent builder.
      */
-    fun registerText() =
-      register(TextDecoder.default, AnyText)
+    fun registerText() = register(TextDecoder.default, AnyText)
 
     /**
      * Registers a dummy binary decoder for Server-Sent Events streams.
@@ -128,16 +124,14 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
      *
      * @return Fluent builder.
      */
-    fun registerEventStream() =
-      register(BinaryDecoder.default, EventStream)
+    fun registerEventStream() = register(BinaryDecoder.default, EventStream)
 
     /**
      * Registers a binary decoder for X509 types.
      *
      * @return Fluent builder.
      */
-    fun registerX509() =
-      register(BinaryDecoder.default, X509CACert, X509UserCert)
+    fun registerX509() = register(BinaryDecoder.default, X509CACert, X509UserCert)
 
     /**
      * Registers a decoder with specific media types.
@@ -146,8 +140,10 @@ class MediaTypeDecoders(private val registered: Map<MediaType, MediaTypeDecoder>
      * @param types Media types to associate with [decoder].
      * @return Fluent builder.
      */
-    fun register(decoder: MediaTypeDecoder, vararg types: MediaType) =
-      Builder(registered.plus(types.map { it to decoder }))
+    fun register(
+      decoder: MediaTypeDecoder,
+      vararg types: MediaType,
+    ) = Builder(registered.plus(types.map { it to decoder }))
 
     /**
      * Builds the immutable [MediaTypeDecoders] instance.

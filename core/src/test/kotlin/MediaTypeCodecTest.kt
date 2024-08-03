@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
+import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
+import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
@@ -27,6 +32,9 @@ import okio.Source
 import okio.buffer
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.not
+import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -43,7 +51,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder decodes text`() {
-
       val decoder = TextDecoder.default
 
       assertThat(decoder.decode<String>("testing".buffer()), equalTo("testing"))
@@ -52,7 +59,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder fails to decode non text`() {
-
       val decoder = TextDecoder.default
 
       assertThrows<IllegalArgumentException> {
@@ -62,7 +68,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder encodes text`() {
-
       val encoder = TextEncoder.default
 
       assertThat(encoder.encode("testing"), equalTo("testing".buffer()))
@@ -71,7 +76,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder fails to encode non text values`() {
-
       val encoder = TextEncoder.default
 
       assertThrows<IllegalArgumentException> {
@@ -86,7 +90,6 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test decoder decodes binary values`() {
-
       val decoder = BinaryDecoder()
 
       val buffer = "testing".buffer()
@@ -94,21 +97,20 @@ class MediaTypeCodecTest {
       assertThat(decoder.decode<ByteString>(buffer.copy()), equalTo(buffer.copy().readByteString()))
       assertThat(
         decoder.decode<InputStream>(buffer.copy()).readAllBytes(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
       assertThat(
         decoder.decode<Source>(buffer.copy()).buffer().readByteArray(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
       assertThat(
         decoder.decode<BufferedSource>(buffer.copy()).readByteArray(),
-        equalTo(buffer.copy().readByteArray())
+        equalTo(buffer.copy().readByteArray()),
       )
     }
 
     @Test
     fun `test decoder fails to decode non binary`() {
-
       val decoder = BinaryDecoder()
 
       assertThrows<IllegalArgumentException> {
@@ -118,30 +120,28 @@ class MediaTypeCodecTest {
 
     @Test
     fun `test encoder encodes binary values`() {
-
       val encoder = BinaryEncoder()
 
       assertThat(
         encoder.encode(byteArrayOf(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(ByteString.of(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(ByteArrayInputStream(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
       assertThat(
         encoder.encode(Buffer().write(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3)))
+        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
       )
     }
 
     @Test
     fun `test encoder fails to encode non binary values`() {
-
       val encoder = BinaryEncoder()
 
       assertThrows<IllegalArgumentException> {
@@ -150,4 +150,29 @@ class MediaTypeCodecTest {
     }
   }
 
+  @Test
+  fun `test encoders builder registers specific codecs`() {
+    val encoders =
+      MediaTypeEncoders
+        .Builder()
+        .registerJSON(JsonMapper())
+        .registerCBOR(CBORMapper())
+        .build()
+
+    assertThat(encoders.find(MediaType.JSON), `is`(not(nullValue())))
+    assertThat(encoders.find(MediaType.CBOR), `is`(not(nullValue())))
+  }
+
+  @Test
+  fun `test decoders builder registers specific codecs`() {
+    val decoders =
+      MediaTypeDecoders
+        .Builder()
+        .registerJSON(JsonMapper())
+        .registerCBOR(CBORMapper())
+        .build()
+
+    assertThat(decoders.find(MediaType.JSON), `is`(not(nullValue())))
+    assertThat(decoders.find(MediaType.CBOR), `is`(not(nullValue())))
+  }
 }

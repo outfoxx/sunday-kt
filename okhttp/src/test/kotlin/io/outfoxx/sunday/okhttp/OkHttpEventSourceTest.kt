@@ -37,34 +37,34 @@ class OkHttpEventSourceTest : EventSourceTest() {
     private val onStart: () -> Unit,
     private val onCancel: () -> Unit,
   ) : OkHttpRequest(
-    request,
-    httpClient,
-    requestDispatcher,
-  ) {
+      request,
+      httpClient,
+      requestDispatcher,
+    ) {
 
-    override fun start(): Flow<Request.Event> {
-      return super.start()
+    override fun start(): Flow<Request.Event> =
+      super
+        .start()
         .onEach {
           if (it is Request.Event.Start) {
             onStart()
           }
-        }
-        .onCompletion {
+        }.onCompletion {
           if (it is CancellationException) {
             onCancel()
           }
         }
-    }
   }
 
   override fun createRequest(
     url: String,
     headers: Headers,
     onStart: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
   ): Request =
     OkHttpTrackingRequest(
-      okhttp3.Request.Builder()
+      okhttp3.Request
+        .Builder()
         .method("GET", null)
         .url(url)
         .headers(headers.toMap().toHeaders())

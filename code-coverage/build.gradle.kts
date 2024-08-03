@@ -1,7 +1,7 @@
 
 plugins {
   base
-  id("jacoco-report-aggregation")
+  id("org.jetbrains.kotlinx.kover")
 }
 
 repositories {
@@ -9,26 +9,15 @@ repositories {
 }
 
 dependencies {
-  jacocoAggregation(project(":sunday-core"))
-  jacocoAggregation(project(":sunday-jdk"))
-  jacocoAggregation(project(":sunday-okhttp"))
-}
-
-reporting {
-  reports {
-    create<JacocoCoverageReport>("testCoverageReport") {
-      testType.set(TestSuiteType.UNIT_TEST)
-      reportTask {
-        reports.xml.required.set(true)
-      }
-    }
-  }
+  kover(project(":sunday-core"))
+  kover(project(":sunday-jdk"))
+  kover(project(":sunday-okhttp"))
 }
 
 tasks {
 
   check {
-    finalizedBy(named<JacocoReport>("testCoverageReport"))
+    finalizedBy(named("koverXmlReport"), named("koverHtmlReport"))
   }
 
 }

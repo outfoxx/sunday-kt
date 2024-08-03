@@ -38,7 +38,7 @@ object HeaderParameters {
 
   private fun encodeParameter(
     headerName: String,
-    headerParameter: Any?
+    headerParameter: Any?,
   ): List<Pair<String, String>> =
     when (headerParameter) {
       null -> emptyList()
@@ -63,7 +63,10 @@ object HeaderParameters {
    *
    * Checks that each character is ASCII. Also disallowing NULL, CR, and LF.
    */
-  private fun validate(headerName: String, headerValue: String): String {
+  private fun validate(
+    headerName: String,
+    headerValue: String,
+  ): String {
     for (char in headerValue) {
       if (!asciiEncoder.canEncode(char) || isDisallowedChar(char)) {
         throw SundayError(InvalidHeaderValue, ": header=$headerName, value=$headerValue")
@@ -72,7 +75,6 @@ object HeaderParameters {
     return headerValue
   }
 
-  private fun isDisallowedChar(char: Char): Boolean =
-    char == 0.toChar() || char == '\r' || char == '\n'
+  private fun isDisallowedChar(char: Char): Boolean = char == 0.toChar() || char == '\r' || char == '\n'
 
 }

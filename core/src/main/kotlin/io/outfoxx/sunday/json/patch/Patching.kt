@@ -45,7 +45,10 @@ sealed class PatchOp<T : Any> {
   /**
    * JSON Merge Patch `set` operation that sets/replaces the current value.
    */
-  data class Set<T : Any>(val value: T) : PatchOp<T>(), UpdateOp<T> {
+  data class Set<T : Any>(
+    val value: T,
+  ) : PatchOp<T>(),
+    UpdateOp<T> {
 
     override fun toString() = "set($value)"
   }
@@ -66,15 +69,17 @@ sealed class PatchOp<T : Any> {
   /**
    * JSON Merge Patch `none` operation that leaves the current value untouched.
    */
-  class None<T : Any> private constructor() : PatchOp<T>(), UpdateOp<T> {
+  class None<T : Any> private constructor() :
+    PatchOp<T>(),
+    UpdateOp<T> {
 
-    companion object {
+      companion object {
 
-      val instance = None<Any>()
+        val instance = None<Any>()
+      }
+
+      override fun toString() = "none"
     }
-
-    override fun toString() = "none"
-  }
 
   @Suppress("UNCHECKED_CAST")
   companion object {
@@ -126,15 +131,20 @@ sealed class PatchOp<T : Any> {
    */
   class Serializer : JsonSerializer<PatchOp<*>>() {
 
-    override fun isEmpty(provider: SerializerProvider?, value: PatchOp<*>?): Boolean =
-      value is PatchOp.None
+    override fun isEmpty(
+      provider: SerializerProvider?,
+      value: PatchOp<*>?,
+    ): Boolean = value is PatchOp.None
 
-    override fun serialize(value: PatchOp<*>, gen: JsonGenerator, serializers: SerializerProvider) =
-      when (value) {
-        is Set<*> -> serializers.defaultSerializeValue(value.value, gen)
-        is Delete<*> -> gen.writeNull()
-        is PatchOp.None -> error("isEmpty should handle this state")
-      }
+    override fun serialize(
+      value: PatchOp<*>,
+      gen: JsonGenerator,
+      serializers: SerializerProvider,
+    ) = when (value) {
+      is Set<*> -> serializers.defaultSerializeValue(value.value, gen)
+      is Delete<*> -> gen.writeNull()
+      is PatchOp.None -> error("isEmpty should handle this state")
+    }
 
   }
 
@@ -143,24 +153,28 @@ sealed class PatchOp<T : Any> {
    */
   object Deserializer : JsonDeserializer<PatchOp<Any>>(), ContextualDeserializer {
 
-    class TypedDeserializer<T : Any>(private val type: JavaType) : JsonDeserializer<PatchOp<T>>() {
+    class TypedDeserializer<T : Any>(
+      private val type: JavaType,
+    ) : JsonDeserializer<PatchOp<T>>() {
 
       override fun getNullValue(ctxt: DeserializationContext): PatchOp<T> = delete()
 
-      override fun deserialize(p: JsonParser, ctxt: DeserializationContext): PatchOp<T> =
-        Set(ctxt.readValue(p, type))
+      override fun deserialize(
+        p: JsonParser,
+        ctxt: DeserializationContext,
+      ): PatchOp<T> = Set(ctxt.readValue(p, type))
 
     }
 
     override fun createContextual(
       ctxt: DeserializationContext,
-      property: BeanProperty
-    ): JsonDeserializer<*> {
-      return TypedDeserializer<Any>(property.type.containedType(0))
-    }
+      property: BeanProperty,
+    ): JsonDeserializer<*> = TypedDeserializer<Any>(property.type.containedType(0))
 
-    override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): PatchOp<Any> =
-      error("Should not be called")
+    override fun deserialize(
+      p: JsonParser?,
+      ctxt: DeserializationContext?,
+    ): PatchOp<Any> = error("Should not be called")
   }
 
 }

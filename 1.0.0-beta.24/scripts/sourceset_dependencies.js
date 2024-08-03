@@ -1,0 +1,1 @@
+sourceset_dependencies = '{":sunday-core:dokkaHtmlPartial/main":[],":sunday-okhttp:dokkaHtmlPartial/main":[],":sunday-jdk:dokkaHtmlPartial/main":[]}'

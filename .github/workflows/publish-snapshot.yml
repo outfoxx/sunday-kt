@@ -17,24 +17,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6.0.2
 
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v5.2.0
       with:
         java-version: '21'
         distribution: temurin
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
+      uses: gradle/actions/setup-gradle@v5.0.0
 
     - name: Build Artifacts & Documentation
-      run: ./gradlew build dokkaHtmlMultiModule -x test
+      run: ./gradlew build dokkaGeneratePublicationHtml -x test
 
     - name: Publish Maven Artifacts (Snapshot)
-      run: >-
-        ./gradlew
-        -PsonatypeUsername=${{ secrets.OSSRH_TOKEN_USER }} -PsonatypePassword=${{ secrets.OSSRH_TOKEN_PASS }}
-        publishToSonatype
+      run: ./gradlew publishToMavenCentral
+      env:
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_TOKEN_USER }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_TOKEN_PASS }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4

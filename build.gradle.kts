@@ -1,16 +1,16 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.cadixdev.gradle.licenser.LicenseExtension
-import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
 
   id("org.jetbrains.dokka")
+  id("org.jetbrains.dokka-javadoc") apply (false)
   id("com.github.breadmoirai.github-release")
+  id("com.vanniktech.maven.publish") apply (false)
   id("org.sonarqube")
-  id("io.github.gradle-nexus.publish-plugin")
   id("org.jetbrains.kotlinx.kover")
 
   kotlin("jvm") apply (false)
@@ -47,12 +47,12 @@ allprojects {
 configure(moduleNames.map { project(":sunday-$it") }) {
 
   apply(plugin = "java-library")
-  apply(plugin = "maven-publish")
-  apply(plugin = "signing")
 
   apply(plugin = "org.jetbrains.kotlin.jvm")
   apply(plugin = "org.jetbrains.kotlinx.kover")
   apply(plugin = "org.jetbrains.dokka")
+  apply(plugin = "org.jetbrains.dokka-javadoc")
+  apply(plugin = "com.vanniktech.maven.publish")
   apply(plugin = "org.cadixdev.licenser")
   apply(plugin = "org.jmailen.kotlinter")
   apply(plugin = "io.gitlab.arturbosch.detekt")
@@ -145,20 +145,17 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   // DOCS
   //
 
-  tasks.named<DokkaTask>("dokkaHtml") {
-    failOnWarning.set(true)
-    suppressObviousFunctions.set(false)
-    outputDirectory.set(file("${layout.buildDirectory.get()}/dokka/${project.version}"))
-  }
-
-  tasks.named<DokkaTask>("dokkaJavadoc") {
-    failOnWarning.set(true)
-    suppressObviousFunctions.set(false)
-    outputDirectory.set(tasks.named<Javadoc>("javadoc").get().destinationDir)
-  }
-
-  tasks.named<Javadoc>("javadoc").configure {
-    dependsOn("dokkaJavadoc")
+  dokka {
+    dokkaPublications.html {
+      failOnWarning.set(true)
+      suppressObviousFunctions.set(false)
+      outputDirectory.set(layout.buildDirectory.dir("dokka/${project.version}"))
+    }
+    dokkaPublications.javadoc {
+      failOnWarning.set(true)
+      suppressObviousFunctions.set(false)
+      outputDirectory.set(layout.buildDirectory.dir("dokka-javadoc/${project.version}"))
+    }
   }
 
 
@@ -166,100 +163,84 @@ configure(moduleNames.map { project(":sunday-$it") }) {
   // PUBLISHING
   //
 
-  configure<PublishingExtension> {
+  mavenPublishing {
+    publishToMavenCentral(automaticRelease = true)
+    if (!isSnapshot) {
+      signAllPublications()
+    }
 
-    publications {
+    coordinates(
+      groupId = "io.outfoxx.sunday",
+      artifactId = project.name,
+      version = releaseVersion,
+    )
 
-      create<MavenPublication>("library") {
-        from(components["java"])
+    pom {
+      when (project.name) {
+        "sunday-core" -> {
+          name.set("Sunday - Kotlin - Core")
+          description.set("Sunday | The framework of REST for Kotlin")
+        }
 
-        suppressPomMetadataWarningsFor("testFixturesApiElements")
-        suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
+        "sunday-okhttp" -> {
+          name.set("Sunday - Kotlin - OkHttp Implementation")
+          description.set(
+            """
+              Sunday | The framework of REST for Kotlin
+              
+              The OkHttp implementation uses the OkHttp client library
+              to execute HTTP requests.
+            """.trimIndent()
+          )
+        }
 
-        pom {
+        "sunday-jdk" -> {
+          name.set("Sunday - Kotlin - JDK 11 HTTP Client Implementation")
+          description.set(
+            """
+              Sunday | The framework of REST for Kotlin
+              
+              The JDK 11 HTTP Client implementation uses the JDK 11 HTTP client
+              to execute HTTP requests.
+            """.trimIndent()
+          )
+        }
+      }
+      url.set("https://github.com/outfoxx/sunday-kt")
 
-          when (project.name) {
-            "sunday-core" -> {
-              name.set("Sunday - Kotlin - Core")
-              description.set("Sunday | The framework of REST for Kotlin")
-            }
+      organization {
+        name.set("Outfox, Inc.")
+        url.set("https://outfoxx.io")
+      }
 
-            "sunday-okhttp" -> {
-              name.set("Sunday - Kotlin - OkHttp Implementation")
-              description.set(
-                """
-                  Sunday | The framework of REST for Kotlin
-                  
-                  The OkHttp implementation uses the OkHttp client library
-                  to execute HTTP requests.
-                """.trimIndent()
-              )
-            }
+      issueManagement {
+        system.set("GitHub")
+        url.set("https://github.com/outfoxx/sunday-kt/issues")
+      }
 
-            "sunday-jdk" -> {
-              name.set("Sunday - Kotlin - JDK 11 HTTP Client Implementation")
-              description.set(
-                """
-                  Sunday | The framework of REST for Kotlin
-                  
-                  The JDK 11 HTTP Client implementation uses the JDK 11 HTTP client
-                  to execute HTTP requests.
-                """.trimIndent()
-              )
-            }
-          }
-          url.set("https://github.com/outfoxx/sunday-kt")
+      licenses {
+        license {
+          name.set("Apache License 2.0")
+          url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/main/LICENSE.txt")
+          distribution.set("repo")
+        }
+      }
 
-          organization {
-            name.set("Outfox, Inc.")
-            url.set("https://outfoxx.io")
-          }
+      scm {
+        url.set("https://github.com/outfoxx/sunday-kt")
+        connection.set("scm:https://github.com/outfoxx/sunday-kt.git")
+        developerConnection.set("scm:git@github.com:outfoxx/sunday-kt.git")
+      }
 
-          issueManagement {
-            system.set("GitHub")
-            url.set("https://github.com/outfoxx/sunday-kt/issues")
-          }
-
-          licenses {
-            license {
-              name.set("Apache License 2.0")
-              url.set("https://raw.githubusercontent.com/outfoxx/sunday-kt/main/LICENSE.txt")
-              distribution.set("repo")
-            }
-          }
-
-          scm {
-            url.set("https://github.com/outfoxx/sunday-kt")
-            connection.set("scm:https://github.com/outfoxx/sunday-kt.git")
-            developerConnection.set("scm:git@github.com:outfoxx/sunday-kt.git")
-          }
-
-          developers {
-            developer {
-              id.set("kdubb")
-              name.set("Kevin Wooten")
-              email.set("kevin@outfoxx.io")
-            }
-          }
-
+      developers {
+        developer {
+          id.set("kdubb")
+          name.set("Kevin Wooten")
+          email.set("kevin@outfoxx.io")
         }
       }
 
     }
-  }
-
-  configure<SigningExtension> {
-    val signingKeyId: String? by project
-    val signingKey: String? by project
-    val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-
-    val publishing = project.extensions.getByType<PublishingExtension>()
-    sign(publishing.publications["library"])
-  }
-
-  tasks.withType<Sign>().configureEach {
-    onlyIf { !isSnapshot }
   }
 
 
@@ -285,6 +266,12 @@ configure(moduleNames.map { project(":sunday-$it") }) {
 
 }
 
+dependencies {
+  moduleNames.forEach { moduleName ->
+    add("dokka", project(":sunday-$moduleName"))
+  }
+}
+
 
 //
 // ANALYSIS
@@ -304,8 +291,10 @@ sonar {
 // DOCS
 //
 
-tasks.dokkaHtmlMultiModule.configure {
-  outputDirectory.set(layout.buildDirectory.dir("dokka/${releaseVersion}"))
+dokka {
+  dokkaPublications.html {
+    outputDirectory.set(layout.buildDirectory.dir("dokka/${releaseVersion}"))
+  }
 }
 
 
@@ -331,10 +320,4 @@ githubRelease {
   )
   overwrite = true
   authorization = "Token " + (project.findProperty("github.token") as String? ?: System.getenv("GITHUB_TOKEN"))
-}
-
-nexusPublishing {
-  repositories {
-    sonatype()
-  }
 }

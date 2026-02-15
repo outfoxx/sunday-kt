@@ -14,18 +14,19 @@ pluginManagement {
   val detektPluginVersion: String by settings
   val githubReleasePluginVersion: String by settings
   val sonarqubePluginVersion: String by settings
-  val nexusPublishPluginVersion: String by settings
+  val vanniktechPublishPluginVersion: String by settings
 
   plugins {
     kotlin("jvm") version kotlinPluginVersion
     id("org.jetbrains.kotlinx.kover") version koverPluginVersion
     id("org.jetbrains.dokka") version dokkaPluginVersion
+    id("org.jetbrains.dokka-javadoc") version dokkaPluginVersion
     id("org.cadixdev.licenser") version licenserPluginVersion
     id("org.jmailen.kotlinter") version kotlinterPluginVersion
     id("io.gitlab.arturbosch.detekt") version detektPluginVersion
     id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
     id("org.sonarqube") version sonarqubePluginVersion
-    id("io.github.gradle-nexus.publish-plugin") version nexusPublishPluginVersion
+    id("com.vanniktech.maven.publish") version vanniktechPublishPluginVersion
   }
 
 }

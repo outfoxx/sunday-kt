@@ -22,13 +22,13 @@ import io.outfoxx.sunday.EventSource.ReadyState.Open
 import io.outfoxx.sunday.EventSourceError.Reason.EventTimeout
 import io.outfoxx.sunday.EventSourceError.Reason.InvalidState
 import io.outfoxx.sunday.MediaType.Companion.EventStream
-import io.outfoxx.sunday.http.HeaderNames.Accept
-import io.outfoxx.sunday.http.HeaderNames.LastEventId
+import io.outfoxx.sunday.http.HeaderNames.ACCEPT
+import io.outfoxx.sunday.http.HeaderNames.LAST_EVENT_ID
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.isSuccessful
-import io.outfoxx.sunday.utils.Problems
+import io.outfoxx.sunday.problems.ProblemFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +64,7 @@ import kotlin.math.pow
  */
 class EventSource(
   private val requestSupplier: suspend (Headers) -> Request,
+  private val problemFactory: ProblemFactory,
   retryTime: Duration = retryTimeDefault,
   private val eventTimeout: Duration? = eventTimeoutDefault,
   private val eventTimeoutCheckInterval: Duration = eventTimeoutCheckIntervalDefault,
@@ -293,13 +294,13 @@ class EventSource(
 
     var headers =
       listOf(
-        Accept to EventStream.value,
+        ACCEPT to EventStream.value,
       )
 
     // Add last-event-id if we are reconnecting
 
     lastEventId?.let {
-      headers = headers.plus(LastEventId to it)
+      headers = headers.plus(LAST_EVENT_ID to it)
     }
 
     connectionAttemptTime = Instant.now()
@@ -335,7 +336,7 @@ class EventSource(
     when (event) {
       is Request.Event.Start -> {
         if (!event.value.isSuccessful) {
-          receivedError(Problems.forResponse(event.value))
+          receivedError(problemFactory.from(event.value).build())
         }
 
         receivedResponse(event.value)

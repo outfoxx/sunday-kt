@@ -20,8 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
-import io.outfoxx.sunday.http.HeaderNames.ContentLength
-import io.outfoxx.sunday.http.HeaderNames.ContentType
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_LENGTH
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.ResultResponse
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
@@ -89,7 +89,7 @@ abstract class GeneratedAPITests {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, JSON)
+          .addHeader(CONTENT_TYPE, JSON)
           .setBody(objectMapper.writeValueAsString(testResult)),
       )
       server.start()
@@ -111,7 +111,7 @@ abstract class GeneratedAPITests {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, JSON)
+          .addHeader(CONTENT_TYPE, JSON)
           .setBody(objectMapper.writeValueAsString(testResult)),
       )
       server.start()
@@ -122,7 +122,7 @@ abstract class GeneratedAPITests {
 
         expectThat(resultResponse.result).isEqualTo(testResult)
         expectThat(resultResponse.headers.map { it.first.lowercase() to it.second.lowercase() })
-          .contains(ContentType.lowercase() to JSON.value, ContentLength.lowercase() to "29")
+          .contains(CONTENT_TYPE.lowercase() to JSON.value, CONTENT_LENGTH.lowercase() to "29")
       }
     }
 
@@ -132,7 +132,7 @@ abstract class GeneratedAPITests {
       val server = MockWebServer()
       server.enqueue(
         MockResponse()
-          .addHeader(ContentLength, "0")
+          .addHeader(CONTENT_LENGTH, "0")
           .setResponseCode(204),
       )
       server.start()
@@ -143,7 +143,7 @@ abstract class GeneratedAPITests {
 
         expectThat(responseResult.result).isEqualTo(Unit)
         expectThat(responseResult.headers.map { it.first.lowercase() to it.second.lowercase() })
-          .contains(ContentLength.lowercase() to "0")
+          .contains(CONTENT_LENGTH.lowercase() to "0")
       }
     }
 

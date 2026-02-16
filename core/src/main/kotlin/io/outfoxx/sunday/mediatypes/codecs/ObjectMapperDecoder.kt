@@ -21,9 +21,9 @@ import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
+import io.outfoxx.sunday.problems.Problem
 import kotlinx.io.Source
 import kotlinx.io.asInputStream
-import org.zalando.problem.AbstractThrowableProblem
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
@@ -46,8 +46,8 @@ open class ObjectMapperDecoder(
       failureMsg: String?,
     ): JavaType? {
       // Ensure deserialization of Problem subclasses can be done explicitly without
-      // registration
-      if (baseType?.isTypeOrSubTypeOf(AbstractThrowableProblem::class.java) == true) {
+      // registration (legacy Zalando Problem support relies on this behavior).
+      if (baseType?.isTypeOrSubTypeOf(Problem::class.java) == true) {
         return baseType
       }
       return super.handleUnknownTypeId(ctxt, baseType, subTypeId, idResolver, failureMsg)

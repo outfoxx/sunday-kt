@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.test
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.CBOR
@@ -32,14 +33,16 @@ import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames
-import io.outfoxx.sunday.http.HeaderNames.ContentType
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.getFirst
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -50,10 +53,6 @@ import kotlinx.io.readByteArray
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
-import org.zalando.problem.AbstractThrowableProblem
-import org.zalando.problem.Exceptional
-import org.zalando.problem.Status
-import org.zalando.problem.ThrowableProblem
 import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.contains
@@ -195,10 +194,10 @@ abstract class RequestFactoryTest {
             requestFactory.request(
               Method.Get,
               "/add-custom-headers",
-              headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
+              headers = mapOf(HeaderNames.AUTHORIZATION to "Bearer 12345"),
             )
 
-          expectThat(request.headers).contains(HeaderNames.Authorization to "Bearer 12345")
+          expectThat(request.headers).contains(HeaderNames.AUTHORIZATION to "Bearer 12345")
         }
     }
 
@@ -216,7 +215,7 @@ abstract class RequestFactoryTest {
             )
 
           expectThat(request.headers)
-            .contains(HeaderNames.Accept to "application/json , application/cbor")
+            .contains(HeaderNames.ACCEPT to "application/json , application/cbor")
         }
     }
 
@@ -289,7 +288,7 @@ abstract class RequestFactoryTest {
               contentTypes = listOf(JSON),
             )
 
-          expectThat(request.headers).contains(ContentType to "application/json")
+          expectThat(request.headers).contains(CONTENT_TYPE to "application/json")
         }
     }
 
@@ -311,7 +310,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, JSON)
+          .addHeader(CONTENT_TYPE, JSON)
           .setBody(objectMapper.writeValueAsString(tester)),
       )
       server.start()
@@ -325,7 +324,7 @@ abstract class RequestFactoryTest {
                 "",
               )
 
-            expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+            expectThat(result.headers.getFirst(CONTENT_TYPE)).isEqualTo("application/json")
             expectThat(result.result).isEqualTo(tester)
           }
       }
@@ -345,7 +344,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, JSON)
+          .addHeader(CONTENT_TYPE, JSON)
           .setBody(objectMapper.writeValueAsString(tester)),
       )
       server.start()
@@ -360,7 +359,7 @@ abstract class RequestFactoryTest {
                 body = null,
               )
 
-            expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+            expectThat(result.headers.getFirst(CONTENT_TYPE)).isEqualTo("application/json")
             expectThat(result.result).isEqualTo(tester)
           }
       }
@@ -391,7 +390,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .setHeader(ContentType, JSON)
+          .setHeader(CONTENT_TYPE, JSON)
           .setBody("[]"),
       )
       server.start()
@@ -414,7 +413,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .setHeader(ContentType, JSON)
+          .setHeader(CONTENT_TYPE, JSON)
           .setBody("[]"),
       )
       server.start()
@@ -436,7 +435,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setStatus("HTTP/1.1 484 Special Status")
-        .setHeader(ContentType, JSON)
+        .setHeader(CONTENT_TYPE, JSON)
         .setBody("[]"),
     )
     server.start()
@@ -446,12 +445,11 @@ abstract class RequestFactoryTest {
 
           val expectedReasonPhrase: String? = null
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<Unit, List<String>>(Method.Get, "", body = null)
           }.and {
-            get { status?.statusCode }.isEqualTo(484)
-            get { status?.reasonPhrase }.isEqualTo(expectedReasonPhrase)
-            get { title }.isNull()
+            get { status }.isEqualTo(484)
+            get { title }.isEqualTo(expectedReasonPhrase)
           }
         }
     }
@@ -469,10 +467,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<SundayError> { requestFactory.result<Array<String>>(Method.Get, "") }
-            .and {
-              get { reason }.isEqualTo(SundayError.Reason.UnexpectedEmptyResponse)
-            }
+          expectThrows<SundayError> {
+            requestFactory.result<Array<String>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.UnexpectedEmptyResponse)
+          }
         }
     }
   }
@@ -527,7 +526,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .setHeader(ContentType, "bad/x-unknown")
+        .setHeader(CONTENT_TYPE, "bad/x-unknown")
         .setBody("some stuff"),
     )
     server.start()
@@ -551,7 +550,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .setHeader(ContentType, "application/x-unknown")
+        .setHeader(CONTENT_TYPE, "application/x-unknown")
         .setBody("some data"),
     )
     server.start()
@@ -574,7 +573,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, "application/x-unknown-type")
+        .addHeader(CONTENT_TYPE, "application/x-unknown-type")
         .setBody("<test>Test</Test>"),
     )
     server.start()
@@ -597,7 +596,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, JSON)
+        .addHeader(CONTENT_TYPE, JSON)
         .setBody("<test>Test</Test>"),
     )
     server.start()
@@ -625,8 +624,8 @@ abstract class RequestFactoryTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, Problem)
+        .setResponseCode(TestProblem.STATUS)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody(objectMapper.writeValueAsString(testProblem)),
     )
     server.start()
@@ -657,8 +656,8 @@ abstract class RequestFactoryTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, Problem)
+        .setResponseCode(TestProblem.STATUS)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody(objectMapper.writeValueAsString(testProblem)),
     )
     server.start()
@@ -666,7 +665,7 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(testProblem.type)
@@ -674,7 +673,7 @@ abstract class RequestFactoryTest {
             get { status }.isEqualTo(testProblem.status)
             get { detail }.isEqualTo(testProblem.detail)
             get { instance }.isEqualTo(testProblem.instance)
-            get { parameters }
+            get { extensions }
               .containsKey("extra")
               .getValue("extra")
               .isEqualTo(testProblem.extra)
@@ -689,7 +688,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, Problem)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody("""{"type":"about:blank","status":499,"title":"Test"}"""),
     )
     server.start()
@@ -697,10 +696,10 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<String>(Method.Get, "/problem")
           }.and {
-            get { status?.statusCode }.isEqualTo(499)
+            get { status }.isEqualTo(499)
           }
         }
     }
@@ -712,7 +711,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, Problem)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody("""{"type":"about:blank","status":"404","title":"Test"}"""),
     )
     server.start()
@@ -720,10 +719,10 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<String>(Method.Get, "/problem")
           }.and {
-            get { status?.statusCode }.isEqualTo(404)
+            get { status }.isEqualTo(404)
           }
         }
     }
@@ -735,7 +734,7 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, HTML)
+        .addHeader(CONTENT_TYPE, HTML)
         .setBody("<error>An Error Occurred</error>"),
     )
     server.start()
@@ -743,15 +742,15 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(URI("about:blank"))
-            get { title }.isNull()
-            get { status }.isEqualTo(Status.BAD_REQUEST)
+            get { title }.isEqualTo(Status.BadRequest.reasonPhrase)
+            get { status }.isEqualTo(Status.BadRequest.code)
             get { detail }.isNull()
             get { instance }.isNull()
-            get { parameters }
+            get { extensions }
               .containsKey("responseText")
               .getValue("responseText")
               .isEqualTo("<error>An Error Occurred</error>")
@@ -766,22 +765,22 @@ abstract class RequestFactoryTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .addHeader(ContentType, Problem),
+        .addHeader(CONTENT_TYPE, Problem),
     )
     server.start()
     server.use {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          expectThrows<ThrowableProblem> {
+          expectThrows<SundayHttpProblem> {
             requestFactory.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(URI("about:blank"))
-            get { title }.isNull()
-            get { status }.isEqualTo(Status.BAD_REQUEST)
+            get { title }.isEqualTo(Status.BadRequest.reasonPhrase)
+            get { status }.isEqualTo(Status.BadRequest.code)
             get { detail }.isNull()
             get { instance }.isNull()
-            get { parameters }.isEmpty()
+            get { extensions }.isEmpty()
           }
         }
     }
@@ -792,8 +791,8 @@ abstract class RequestFactoryTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, Problem)
+        .setResponseCode(TestProblem.STATUS)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody(objectMapper.writeValueAsString(TestProblem("test"))),
     )
     server.start()
@@ -817,8 +816,8 @@ abstract class RequestFactoryTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
-        .setResponseCode(TestProblem.STATUS.statusCode)
-        .addHeader(ContentType, Problem)
+        .setResponseCode(TestProblem.STATUS)
+        .addHeader(CONTENT_TYPE, Problem)
         .setBody(objectMapper.writeValueAsString(TestProblem("test"))),
     )
     server.start()
@@ -851,7 +850,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, EventStream)
+          .addHeader(CONTENT_TYPE, EventStream)
           .setBody(encodedEvent),
       )
       server.start()
@@ -886,7 +885,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, EventStream)
+          .addHeader(CONTENT_TYPE, EventStream)
           .setBody(encodedEvent),
       )
       server.start()
@@ -921,7 +920,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, EventStream)
+          .addHeader(CONTENT_TYPE, EventStream)
           .setBody(encodedEvent),
       )
       server.start()
@@ -968,7 +967,7 @@ abstract class RequestFactoryTest {
       server.enqueue(
         MockResponse()
           .setResponseCode(200)
-          .addHeader(ContentType, EventStream)
+          .addHeader(CONTENT_TYPE, EventStream)
           .setBody(encodedEvent),
       )
       server.start()
@@ -1008,24 +1007,19 @@ abstract class RequestFactoryTest {
     }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  class TestProblem(
-    extra: String,
-    instance: URI? = null,
-    type: URI = URI.create(TYPE),
-    title: String? = TITLE,
-    status: Status? = STATUS,
-    detail: String? = DETAIL,
-    parameters: Map<String, Any?> = mapOf("extra" to extra),
-  ) : AbstractThrowableProblem(type, title, status, detail, instance, null, parameters) {
-
-    override fun getCause(): Exceptional? = null
-
-    var extra: String by this.parameters
+  data class TestProblem(
+    @JsonProperty("extra") val extra: String,
+    val instance: URI? = null,
+    val type: URI = URI.create(TYPE),
+    val title: String? = TITLE,
+    val status: Int? = STATUS,
+    val detail: String? = DETAIL,
+    val parameters: Map<String, Any?> = mapOf("extra" to extra),
+  ) : RuntimeException() {
 
     companion object {
-
       const val TYPE = "http://example.com/test"
-      val STATUS = Status.BAD_REQUEST
+      val STATUS = Status.BadRequest.code
       const val TITLE = "Test Problem"
       const val DETAIL = "A Test Problem"
     }

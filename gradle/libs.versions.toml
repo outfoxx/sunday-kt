@@ -9,6 +9,8 @@ sonarqube = "7.2.2.6593"
 vanniktechPublish = "0.36.0"
 zalando-problem = "0.27.1"
 checker-qual = "3.53.0"
+qv-problem = "3.21.0"
+jakarta-rest-api = "3.1.0"
 
 slf4j = "2.0.17"
 kotlinCoroutines = "1.10.2"
@@ -45,14 +47,18 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 
 zalando-problem = { module = "org.zalando:problem", version.ref = "zalando-problem" }
-zalando-jacksonProblem = { module = "org.zalando:jackson-datatype-problem", version.ref = "zalando-problem" }
+zalando-problem-jackson = { module = "org.zalando:jackson-datatype-problem", version.ref = "zalando-problem" }
 checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checker-qual" }
+
+qv-problem = { module = "io.quarkiverse.resteasy-problem:quarkus-resteasy-problem", version.ref = "qv-problem" }
 
 uri-template = { module = "com.github.hal4j:uritemplate", version.ref = "uriTemplate" }
 
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-dataformat-cbor = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor", version.ref = "jackson" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+
+jakarta-rest-api = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = "jakarta-rest-api" }
 
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
@@ -72,6 +78,5 @@ strikt = ["strikt-jvm", "strikt-jackson"]
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 github-release = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

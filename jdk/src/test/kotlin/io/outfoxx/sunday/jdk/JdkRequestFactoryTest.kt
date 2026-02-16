@@ -18,11 +18,12 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
-import io.outfoxx.sunday.http.HeaderNames.Authorization
-import io.outfoxx.sunday.http.HeaderNames.ContentType
+import io.outfoxx.sunday.http.HeaderNames.AUTHORIZATION
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.Implementation
 import io.outfoxx.sunday.test.RequestFactoryTest
 import kotlinx.coroutines.test.runTest
@@ -46,6 +47,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
   ): RequestFactory =
     JdkRequestFactory(
       uriTemplate,
+      problemFactory = SundayHttpProblem.Factory,
       mediaTypeEncoders = encoders,
       mediaTypeDecoders = decoders,
     )
@@ -56,6 +58,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
       val factory =
         JdkRequestFactory(
           URITemplate("http://example.com"),
+          problemFactory = SundayHttpProblem.Factory,
           adapter = { request ->
             request
               .copyToBuilder()
@@ -76,8 +79,8 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
       val headers =
         HttpHeaders.of(
           mapOf(
-            Authorization to listOf("Bearer 12345"),
-            ContentType to listOf("application/json", "application/cbor"),
+            AUTHORIZATION to listOf("Bearer 12345"),
+            CONTENT_TYPE to listOf("application/json", "application/cbor"),
           ),
         ) { _, _ -> true }
 
@@ -85,9 +88,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .GET()
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val getCopy = get.copyToBuilder().build()
       expectThat(getCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -99,9 +102,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .DELETE()
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val deleteCopy = delete.copyToBuilder().build()
       expectThat(deleteCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -113,9 +116,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .POST(BodyPublishers.noBody())
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val postCopy = post.copyToBuilder().build()
       expectThat(postCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -127,9 +130,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .PUT(BodyPublishers.ofString("test"))
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val putCopy = put.copyToBuilder().build()
       expectThat(putCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -141,9 +144,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .method("TEST", BodyPublishers.noBody())
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val customCopy = custom.copyToBuilder().build()
       expectThat(customCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -162,9 +165,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .GET()
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val getCopy = get.copyToBuilder(includeHeaders = false).build()
       expectThat(getCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -176,9 +179,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .DELETE()
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val deleteCopy = delete.copyToBuilder(includeHeaders = false).build()
       expectThat(deleteCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -190,9 +193,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .POST(BodyPublishers.noBody())
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val postCopy = post.copyToBuilder(includeHeaders = false).build()
       expectThat(postCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -204,9 +207,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .PUT(BodyPublishers.ofString("test"))
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val putCopy = put.copyToBuilder(includeHeaders = false).build()
       expectThat(putCopy.uri()).isEqualTo(URI("http://example.com"))
@@ -218,9 +221,9 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
         HttpRequest
           .newBuilder(URI("http://example.com"))
           .method("TEST", BodyPublishers.noBody())
-          .header(Authorization, "Bearer 12345")
-          .header(ContentType, "application/json")
-          .header(ContentType, "application/cbor")
+          .header(AUTHORIZATION, "Bearer 12345")
+          .header(CONTENT_TYPE, "application/json")
+          .header(CONTENT_TYPE, "application/cbor")
           .build()
       val customCopy = custom.copyToBuilder(includeHeaders = false).build()
       expectThat(customCopy.uri()).isEqualTo(URI("http://example.com"))

@@ -3,7 +3,7 @@ plugins {
   alias(libs.plugins.sonarqube)
   alias(libs.plugins.dokka)
   alias(libs.plugins.github.release)
-  alias(libs.plugins.kotlin.jvm) apply false // For dokka even though plugins are applied by conventions
+  alias(libs.plugins.kotlin.jvm) apply false // Required by dokka
 }
 
 val releaseVersion: String by project
@@ -11,7 +11,7 @@ val releaseVersion: String by project
 group = "io.outfoxx.sunday"
 version = releaseVersion
 
-val moduleNames = listOf("core", "jdk", "okhttp")
+val moduleNames = listOf("core", "jdk", "okhttp", "problem", "problem-quarkus", "problem-zalando")
 
 //
 // ANALYSIS

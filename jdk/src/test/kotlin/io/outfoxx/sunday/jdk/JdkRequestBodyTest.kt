@@ -19,6 +19,7 @@ package io.outfoxx.sunday.jdk
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Test
@@ -30,7 +31,7 @@ class JdkRequestBodyTest {
   @Test
   fun `request bodies can be read`() =
     runTest {
-      val factory = JdkRequestFactory(URITemplate("http://example.com"))
+      val factory = JdkRequestFactory(URITemplate("http://example.com"), SundayHttpProblem.Factory)
 
       val request =
         factory.request(

@@ -81,11 +81,11 @@ val Response.isSuccessful: Boolean
  * Convenience accessor for HTTP Content-Length header.
  */
 val Response.contentLength: Long?
-  get() = headers.getFirstOrNull(HeaderNames.ContentLength)?.toLong()
+  get() = headers.getFirstOrNull(HeaderNames.CONTENT_LENGTH)?.toLong()
 
 
 /**
  * Convenience accessor for HTTP Content-Type header.
  */
 val Response.contentType: MediaType?
-  get() = headers.getFirstOrNull(HeaderNames.ContentType)?.let(MediaType::from)
+  get() = headers.getFirstOrNull(HeaderNames.CONTENT_TYPE)?.let(MediaType::from)

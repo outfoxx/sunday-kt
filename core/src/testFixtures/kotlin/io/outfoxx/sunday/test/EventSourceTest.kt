@@ -23,10 +23,11 @@ import io.outfoxx.sunday.EventSourceError
 import io.outfoxx.sunday.EventSourceError.Reason.EventTimeout
 import io.outfoxx.sunday.MediaType.Companion.EventStream
 import io.outfoxx.sunday.MediaType.Companion.Problem
-import io.outfoxx.sunday.http.HeaderNames.ContentType
-import io.outfoxx.sunday.http.HeaderNames.LastEventId
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
+import io.outfoxx.sunday.http.HeaderNames.LAST_EVENT_ID
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
@@ -57,7 +58,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |data: some test data
@@ -70,7 +71,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       val completed = CountDownLatch(1)
 
@@ -97,7 +101,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |event: test
@@ -112,7 +116,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       var receivedEvent: EventSource.Event? = null
       val completed = CountDownLatch(1)
@@ -143,7 +150,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |event: test
@@ -159,7 +166,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       var receivedEvent: EventSource.Event? = null
       val completed = CountDownLatch(1)
@@ -193,7 +203,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setBody(
           """
           |data: some test data
@@ -205,13 +215,14 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(400)
-        .setHeader(ContentType, Problem),
+        .setHeader(CONTENT_TYPE, Problem),
     )
     server.start()
     server.use {
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
           retryTime = Duration.ofMillis(100),
         )
 
@@ -249,6 +260,7 @@ abstract class EventSourceTest {
     val eventSource =
       EventSource(
         { headers -> createRequest("http://example.com", headers) },
+        SundayHttpProblem.Factory,
       )
 
     val handler: (EventSource.Event) -> Unit = { }
@@ -264,7 +276,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |retry: 123456789
@@ -278,7 +290,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       val completed = CountDownLatch(1)
 
@@ -301,7 +316,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |retry: long
@@ -315,7 +330,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       val completed = CountDownLatch(1)
 
@@ -338,7 +356,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |id: 123-abc
@@ -356,7 +374,10 @@ abstract class EventSourceTest {
     server.start()
     server.use {
       val eventSource =
-        EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
 
       eventSource.use {
         eventSource.connect()
@@ -366,7 +387,7 @@ abstract class EventSourceTest {
 
         expectThat(reconnectRequest)
           .isNotNull()
-          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
+          .and { get { getHeader(LAST_EVENT_ID) }.isEqualTo("123-abc") }
       }
     }
   }
@@ -377,7 +398,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |id: 123-abc
@@ -391,7 +412,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |id: 456${0.toChar()}def
@@ -411,6 +432,7 @@ abstract class EventSourceTest {
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
           retryTime = Duration.ofMillis(100),
         )
 
@@ -423,11 +445,11 @@ abstract class EventSourceTest {
 
         expectThat(reconnect1)
           .isNotNull()
-          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
+          .and { get { getHeader(LAST_EVENT_ID) }.isEqualTo("123-abc") }
 
         expectThat(reconnect2)
           .isNotNull()
-          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
+          .and { get { getHeader(LAST_EVENT_ID) }.isEqualTo("123-abc") }
       }
     }
   }
@@ -438,7 +460,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |data: some test data
@@ -453,6 +475,7 @@ abstract class EventSourceTest {
       val eventSource =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
           eventTimeout = Duration.ofMillis(500),
           eventTimeoutCheckInterval = Duration.ofMillis(100),
         )
@@ -486,7 +509,7 @@ abstract class EventSourceTest {
     server.enqueue(
       MockResponse()
         .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
+        .addHeader(CONTENT_TYPE, EventStream)
         .setChunkedBody(
           """
           |data: ${"x".repeat(100000)}
@@ -517,6 +540,7 @@ abstract class EventSourceTest {
               canceled.countDown()
             }
           },
+          SundayHttpProblem.Factory,
         )
 
       eventSource.connect()

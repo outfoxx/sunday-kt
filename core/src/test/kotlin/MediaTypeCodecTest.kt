@@ -17,6 +17,7 @@
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
 import io.outfoxx.sunday.mediatypes.codecs.JSONDecoder
@@ -32,11 +33,9 @@ import kotlinx.io.Source
 import kotlinx.io.bytestring.ByteString
 import kotlinx.io.readByteArray
 import kotlinx.io.readByteString
-import kotlinx.io.write
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.zalando.problem.Status
 import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.isEqualTo
@@ -147,11 +146,11 @@ class MediaTypeCodecTest {
 
       val numeric = decoder.decode<StatusHolder>("""{"status":400}""", typeOf<StatusHolder>())
       val numericString = decoder.decode<StatusHolder>("""{"status":"404"}""", typeOf<StatusHolder>())
-      val nameString = decoder.decode<StatusHolder>("""{"status":"BAD_REQUEST"}""", typeOf<StatusHolder>())
+      val nameString = decoder.decode<StatusHolder>("""{"status":"Bad Request"}""", typeOf<StatusHolder>())
 
-      expectThat(numeric.status).isEqualTo(Status.BAD_REQUEST)
-      expectThat(numericString.status).isEqualTo(Status.NOT_FOUND)
-      expectThat(nameString.status).isEqualTo(Status.BAD_REQUEST)
+      expectThat(numeric.status).isEqualTo(Status.BadRequest)
+      expectThat(numericString.status).isEqualTo(Status.NotFound)
+      expectThat(nameString.status).isEqualTo(Status.BadRequest)
     }
   }
 

@@ -19,6 +19,7 @@ package io.outfoxx.sunday.jdk
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.Status
 import kotlinx.io.Source
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
@@ -35,7 +36,7 @@ class JdkResponse(
     get() = response.statusCode()
 
   override val reasonPhrase: String? by lazy {
-    ReasonPhrases.lookup(response.statusCode())
+    Status.valueOf(response.statusCode()).reasonPhrase
   }
 
   override val headers: Headers by lazy {

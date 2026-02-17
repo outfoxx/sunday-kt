@@ -20,6 +20,7 @@ import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.Implementation
 import io.outfoxx.sunday.test.RequestFactoryTest
 
@@ -34,6 +35,7 @@ class OkHttpRequestFactoryTest : RequestFactoryTest() {
   ): RequestFactory =
     OkHttpRequestFactory(
       uriTemplate,
+      problemFactory = SundayHttpProblem.Factory,
       mediaTypeEncoders = encoders,
       mediaTypeDecoders = decoders,
     )

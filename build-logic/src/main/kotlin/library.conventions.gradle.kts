@@ -7,6 +7,7 @@ plugins {
   id("org.jetbrains.dokka-javadoc")
   id("org.jlleitschuh.gradle.ktlint")
   id("org.jetbrains.kotlinx.kover")
+  id("com.vanniktech.maven.publish")
 }
 
 
@@ -58,5 +59,12 @@ tasks {
   // Ensure ktlint runs as part of the standard verification workflow.
   named("check") {
     dependsOn("ktlintCheck")
+  }
+
+}
+
+mavenPublishing {
+  pom {
+    name.set(project.name)
   }
 }

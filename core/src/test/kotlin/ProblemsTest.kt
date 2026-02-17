@@ -17,10 +17,10 @@
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.utils.Problems
+import io.outfoxx.sunday.http.Status
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.io.Source
 import org.junit.jupiter.api.Test
-import org.zalando.problem.Status
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
@@ -28,24 +28,30 @@ class ProblemsTest {
 
   @Test
   fun `test forResponse`() {
-    val problem = Problems.forResponse(TestResponse(400, "Bad Request", listOf(), null))
+    val problem =
+      SundayHttpProblem.Factory
+        .from(TestResponse(400, "Bad Request", listOf(), null))
+        .build() as SundayHttpProblem
 
-    expectThat(problem.status).isEqualTo(Status.BAD_REQUEST)
+    expectThat(problem.status).isEqualTo(Status.BadRequest.code)
   }
 
   @Test
   fun `test forStatus`() {
-    val problem = Problems.forStatus(400, "Bad Request")
+    val problem = SundayHttpProblem.Factory.from(Status.BadRequest).build() as SundayHttpProblem
 
-    expectThat(problem.status).isEqualTo(Status.BAD_REQUEST)
+    expectThat(problem.status).isEqualTo(Status.BadRequest.code)
   }
 
   @Test
   fun `test forStatus supports non-standard values`() {
-    val problem = Problems.forStatus(195, "AI Thinking")
+    val problem =
+      SundayHttpProblem.Factory.from(Status(195, "AI Thinking")).build() as SundayHttpProblem
 
-    expectThat(problem.status?.statusCode).isEqualTo(195)
-    expectThat(problem.status?.reasonPhrase).isEqualTo("AI Thinking")
+    expectThat(problem) {
+      get { status }.isEqualTo(195)
+      get { title }.isEqualTo("AI Thinking")
+    }
   }
 
   data class TestResponse(

@@ -11,4 +11,5 @@ dependencies {
   implementation(libs.jackson.module.kotlin)
 
   testImplementation(testFixtures(project(":sunday-core")))
+  testImplementation(project(":sunday-problem"))
 }

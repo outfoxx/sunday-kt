@@ -10,10 +10,8 @@ dependencies {
   api(libs.slf4j.api)
   api(libs.kotlinx.coroutines.core.jvm)
   api(libs.bundles.jackson)
-  api(libs.zalando.problem)
 
-  implementation(libs.zalando.jacksonProblem)
-
+  testFixturesApi(project(":sunday-problem"))
   testFixturesApi(libs.junit.jupiter.api)
   testFixturesApi(libs.bundles.strikt)
   testFixturesApi(libs.kotlinx.coroutines.core.jvm)

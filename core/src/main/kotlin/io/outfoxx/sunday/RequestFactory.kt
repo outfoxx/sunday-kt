@@ -26,6 +26,7 @@ import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResultResponse
+import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
@@ -33,7 +34,9 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
-import io.outfoxx.sunday.problems.NonStandardStatus
+import io.outfoxx.sunday.problems.Problem
+import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.problems.ProblemFactory.Descriptor
 import io.outfoxx.sunday.utils.from
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
@@ -46,12 +49,8 @@ import kotlinx.io.readByteArray
 import kotlinx.io.readString
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.zalando.problem.DefaultProblem
-import org.zalando.problem.Problem
-import org.zalando.problem.Status
-import org.zalando.problem.StatusType
-import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
+import java.net.URI
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
@@ -98,13 +97,14 @@ abstract class RequestFactory : Closeable {
    */
   abstract fun registerProblem(
     typeId: String,
-    problemType: KClass<out ThrowableProblem>,
+    problemType: KClass<out Problem>,
   )
 
-  abstract val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
+  abstract val registeredProblemTypes: Map<String, KClass<out Problem>>
   abstract val mediaTypeEncoders: MediaTypeEncoders
   abstract val mediaTypeDecoders: MediaTypeDecoders
   abstract val pathEncoders: Map<KClass<*>, PathEncoder>
+  abstract val problemFactory: ProblemFactory
 
   /**
    * Create a [Request].
@@ -615,21 +615,13 @@ abstract class RequestFactory : Closeable {
     }
   }
 
-  private fun parseFailure(response: Response): ThrowableProblem {
-    val status =
-      try {
-        Status.valueOf(response.statusCode)
-      } catch (_: IllegalArgumentException) {
-        NonStandardStatus(response.statusCode, null)
-      }
-
-    return parseFailureResponseBody(response, status)
-  }
+  private fun parseFailure(response: Response): Problem =
+    parseFailureResponseBody(response, Status.valueOf(response.statusCode))
 
   private fun parseFailureResponseBody(
     response: Response,
-    status: StatusType,
-  ): ThrowableProblem {
+    status: Status,
+  ): Problem {
     val body = response.body
 
     return if (body != null && response.contentLength != 0L) {
@@ -640,14 +632,22 @@ abstract class RequestFactory : Closeable {
       if (!contentType.compatible(MediaType.Problem)) {
         parseUnknownFailureResponseBody(contentType, body, status)
       } else {
-        parseProblemResponseBody(body)
+        parseProblemResponseBody(body, status)
       }
     } else {
-      buildDefaultProblem(status)
+      problemFactory.from(
+        Descriptor(
+          status = status.code,
+          title = defaultTitleForType(URI.create("about:blank"), status),
+        ),
+      )
     }
   }
 
-  private fun parseProblemResponseBody(body: Source): ThrowableProblem {
+  private fun parseProblemResponseBody(
+    body: Source,
+    status: Status,
+  ): Problem {
     val problemDecoder =
       mediaTypeDecoders.find(MediaType.Problem)
         ?: throw SundayError(NoDecoder, MediaType.Problem.value)
@@ -658,29 +658,22 @@ abstract class RequestFactory : Closeable {
         "'${MediaType.Problem}' decoder must support structured decoding",
       )
 
-    val decoded: MutableMap<String, Any> = problemDecoder.decode<Map<String, Any>>(body).toMutableMap()
-    val statusValue = decoded["status"]
-    if (statusValue is Number) {
-      decoded["status"] = statusValue.toInt().toStatusType()
-    } else if (statusValue is String) {
-      decoded["status"] =
-        statusValue
-          .toIntOrNull()
-          ?.toStatusType()
-          ?: statusValue
-    }
+    val decoded: Map<String, Any> = problemDecoder.decode(body)
 
     val problemType = decoded["type"]?.toString() ?: ""
-    val problemClass = (registeredProblemTypes[problemType] ?: DefaultProblem::class).createType()
-
-    return problemDecoder.decode(decoded, problemClass)
+    return registeredProblemTypes[problemType]
+      ?.createType()
+      ?.let {
+        problemDecoder.decode(decoded, it)
+      }
+      ?: problemFactory.from(toDescriptor(decoded, status))
   }
 
   private fun parseUnknownFailureResponseBody(
     contentType: MediaType,
     body: Source,
-    status: StatusType,
-  ): ThrowableProblem {
+    status: Status,
+  ): Problem {
     val (responseText, responseData) =
       if (contentType.compatible(MediaType.AnyText)) {
         body.readString(Charsets.from(contentType)) to null
@@ -688,32 +681,95 @@ abstract class RequestFactory : Closeable {
         null to body.readByteArray()
       }
 
-    return Problem
-      .builder()
-      .withType(Problem.DEFAULT_TYPE)
-      .withStatus(status)
-      .apply {
+    val extensions =
+      buildMap<String, Any?> {
         if (responseText != null) {
-          with("responseText", responseText)
+          put("responseText", responseText)
         }
         if (responseData != null) {
-          with("responseData", responseData)
+          put("responseData", responseData)
         }
-      }.build()
+      }
+    return problemFactory.from(
+      Descriptor(
+        status = status.code,
+        title = defaultTitleForType(URI.create("about:blank"), status),
+        extensions = extensions,
+      ),
+    )
   }
 
-  private fun buildDefaultProblem(status: StatusType): ThrowableProblem =
-    Problem
-      .builder()
-      .withType(Problem.DEFAULT_TYPE)
-      .withStatus(status)
-      .build()
+  private fun toDescriptor(
+    decoded: Map<String, Any>,
+    fallbackStatus: Status,
+  ): Descriptor {
+    val type =
+      decoded["type"]
+        ?.toString()
+        ?.takeIf { it.isNotBlank() }
+        ?.let(URI::create)
+        ?: URI.create("about:blank")
 
-  private fun Int.toStatusType(): StatusType =
-    try {
-      Status.valueOf(this)
-    } catch (_: IllegalArgumentException) {
-      NonStandardStatus(this, null)
-    }
+    val statusCode =
+      when (val rawStatus = decoded["status"]) {
+        is Number -> rawStatus.toInt()
+        is String -> rawStatus.toIntOrNull()
+        is Map<*, *> -> {
+          val code =
+            when (val rawCode = rawStatus["code"]) {
+              is Number -> rawCode.toInt()
+              is String -> rawCode.toIntOrNull()
+              else -> null
+            }
+          code
+        }
+
+        else -> null
+      }
+
+    val status =
+      when (val rawStatus = decoded["status"]) {
+        is Map<*, *> -> {
+          val reason = rawStatus["reasonPhrase"]?.toString()
+          when {
+            statusCode == null -> null
+            reason.isNullOrBlank() -> Status.valueOf(statusCode)
+            else -> Status.valueOf(statusCode, reason)
+          }
+        }
+
+        else -> statusCode?.let(Status::valueOf)
+      } ?: fallbackStatus
+
+    val title =
+      decoded["title"]?.toString()
+        // Fallback to status reason but only if type == null or "about:blank" (matching RFC)
+        ?: defaultTitleForType(type, status)
+
+    val detail = decoded["detail"]?.toString()
+
+    val instance =
+      decoded["instance"]
+        ?.toString()
+        ?.takeIf { it.isNotBlank() }
+        ?.let(URI::create)
+
+    val extensions =
+      decoded.filterKeys { it !in setOf("type", "title", "status", "detail", "instance") }
+
+    return Descriptor(
+      type = type,
+      title = title,
+      status = status.code,
+      detail = detail,
+      instance = instance,
+      extensions = extensions,
+    )
+  }
+
+  private fun defaultTitleForType(
+    type: URI?,
+    status: Status,
+  ): String? = if (type == null || type == URI.create("about:blank")) status.reasonPhrase else null
 
 }

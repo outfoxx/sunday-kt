@@ -28,8 +28,8 @@ import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
 import io.outfoxx.sunday.URITemplate
-import io.outfoxx.sunday.http.HeaderNames.Accept
-import io.outfoxx.sunday.http.HeaderNames.ContentType
+import io.outfoxx.sunday.http.HeaderNames.ACCEPT
+import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.HeaderParameters
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
@@ -39,9 +39,10 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
+import io.outfoxx.sunday.problems.Problem
+import io.outfoxx.sunday.problems.ProblemFactory
 import kotlinx.io.asInputStream
 import org.slf4j.LoggerFactory
-import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
 import java.net.Authenticator
 import java.net.URI
@@ -56,6 +57,7 @@ import kotlin.reflect.KClass
  */
 class JdkRequestFactory(
   private val baseURI: URITemplate,
+  override val problemFactory: ProblemFactory,
   private val httpClient: HttpClient = defaultHttpClient(),
   private val adapter: suspend (HttpRequest) -> HttpRequest = { it },
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
@@ -89,13 +91,13 @@ class JdkRequestFactory(
     }
   }
 
-  override val registeredProblemTypes: Map<String, KClass<out ThrowableProblem>>
+  override val registeredProblemTypes: Map<String, KClass<out Problem>>
     get() = registeredProblemTypesStorage
-  private val registeredProblemTypesStorage = mutableMapOf<String, KClass<out ThrowableProblem>>()
+  private val registeredProblemTypesStorage = mutableMapOf<String, KClass<out Problem>>()
 
   override fun registerProblem(
     typeId: String,
-    problemType: KClass<out ThrowableProblem>,
+    problemType: KClass<out Problem>,
   ) {
     registeredProblemTypesStorage[typeId] = problemType
   }
@@ -130,13 +132,13 @@ class JdkRequestFactory(
 
       val accept = supportedAcceptTypes.joinToString(" , ") { it.toString() }
 
-      requestBuilder.header(Accept, accept)
+      requestBuilder.header(ACCEPT, accept)
     }
 
     val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
 
     // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
-    contentType?.let { requestBuilder.header(ContentType, contentType.toString()) }
+    contentType?.let { requestBuilder.header(CONTENT_TYPE, contentType.toString()) }
 
     var requestBodyPublisher =
       body?.let {
@@ -212,7 +214,8 @@ class JdkRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
+    EventSource(requestSupplier, problemFactory)
 
   override fun close() {
     close(true)

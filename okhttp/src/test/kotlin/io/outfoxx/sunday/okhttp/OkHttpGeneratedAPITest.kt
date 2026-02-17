@@ -20,6 +20,7 @@ import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.GeneratedAPITests
 
 class OkHttpGeneratedAPITest : GeneratedAPITests() {
@@ -31,6 +32,7 @@ class OkHttpGeneratedAPITest : GeneratedAPITests() {
   ): RequestFactory =
     OkHttpRequestFactory(
       uriTemplate,
+      problemFactory = SundayHttpProblem.Factory,
       mediaTypeEncoders = encoders,
       mediaTypeDecoders = decoders,
     )

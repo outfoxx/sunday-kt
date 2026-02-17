@@ -19,20 +19,18 @@ package io.outfoxx.sunday.http
 /**
  * Commonly used HTTP header names.
  */
-@Suppress("ktlint")
 object HeaderNames {
-  const val Accept = "accept"
-  const val Authorization = "authorization"
-  const val Connection = "connection"
-  const val ContentLength = "content-length"
-  const val ContentType = "content-type"
-  const val Location = "location"
-  const val Server = "server"
-  const val TransferEncoding = "transfer-encoding"
-  const val UserAgent = "user-agent"
-  const val Cookie = "cookie"
-  const val SetCookie = "set-cookie"
-  const val Expect = "expect"
-
-  const val LastEventId = "last-event-id"
+  const val ACCEPT = "Accept"
+  const val AUTHORIZATION = "Authorization"
+  const val CONNECTION = "Connection"
+  const val CONTENT_LENGTH = "Content-Length"
+  const val CONTENT_TYPE = "Content-Type"
+  const val LOCATION = "Location"
+  const val SERVER = "Server"
+  const val TRANSFER_ENCODING = "Transfer-Encoding"
+  const val USER_AGENT = "User-Agent"
+  const val COOKIE = "Cookie"
+  const val SET_COOKIE = "Set-Cookie"
+  const val EXPECT = "Expect"
+  const val LAST_EVENT_ID = "Last-Event-Id"
 }

@@ -7,9 +7,8 @@ import strikt.assertions.containsKey
 import strikt.assertions.getValue
 import strikt.assertions.isEqualTo
 import java.net.URI
-import org.zalando.problem.Status as ZalandoStatus
 
-class ZalandoProblemFactoryTest {
+class QuarkusProblemFactoryTest {
 
   @Test
   fun `builder sets fields and adapter reads them`() {
@@ -17,14 +16,14 @@ class ZalandoProblemFactoryTest {
     val instance = URI.create("urn:test:instance")
 
     val problem =
-      ZalandoProblemFactory
+      QuarkusProblemFactory
         .typed(type)
         .detail("Detail")
         .instance(instance)
         .extension("extra", "value")
         .build()
 
-    val adapter = ZalandoProblemFactory.adapter()
+    val adapter = QuarkusProblemFactory.adapter()
 
     expectThat(adapter.getType(problem)).isEqualTo(type)
     expectThat(adapter.getDetail(problem)).isEqualTo("Detail")
@@ -36,25 +35,20 @@ class ZalandoProblemFactoryTest {
   }
 
   @Test
-  fun `standard statuses map to zalando status`() {
-    val problem = ZalandoProblemFactory.from(Status.BadRequest).build() as org.zalando.problem.ThrowableProblem
+  fun `from status sets status code`() {
+    val status = Status(499, "Custom")
+    val problem = QuarkusProblemFactory.from(status).build()
 
-    expectThat(problem.status).isEqualTo(ZalandoStatus.BAD_REQUEST)
+    expectThat(QuarkusProblemFactory.adapter().getStatus(problem))
+      .isEqualTo(Status.valueOf(499))
   }
 
   @Test
-  fun `non standard reason phrases remain intact`() {
-    val problem = ZalandoProblemFactory.from(Status.Unused_418).build() as org.zalando.problem.ThrowableProblem
+  fun `provider creates quarkus factory`() {
+    val provider = QuarkusProblemFactoryProvider()
 
-    expectThat(problem.status?.reasonPhrase).isEqualTo(Status.Unused_418.reasonPhrase)
-  }
-
-  @Test
-  fun `provider creates zalando factory`() {
-    val provider = ZalandoProblemFactoryProvider()
-
-    expectThat(provider.id).isEqualTo("zalando")
+    expectThat(provider.id).isEqualTo("quarkus")
     expectThat(provider.priority).isEqualTo(100)
-    expectThat(provider.create()).isEqualTo(ZalandoProblemFactory)
+    expectThat(provider.create()).isEqualTo(QuarkusProblemFactory)
   }
 }

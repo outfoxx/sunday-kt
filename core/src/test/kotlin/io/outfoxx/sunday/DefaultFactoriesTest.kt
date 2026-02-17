@@ -49,6 +49,35 @@ class DefaultFactoriesTest {
   }
 
   @Test
+  fun `request factory selection uses provider id when provided`() {
+    val providers =
+      listOf(
+        TestRequestProvider("okhttp"),
+        TestRequestProvider("jdk"),
+      )
+
+    val selected = DefaultFactories.selectRequestFactoryProvider(providers, "jdk")
+
+    expectThat(selected.id).isEqualTo("jdk")
+  }
+
+  @Test
+  fun `request factory selection fails when provider id not found`() {
+    val providers =
+      listOf(
+        TestRequestProvider("okhttp"),
+        TestRequestProvider("jdk"),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        DefaultFactories.selectRequestFactoryProvider(providers, "missing")
+      }
+
+    expectThat(error.reason).isEqualTo(SundayError.Reason.NoRequestFactoryProvider)
+  }
+
+  @Test
   fun `problem factory selection prefers highest priority`() {
     val providers =
       listOf(
@@ -59,6 +88,51 @@ class DefaultFactoriesTest {
     val selected = DefaultFactories.selectProblemFactoryProvider(providers, null)
 
     expectThat(selected.id).isEqualTo("quarkus")
+  }
+
+  @Test
+  fun `problem factory selection uses provider id when provided`() {
+    val providers =
+      listOf(
+        TestProblemProvider("sunday", priority = 0),
+        TestProblemProvider("quarkus", priority = 100),
+      )
+
+    val selected = DefaultFactories.selectProblemFactoryProvider(providers, "sunday")
+
+    expectThat(selected.id).isEqualTo("sunday")
+  }
+
+  @Test
+  fun `problem factory selection fails when provider id not found`() {
+    val providers =
+      listOf(
+        TestProblemProvider("sunday", priority = 0),
+        TestProblemProvider("quarkus", priority = 100),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        DefaultFactories.selectProblemFactoryProvider(providers, "missing")
+      }
+
+    expectThat(error.reason).isEqualTo(SundayError.Reason.NoProblemFactoryProvider)
+  }
+
+  @Test
+  fun `problem factory selection requires id when multiple share priority`() {
+    val providers =
+      listOf(
+        TestProblemProvider("sunday", priority = 100),
+        TestProblemProvider("quarkus", priority = 100),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        DefaultFactories.selectProblemFactoryProvider(providers, null)
+      }
+
+    expectThat(error.reason).isEqualTo(SundayError.Reason.MultipleProblemFactoryProviders)
   }
 
   @Test

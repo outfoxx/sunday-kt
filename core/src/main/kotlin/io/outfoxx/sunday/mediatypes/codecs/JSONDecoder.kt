@@ -18,6 +18,8 @@ package io.outfoxx.sunday.mediatypes.codecs
 
 import com.fasterxml.jackson.core.Base64Variant
 import com.fasterxml.jackson.core.Base64Variants
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
@@ -25,8 +27,6 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.type.TypeFactory
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
 import org.zalando.problem.Status
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
@@ -52,8 +52,7 @@ class JSONDecoder(
           .findAndRegisterModules()
           .registerModule(
             SimpleModule().addDeserializer(Status::class.java, StatusDeserializer()),
-          )
-          .setBase64Variant(
+          ).setBase64Variant(
             Base64Variants.MIME_NO_LINEFEEDS
               .withReadPadding(Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED)
               .withWritePadding(false),

@@ -246,9 +246,10 @@ abstract class EventSourceTest {
 
   @Test
   fun `test listener add & remove`() {
-    val eventSource = EventSource(
-      { headers -> createRequest("http://example.com", headers) },
-    )
+    val eventSource =
+      EventSource(
+        { headers -> createRequest("http://example.com", headers) },
+      )
 
     val handler: (EventSource.Event) -> Unit = { }
     eventSource.addEventListener("test", handler)

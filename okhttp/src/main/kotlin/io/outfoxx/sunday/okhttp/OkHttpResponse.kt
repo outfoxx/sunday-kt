@@ -41,7 +41,11 @@ class OkHttpResponse(
     get() = response.headers
 
   override val body: Source?
-    get() = response.body?.source()?.asKotlinxIoRawSource()?.buffered()
+    get() =
+      response.body
+        ?.source()
+        ?.asKotlinxIoRawSource()
+        ?.buffered()
 
   override val trailers: Headers?
     get() =

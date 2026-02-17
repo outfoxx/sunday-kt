@@ -5,6 +5,7 @@ plugins {
   `java-test-fixtures`
   kotlin("jvm")
   id("org.jetbrains.dokka-javadoc")
+  id("org.jlleitschuh.gradle.ktlint")
 }
 
 
@@ -51,5 +52,10 @@ kotlin {
 tasks {
   test {
     useJUnitPlatform()
+  }
+
+  // Ensure ktlint runs as part of the standard verification workflow.
+  named("check") {
+    dependsOn("ktlintCheck")
   }
 }

@@ -64,7 +64,7 @@ class JdkRequestFactory(
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault,
 ) : RequestFactory(),
-    Closeable {
+  Closeable {
 
   companion object {
 
@@ -212,8 +212,7 @@ class JdkRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-    EventSource(requestSupplier)
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
 
   override fun close() {
     close(true)

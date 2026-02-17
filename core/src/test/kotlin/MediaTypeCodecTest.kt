@@ -161,9 +161,7 @@ class MediaTypeCodecTest {
     expectThat(decoders.find(MediaType.CBOR)).isNotNull()
   }
 
-  private fun bufferCopy(source: Buffer): Buffer =
-    Buffer().also { source.copyTo(it) }
+  private fun bufferCopy(source: Buffer): Buffer = Buffer().also { source.copyTo(it) }
 
-  private fun sourceBytes(source: Source): ByteArray =
-    source.readByteArray()
+  private fun sourceBytes(source: Source): ByteArray = source.readByteArray()
 }

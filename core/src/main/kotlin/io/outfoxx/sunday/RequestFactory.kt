@@ -664,7 +664,8 @@ abstract class RequestFactory : Closeable {
       decoded["status"] = statusValue.toInt().toStatusType()
     } else if (statusValue is String) {
       decoded["status"] =
-        statusValue.toIntOrNull()
+        statusValue
+          .toIntOrNull()
           ?.toStatusType()
           ?: statusValue
     }

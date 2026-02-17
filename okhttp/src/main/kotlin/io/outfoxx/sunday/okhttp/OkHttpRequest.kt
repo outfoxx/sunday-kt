@@ -168,7 +168,12 @@ open class OkHttpRequest(
               while (isActive && scope.isActive) {
                 val buffer = Buffer()
 
-                val bytesRead = body.source().asKotlinxIoRawSource().buffered().readAtMostTo(buffer, READ_SIZE)
+                val bytesRead =
+                  body
+                    .source()
+                    .asKotlinxIoRawSource()
+                    .buffered()
+                    .readAtMostTo(buffer, READ_SIZE)
                 if (bytesRead == EOF) {
                   break
                 }

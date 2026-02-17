@@ -106,38 +106,40 @@ abstract class RequestFactoryTest {
    */
 
   @Test
-  fun `encodes path parameters`() = runTest {
-    createRequestFactory(URITemplate("http://example.com/{id}"))
-      .use { requestFactory ->
+  fun `encodes path parameters`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com/{id}"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Get,
-            "/encoded-params",
-            pathParameters = mapOf("id" to 123),
-          )
+          val request =
+            requestFactory.request(
+              Method.Get,
+              "/encoded-params",
+              pathParameters = mapOf("id" to 123),
+            )
 
-        expectThat(request.uri)
-          .isEqualTo(URI("http://example.com/123/encoded-params"))
-      }
-  }
+          expectThat(request.uri)
+            .isEqualTo(URI("http://example.com/123/encoded-params"))
+        }
+    }
 
   @Test
-  fun `encodes query parameters`() = runTest {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+  fun `encodes query parameters`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Get,
-            "/encode-query-params",
-            queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
-          )
+          val request =
+            requestFactory.request(
+              Method.Get,
+              "/encode-query-params",
+              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+            )
 
-        expectThat(request.uri)
-          .isEqualTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202"))
-      }
-  }
+          expectThat(request.uri)
+            .isEqualTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202"))
+        }
+    }
 
   @Test
   fun `fails when no query parameter encoder is registered and query params are provided`() {
@@ -184,37 +186,39 @@ abstract class RequestFactoryTest {
   }
 
   @Test
-  fun `adds custom headers`() = runTest {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+  fun `adds custom headers`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Get,
-            "/add-custom-headers",
-            headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
-          )
+          val request =
+            requestFactory.request(
+              Method.Get,
+              "/add-custom-headers",
+              headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
+            )
 
-        expectThat(request.headers).contains(HeaderNames.Authorization to "Bearer 12345")
-      }
-  }
+          expectThat(request.headers).contains(HeaderNames.Authorization to "Bearer 12345")
+        }
+    }
 
   @Test
-  fun `adds accept headers`() = runTest {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+  fun `adds accept headers`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Get,
-            "/add-accept-headers",
-            acceptTypes = listOf(JSON, CBOR),
-          )
+          val request =
+            requestFactory.request(
+              Method.Get,
+              "/add-accept-headers",
+              acceptTypes = listOf(JSON, CBOR),
+            )
 
-        expectThat(request.headers)
-          .contains(HeaderNames.Accept to "application/json , application/cbor")
-      }
-  }
+          expectThat(request.headers)
+            .contains(HeaderNames.Accept to "application/json , application/cbor")
+        }
+    }
 
   @Test
   fun `fails if none of the accept types has a decoder`() {
@@ -254,170 +258,177 @@ abstract class RequestFactoryTest {
   }
 
   @Test
-  fun `attaches encoded body based on content-type`() = runTest {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+  fun `attaches encoded body based on content-type`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Post,
-            "/attach-body",
-            body = mapOf("a" to 5),
-            contentTypes = listOf(JSON),
-          )
+          val request =
+            requestFactory.request(
+              Method.Post,
+              "/attach-body",
+              body = mapOf("a" to 5),
+              contentTypes = listOf(JSON),
+            )
 
-        val body = request.body()
-        expectThat(body?.readByteArray()).isEqualTo("""{"a":5}""".encodeToByteArray())
-      }
-  }
+          val body = request.body()
+          expectThat(body?.readByteArray()).isEqualTo("""{"a":5}""".encodeToByteArray())
+        }
+    }
 
   @Test
-  fun `set content-type when body is non-existent`() = runTest {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+  fun `set content-type when body is non-existent`() =
+    runTest {
+      createRequestFactory(URITemplate("http://example.com"))
+        .use { requestFactory ->
 
-        val request =
-          requestFactory.request(
-            Method.Post,
-            "/attach-body",
-            contentTypes = listOf(JSON),
-          )
+          val request =
+            requestFactory.request(
+              Method.Post,
+              "/attach-body",
+              contentTypes = listOf(JSON),
+            )
 
-        expectThat(request.headers).contains(ContentType to "application/json")
-      }
-  }
+          expectThat(request.headers).contains(ContentType to "application/json")
+        }
+    }
 
   /**
    * Response/Result Building
    */
 
   @Test
-  fun `fetches typed results`() = runTest {
-    data class Tester(
-      val name: String,
-      val count: Int,
-    )
+  fun `fetches typed results`() =
+    runTest {
+      data class Tester(
+        val name: String,
+        val count: Int,
+      )
 
-    val tester = Tester("Test", 10)
+      val tester = Tester("Test", 10)
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, JSON)
-        .setBody(objectMapper.writeValueAsString(tester)),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, JSON)
+          .setBody(objectMapper.writeValueAsString(tester)),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val result =
-            requestFactory.resultResponse<Tester>(
-              Method.Get,
-              "",
-            )
+            val result =
+              requestFactory.resultResponse<Tester>(
+                Method.Get,
+                "",
+              )
 
-          expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
-          expectThat(result.result).isEqualTo(tester)
-        }
+            expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+            expectThat(result.result).isEqualTo(tester)
+          }
+      }
     }
-  }
 
   @Test
-  fun `fetches typed results with body`() = runTest {
-    data class Tester(
-      val name: String,
-      val count: Int,
-    )
+  fun `fetches typed results with body`() =
+    runTest {
+      data class Tester(
+        val name: String,
+        val count: Int,
+      )
 
-    val tester = Tester("Test", 10)
+      val tester = Tester("Test", 10)
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, JSON)
-        .setBody(objectMapper.writeValueAsString(tester)),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, JSON)
+          .setBody(objectMapper.writeValueAsString(tester)),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val result =
-            requestFactory.resultResponse<Unit, Tester>(
-              Method.Get,
-              "",
-              body = null,
-            )
+            val result =
+              requestFactory.resultResponse<Unit, Tester>(
+                Method.Get,
+                "",
+                body = null,
+              )
 
-          expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
-          expectThat(result.result).isEqualTo(tester)
-        }
+            expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+            expectThat(result.result).isEqualTo(tester)
+          }
+      }
     }
-  }
 
   @Test
-  fun `executes requests with empty responses`() = runTest {
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(204),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+  fun `executes requests with empty responses`() =
+    runTest {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(204),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          requestFactory.result<Unit>(Method.Post, "")
-        }
+            requestFactory.result<Unit>(Method.Post, "")
+          }
+      }
     }
-  }
 
   @Test
-  fun `executes manual requests for responses`() = runTest {
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .setHeader(ContentType, JSON)
-        .setBody("[]"),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+  fun `executes manual requests for responses`() =
+    runTest {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .setHeader(ContentType, JSON)
+          .setBody("[]"),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val response =
-            requestFactory.response(Method.Get, "")
+            val response =
+              requestFactory.response(Method.Get, "")
 
-          expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
-        }
+            expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
+          }
+      }
     }
-  }
 
   @Test
-  fun `executes manual requests with body for responses`() = runTest {
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .setHeader(ContentType, JSON)
-        .setBody("[]"),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+  fun `executes manual requests with body for responses`() =
+    runTest {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .setHeader(ContentType, JSON)
+          .setBody("[]"),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val response =
-            requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
+            val response =
+              requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
 
-          expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
-        }
+            expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
+          }
+      }
     }
-  }
 
   @Test
   fun `error responses with non standard status codes are handled`() {
@@ -786,165 +797,169 @@ abstract class RequestFactoryTest {
    */
 
   @Test
-  fun `builds event sources`() = runTest {
-    val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
+  fun `builds event sources`() =
+    runTest {
+      val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, EventStream)
+          .setBody(encodedEvent),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          withContext(Dispatchers.IO) {
-            withTimeout(5000) {
-              val eventSource = requestFactory.eventSource(Method.Get, "")
-              eventSource.use {
-                suspendCancellableCoroutine { continuation ->
-                  eventSource.onMessage = { _ ->
-                    continuation.resume(Unit)
+            withContext(Dispatchers.IO) {
+              withTimeout(5000) {
+                val eventSource = requestFactory.eventSource(Method.Get, "")
+                eventSource.use {
+                  suspendCancellableCoroutine { continuation ->
+                    eventSource.onMessage = { _ ->
+                      continuation.resume(Unit)
+                    }
+                    eventSource.connect()
                   }
-                  eventSource.connect()
-                }
 
+                }
               }
             }
           }
-        }
+      }
     }
-  }
 
   @Test
-  fun `builds event sources with explicit body`() = runTest {
-    val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
+  fun `builds event sources with explicit body`() =
+    runTest {
+      val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, EventStream)
+          .setBody(encodedEvent),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          withContext(Dispatchers.IO) {
-            withTimeout(5000) {
-              val eventSource = requestFactory.eventSource<Unit>(Method.Get, "", body = null)
-              eventSource.use {
-                suspendCancellableCoroutine { continuation ->
-                  eventSource.onMessage = { _ ->
-                    continuation.resume(Unit)
+            withContext(Dispatchers.IO) {
+              withTimeout(5000) {
+                val eventSource = requestFactory.eventSource<Unit>(Method.Get, "", body = null)
+                eventSource.use {
+                  suspendCancellableCoroutine { continuation ->
+                    eventSource.onMessage = { _ ->
+                      continuation.resume(Unit)
+                    }
+                    eventSource.connect()
                   }
-                  eventSource.connect()
-                }
 
+                }
               }
             }
           }
-        }
+      }
     }
-  }
 
   @Test
-  fun `builds event streams`() = runTest {
-    val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+  fun `builds event streams`() =
+    runTest {
+      val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, EventStream)
+          .setBody(encodedEvent),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val result =
-            withContext(Dispatchers.IO) {
-              withTimeout(50000) {
-                val eventStream =
-                  requestFactory.eventStream(
-                    Method.Get,
-                    "",
-                    decoder = { decoder, event, _, data, logger ->
-                      when (event) {
-                        "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
-                        else -> {
-                          logger.error("unsupported event type")
-                          null
+            val result =
+              withContext(Dispatchers.IO) {
+                withTimeout(50000) {
+                  val eventStream =
+                    requestFactory.eventStream(
+                      Method.Get,
+                      "",
+                      decoder = { decoder, event, _, data, logger ->
+                        when (event) {
+                          "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                          else -> {
+                            logger.error("unsupported event type")
+                            null
+                          }
                         }
-                      }
-                    },
-                  )
+                      },
+                    )
 
-                eventStream.first()
+                  eventStream.first()
+                }
               }
-            }
 
-          expectThat(result)
-            .containsKey("target")
-            .getValue("target")
-            .isEqualTo("world")
-        }
+            expectThat(result)
+              .containsKey("target")
+              .getValue("target")
+              .isEqualTo("world")
+          }
+      }
     }
-  }
 
   @Test
-  fun `builds event streams with explicit body`() = runTest {
-    val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+  fun `builds event streams with explicit body`() =
+    runTest {
+      val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(ContentType, EventStream)
-        .setBody(encodedEvent),
-    )
-    server.start()
-    server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(ContentType, EventStream)
+          .setBody(encodedEvent),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
 
-          val result =
-            withContext(Dispatchers.IO) {
-              withTimeout(50000) {
-                val eventStream =
-                  requestFactory.eventStream<Unit, Map<String, Any>>(
-                    Method.Get,
-                    "",
-                    body = null,
-                    decoder = { decoder, event, _, data, logger ->
-                      when (event) {
-                        "hello" -> decoder.decode(data, typeOf<Map<String, Any>>())
-                        else -> {
-                          logger.error("unsupported event type")
-                          null
+            val result =
+              withContext(Dispatchers.IO) {
+                withTimeout(50000) {
+                  val eventStream =
+                    requestFactory.eventStream<Unit, Map<String, Any>>(
+                      Method.Get,
+                      "",
+                      body = null,
+                      decoder = { decoder, event, _, data, logger ->
+                        when (event) {
+                          "hello" -> decoder.decode(data, typeOf<Map<String, Any>>())
+                          else -> {
+                            logger.error("unsupported event type")
+                            null
+                          }
                         }
-                      }
-                    },
-                  )
+                      },
+                    )
 
-                eventStream.first()
+                  eventStream.first()
+                }
               }
-            }
 
-          expectThat(result)
-            .containsKey("target")
-            .getValue("target")
-            .isEqualTo("world")
-        }
+            expectThat(result)
+              .containsKey("target")
+              .getValue("target")
+              .isEqualTo("world")
+          }
+      }
     }
-  }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   class TestProblem(

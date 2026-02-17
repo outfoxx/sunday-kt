@@ -4,7 +4,6 @@ kover = "0.8.3"
 ktlint = "14.0.1"
 dokka = "2.1.0"
 licenser = "1.2.0"
-detekt = "1.23.6"
 githubRelease = "2.5.2"
 sonarqube = "5.1.0.4882"
 vanniktechPublish = "0.36.0"
@@ -58,7 +57,7 @@ jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 dokka-gradle-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka" }
 dokka-javadoc-gradle-plugin = { module = "org.jetbrains.dokka-javadoc:org.jetbrains.dokka-javadoc.gradle.plugin", version.ref = "dokka" }
-ktlint-gradle-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle:ktlint-gradle", version.ref = "ktlint" }
 licenser-gradle-plugin = { module = "net.minecraftforge.licenser:net.minecraftforge.licenser.gradle.plugin", version.ref = "licenser" }
 vanniktech-maven-publish-gradle-plugin = { module = "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin", version.ref = "vanniktechPublish" }
 
@@ -72,5 +71,6 @@ strikt = ["strikt-jvm", "strikt-jackson"]
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 github-release = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

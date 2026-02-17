@@ -56,7 +56,8 @@ class OkHttpRequestFactory(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-) : RequestFactory(), Closeable {
+) : RequestFactory(),
+  Closeable {
 
   companion object {
 
@@ -173,8 +174,7 @@ class OkHttpRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-    EventSource(requestSupplier)
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
 
   override fun close() {
     close(true)

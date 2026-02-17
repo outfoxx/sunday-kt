@@ -29,15 +29,13 @@ import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.empty
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.not
-import org.hamcrest.Matchers.nullValue
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
+import strikt.api.expectThat
+import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
+import strikt.assertions.isTrue
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -88,7 +86,7 @@ abstract class EventSourceTest {
         eventSource.connect()
         eventSource.connect()
 
-        assertTrue(completed.await(3, SECONDS))
+        expectThat(completed.await(3, SECONDS)).isTrue()
       }
     }
   }
@@ -116,22 +114,25 @@ abstract class EventSourceTest {
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
-      var event: EventSource.Event? = null
+      var receivedEvent: EventSource.Event? = null
       val completed = CountDownLatch(1)
       eventSource.onMessage = {
-        event = it
+        receivedEvent = it
         completed.countDown()
       }
 
       eventSource.use {
         eventSource.connect()
 
-        assertTrue(completed.await(300, SECONDS))
-        assertThat(event, not(nullValue()))
-        assertThat(event?.id, equalTo("123"))
-        assertThat(event?.event, equalTo("test"))
-        assertThat(event?.origin, equalTo(server.url("/test").toString()))
-        assertThat(event?.data, equalTo("some test data"))
+        expectThat(completed.await(300, SECONDS)).isTrue()
+        expectThat(receivedEvent)
+          .isNotNull()
+          .and {
+            get { id }.isEqualTo("123")
+            get { this.event }.isEqualTo("test")
+            get { origin }.isEqualTo(server.url("/test").toString())
+            get { data }.isEqualTo("some test data")
+          }
       }
     }
   }
@@ -160,30 +161,28 @@ abstract class EventSourceTest {
       val eventSource =
         EventSource({ headers -> createRequest(server.url("/test").toString(), headers) })
 
-      var event: EventSource.Event? = null
+      var receivedEvent: EventSource.Event? = null
       val completed = CountDownLatch(1)
       eventSource.onMessage = {
-        event = it
+        receivedEvent = it
         completed.countDown()
       }
 
       eventSource.use {
         eventSource.connect()
 
-        assertTrue(completed.await(3, SECONDS))
+        expectThat(completed.await(3, SECONDS)).isTrue()
 
-        assertThat(event, not(nullValue()))
-        assertThat(event?.id, equalTo("123"))
-        assertThat(event?.event, equalTo("test"))
-        assertThat(event?.origin, equalTo(server.url("/test").toString()))
-
-        val json =
-          try {
-            ObjectMapper().readValue<Map<String, String>>(event?.data ?: "{}")
-          } catch (t: Throwable) {
-            fail("Event contains invalid JSON", t)
+        expectThat(receivedEvent)
+          .isNotNull()
+          .and {
+            get { id }.isEqualTo("123")
+            get { this.event }.isEqualTo("test")
+            get { origin }.isEqualTo(server.url("/test").toString())
           }
-        assertThat(json, equalTo(mapOf("some" to "test data")))
+
+        val json = ObjectMapper().readValue<Map<String, String>>(receivedEvent?.data ?: "{}")
+        expectThat(json).isEqualTo(mapOf("some" to "test data"))
       }
     }
   }
@@ -223,37 +222,40 @@ abstract class EventSourceTest {
       eventSource.onOpen = {
         opened.countDown()
       }
-      assertThat(eventSource.onOpen, not(nullValue()))
+      expectThat(eventSource.onOpen).isNotNull()
 
       eventSource.onMessage = { _ ->
         messaged.countDown()
       }
-      assertThat(eventSource.onMessage, not(nullValue()))
+      expectThat(eventSource.onMessage).isNotNull()
 
       eventSource.onError = { _ ->
         errored.countDown()
       }
-      assertThat(eventSource.onError, not(nullValue()))
+      expectThat(eventSource.onError).isNotNull()
 
       eventSource.use {
         eventSource.connect()
 
-        assertTrue(opened.await(3, SECONDS), "Did not received open callback")
-        assertTrue(messaged.await(3, SECONDS), "Did not received message callback")
-        assertTrue(errored.await(3, SECONDS), "Did not received error callback")
+        expectThat(opened.await(3, SECONDS)).isTrue()
+        expectThat(messaged.await(3, SECONDS)).isTrue()
+        expectThat(errored.await(3, SECONDS)).isTrue()
       }
     }
   }
 
   @Test
   fun `test listener add & remove`() {
-    val eventSource = EventSource({ headers -> createRequest("http://example.com", headers) })
+    val eventSource =
+      EventSource(
+        { headers -> createRequest("http://example.com", headers) },
+      )
 
     val handler: (EventSource.Event) -> Unit = { }
     eventSource.addEventListener("test", handler)
     eventSource.removeEventListener("test", handler)
 
-    assertThat(eventSource.eventListeners.keys, empty())
+    expectThat(eventSource.eventListeners.keys).isEmpty()
   }
 
   @Test
@@ -287,8 +289,8 @@ abstract class EventSourceTest {
       eventSource.use {
         eventSource.connect()
 
-        assertTrue(completed.await(3, SECONDS))
-        assertThat(eventSource.retryTime, equalTo(Duration.ofMillis(123456789L)))
+        expectThat(completed.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.retryTime).isEqualTo(Duration.ofMillis(123456789L))
       }
     }
   }
@@ -324,8 +326,8 @@ abstract class EventSourceTest {
       eventSource.use {
         eventSource.connect()
 
-        assertTrue(completed.await(3, SECONDS))
-        assertThat(eventSource.retryTime, equalTo(Duration.ofMillis(500L)))
+        expectThat(completed.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.retryTime).isEqualTo(Duration.ofMillis(500L))
       }
     }
   }
@@ -362,8 +364,9 @@ abstract class EventSourceTest {
         server.takeRequest(3, SECONDS)
         val reconnectRequest = server.takeRequest(3, SECONDS)
 
-        assertThat(reconnectRequest, not(nullValue()))
-        assertThat(reconnectRequest?.getHeader(LastEventId), equalTo("123-abc"))
+        expectThat(reconnectRequest)
+          .isNotNull()
+          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
       }
     }
   }
@@ -418,11 +421,13 @@ abstract class EventSourceTest {
         val reconnect1 = server.takeRequest(3, SECONDS)
         val reconnect2 = server.takeRequest(3, SECONDS)
 
-        assertThat(reconnect1, not(nullValue()))
-        assertThat(reconnect1?.getHeader(LastEventId), equalTo("123-abc"))
+        expectThat(reconnect1)
+          .isNotNull()
+          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
 
-        assertThat(reconnect2, not(nullValue()))
-        assertThat(reconnect2?.getHeader(LastEventId), equalTo("123-abc"))
+        expectThat(reconnect2)
+          .isNotNull()
+          .and { get { getHeader(LastEventId) }.isEqualTo("123-abc") }
       }
     }
   }
@@ -465,8 +470,10 @@ abstract class EventSourceTest {
       eventSource.use {
         eventSource.connect()
 
-        assertThat(completed.await(12, SECONDS), equalTo(true))
-        assertThat(error?.reason, equalTo(EventTimeout))
+        expectThat(completed.await(12, SECONDS)).isTrue()
+        expectThat(error)
+          .isNotNull()
+          .and { get { reason }.isEqualTo(EventTimeout) }
       }
     }
   }
@@ -514,11 +521,11 @@ abstract class EventSourceTest {
 
       eventSource.connect()
 
-      assertThat(connected.await(12, SECONDS), equalTo(true))
+      expectThat(connected.await(12, SECONDS)).isTrue()
 
       eventSource.close()
 
-      assertThat(canceled.await(12, SECONDS), equalTo(true))
+      expectThat(canceled.await(12, SECONDS)).isTrue()
     }
   }
 

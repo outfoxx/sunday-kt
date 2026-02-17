@@ -16,17 +16,18 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.BufferedSource
-import okio.ByteString
-import okio.Source
-import okio.buffer
+import kotlinx.io.Source
+import kotlinx.io.asInputStream
+import kotlinx.io.bytestring.ByteString
+import kotlinx.io.readByteArray
+import kotlinx.io.readByteString
 import java.io.InputStream
 import kotlin.reflect.KType
 
 /**
  * Decodes binary data into binary data containers.
  *
- * Decoding to [ByteArray], [ByteString], [InputStream], [Source], and [BufferedSource]
+ * Decoding to [ByteArray], [ByteString], [InputStream], and [Source]
  * is supported.
  */
 class BinaryDecoder : MediaTypeDecoder {
@@ -46,11 +47,10 @@ class BinaryDecoder : MediaTypeDecoder {
   ): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
-      ByteArray::class -> data.buffer().readByteArray() as T
-      ByteString::class -> data.buffer().readByteString() as T
-      InputStream::class -> data.buffer().inputStream() as T
+      ByteArray::class -> data.readByteArray() as T
+      ByteString::class -> data.readByteString() as T
+      InputStream::class -> data.asInputStream() as T
       Source::class -> data as T
-      BufferedSource::class -> data.buffer() as T
       else -> throw IllegalArgumentException("Unsupported type for binary decode")
     }
 }

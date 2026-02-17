@@ -1,15 +1,15 @@
-
-val slf4jVersion: String by project
-val okhttpVersion: String by project
-val jacksonVersion: String by project
+plugins {
+  id("library.conventions")
+}
 
 dependencies {
 
   api(project(":sunday-core"))
-  api("com.squareup.okhttp3:okhttp:$okhttpVersion")
+  api(libs.kotlinx.io.okio)
+  api(libs.okhttp)
 
-  implementation("org.slf4j:slf4j-api:$slf4jVersion")
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+  implementation(libs.slf4j.api)
+  implementation(libs.jackson.module.kotlin)
 
   testImplementation(testFixtures(project(":sunday-core")))
 }

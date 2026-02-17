@@ -1,11 +1,7 @@
 
 plugins {
   base
-  id("org.jetbrains.kotlinx.kover")
-}
-
-repositories {
-  mavenCentral()
+  alias(libs.plugins.kover)
 }
 
 dependencies {

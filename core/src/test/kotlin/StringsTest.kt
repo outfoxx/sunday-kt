@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.mediatypes.codecs
+import io.outfoxx.sunday.utils.buffer
+import kotlinx.io.readByteArray
+import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 
-import io.outfoxx.sunday.MediaType
-import kotlinx.io.Source
+class StringsTest {
 
-/**
- * Encoder producing binary data that is related to a specific media type.
- *
- * @see MediaType
- */
-interface MediaTypeEncoder {
+  @Test
+  fun `buffer writes string with charset`() {
+    val input = "hello"
 
-  /**
-   * Encodes the given value into a binary data [Source].
-   *
-   * @param value Value to encode.
-   * @return Binary data source.
-   */
-  fun <T> encode(value: T): Source
+    val buffer = input.buffer(Charsets.UTF_16)
+
+    expectThat(buffer.readByteArray()).isEqualTo(input.toByteArray(Charsets.UTF_16))
+  }
 }

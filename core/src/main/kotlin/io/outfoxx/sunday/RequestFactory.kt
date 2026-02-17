@@ -41,7 +41,9 @@ import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import okio.BufferedSource
+import kotlinx.io.Source
+import kotlinx.io.readByteArray
+import kotlinx.io.readString
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.zalando.problem.DefaultProblem
@@ -617,8 +619,8 @@ abstract class RequestFactory : Closeable {
     val status =
       try {
         Status.valueOf(response.statusCode)
-      } catch (ignored: IllegalArgumentException) {
-        NonStandardStatus(response)
+      } catch (_: IllegalArgumentException) {
+        NonStandardStatus(response.statusCode, null)
       }
 
     return parseFailureResponseBody(response, status)
@@ -641,11 +643,11 @@ abstract class RequestFactory : Closeable {
         parseProblemResponseBody(body)
       }
     } else {
-      Problem.valueOf(status)
+      buildDefaultProblem(status)
     }
   }
 
-  private fun parseProblemResponseBody(body: BufferedSource): ThrowableProblem {
+  private fun parseProblemResponseBody(body: Source): ThrowableProblem {
     val problemDecoder =
       mediaTypeDecoders.find(MediaType.Problem)
         ?: throw SundayError(NoDecoder, MediaType.Problem.value)
@@ -656,7 +658,17 @@ abstract class RequestFactory : Closeable {
         "'${MediaType.Problem}' decoder must support structured decoding",
       )
 
-    val decoded: Map<String, Any> = problemDecoder.decode(body)
+    val decoded: MutableMap<String, Any> = problemDecoder.decode<Map<String, Any>>(body).toMutableMap()
+    val statusValue = decoded["status"]
+    if (statusValue is Number) {
+      decoded["status"] = statusValue.toInt().toStatusType()
+    } else if (statusValue is String) {
+      decoded["status"] =
+        statusValue
+          .toIntOrNull()
+          ?.toStatusType()
+          ?: statusValue
+    }
 
     val problemType = decoded["type"]?.toString() ?: ""
     val problemClass = (registeredProblemTypes[problemType] ?: DefaultProblem::class).createType()
@@ -666,7 +678,7 @@ abstract class RequestFactory : Closeable {
 
   private fun parseUnknownFailureResponseBody(
     contentType: MediaType,
-    body: BufferedSource,
+    body: Source,
     status: StatusType,
   ): ThrowableProblem {
     val (responseText, responseData) =
@@ -678,8 +690,8 @@ abstract class RequestFactory : Closeable {
 
     return Problem
       .builder()
+      .withType(Problem.DEFAULT_TYPE)
       .withStatus(status)
-      .withTitle(status.reasonPhrase)
       .apply {
         if (responseText != null) {
           with("responseText", responseText)
@@ -689,5 +701,19 @@ abstract class RequestFactory : Closeable {
         }
       }.build()
   }
+
+  private fun buildDefaultProblem(status: StatusType): ThrowableProblem =
+    Problem
+      .builder()
+      .withType(Problem.DEFAULT_TYPE)
+      .withStatus(status)
+      .build()
+
+  private fun Int.toStatusType(): StatusType =
+    try {
+      Status.valueOf(this)
+    } catch (_: IllegalArgumentException) {
+      NonStandardStatus(this, null)
+    }
 
 }

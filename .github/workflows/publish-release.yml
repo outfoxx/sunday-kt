@@ -17,34 +17,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6.0.2
 
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v5.2.0
       with:
         java-version: '21'
         distribution: temurin
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
+      uses: gradle/actions/setup-gradle@v5.0.0
 
     - name: Build Artifacts & Documentation
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        build dokkaHtmlMultiModule
+        build dokkaGeneratePublicationHtml
         -x test
 
     - name: Publish Maven Release
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        -PsonatypeUsername=${{ secrets.OSSRH_TOKEN_USER }} -PsonatypePassword=${{ secrets.OSSRH_TOKEN_PASS }}
-        publishToSonatype closeAndReleaseSonatypeStagingRepository
+        publishToMavenCentral
         -x test
       env:
-        ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
-        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
-        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+        ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_TOKEN_USER }}
+        ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_TOKEN_PASS }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}
+        ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+        ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
 
     - name: Publish Documentation
       uses: JamesIves/github-pages-deploy-action@v4
@@ -57,6 +58,8 @@ jobs:
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        -Pgithub.token=${{ secrets.GITHUB_TOKEN }}
         githubRelease
         -x test
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

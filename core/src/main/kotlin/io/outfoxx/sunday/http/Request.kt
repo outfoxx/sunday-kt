@@ -17,8 +17,8 @@
 package io.outfoxx.sunday.http
 
 import kotlinx.coroutines.flow.Flow
-import okio.Buffer
-import okio.BufferedSource
+import kotlinx.io.Buffer
+import kotlinx.io.Source
 import java.net.URI
 
 /**
@@ -47,7 +47,7 @@ interface Request {
   /**
    * Body data to send with request.
    */
-  suspend fun body(): BufferedSource?
+  suspend fun body(): Source?
 
   /**
    * Executes the request and returns a complete [response][Response].
@@ -80,7 +80,7 @@ interface Request {
     /**
      * HTTP response has completed.
      *
-     * Response trailers are provided, if any were delivered.
+     * Response trailers are provided if any were delivered.
      */
     data class End(
       val trailers: Headers,

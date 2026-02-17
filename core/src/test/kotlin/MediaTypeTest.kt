@@ -40,15 +40,14 @@ import io.outfoxx.sunday.MediaType.Type.Model
 import io.outfoxx.sunday.MediaType.Type.Multipart
 import io.outfoxx.sunday.MediaType.Type.Text
 import io.outfoxx.sunday.MediaType.Type.Video
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsInAnyOrder
-import org.hamcrest.Matchers.equalTo
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
+import strikt.assertions.isNotEqualTo
+import strikt.assertions.isNull
+import strikt.assertions.isTrue
 
 class MediaTypeTest {
 
@@ -62,50 +61,45 @@ class MediaTypeTest {
         ),
       )
 
-    assertThat(mediaTypes, containsInAnyOrder(MediaType.JSON, MediaType.CBOR, MediaType.HTML))
+    expectThat(mediaTypes)
+      .containsExactlyInAnyOrder(MediaType.JSON, MediaType.CBOR, MediaType.HTML)
   }
 
   @Test
   fun `test equality`() {
     val mediaType = MediaType.HTML.with(CharSet, "utf-8")
-    assertEquals(mediaType, mediaType)
+    expectThat(mediaType).isEqualTo(mediaType)
 
-    assertEquals(
+    expectThat(
       MediaType.HTML.with(CharSet, "utf-8").with("test", "123"),
-      MediaType.HTML.with(CharSet, "utf-8").with("test", "123"),
-    )
+    ).isEqualTo(MediaType.HTML.with(CharSet, "utf-8").with("test", "123"))
 
-    assertNotEquals(
+    expectThat(
       MediaType.from("application/text"),
-      MediaType.from("text/json"),
-    )
+    ).isNotEqualTo(MediaType.from("text/json"))
 
-    assertNotEquals(
+    expectThat(
       MediaType.from("application/x-html"),
-      MediaType.from("application/x.html"),
-    )
+    ).isNotEqualTo(MediaType.from("application/x.html"))
 
-    assertNotEquals(
+    expectThat(
       MediaType.from("text/html"),
-      MediaType.from("text/json"),
-    )
+    ).isNotEqualTo(MediaType.from("text/json"))
 
-    assertNotEquals(
+    expectThat(
       MediaType.from("application/problem+json"),
-      MediaType.from("application/problem+cbor"),
-    )
+    ).isNotEqualTo(MediaType.from("application/problem+cbor"))
 
-    assertNotEquals(
+    expectThat(
       MediaType.HTML.with("a", "123").with("b", "456"),
-      MediaType.HTML.with("a", "123").with("b", "789"),
-    )
+    ).isNotEqualTo(MediaType.HTML.with("a", "123").with("b", "789"))
 
   }
 
   @Test
   @Suppress("LongMethod")
   fun `test compatibility`() {
-    assertTrue(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -115,9 +109,9 @@ class MediaTypeTest {
           mapOf("a" to "b"),
         ),
       ),
-    ) { "Test compatibility" }
+    ).isTrue()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Image,
@@ -127,9 +121,9 @@ class MediaTypeTest {
           mapOf("a" to "b"),
         ),
       ),
-    ) { "Test incompatibility in types" }
+    ).isFalse()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -139,9 +133,9 @@ class MediaTypeTest {
           mapOf("a" to "b"),
         ),
       ),
-    ) { "Test incompatibility in trees" }
+    ).isFalse()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -151,9 +145,9 @@ class MediaTypeTest {
           mapOf("a" to "b"),
         ),
       ),
-    ) { "Test incompatibility in subtypes" }
+    ).isFalse()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -163,9 +157,9 @@ class MediaTypeTest {
           mapOf("a" to "b"),
         ),
       ),
-    ) { "Test incompatibility in suffixes" }
+    ).isFalse()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -175,9 +169,9 @@ class MediaTypeTest {
           mapOf("a" to "c"),
         ),
       ),
-    ) { "Test incompatibility in parameter values" }
+    ).isFalse()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, Vendor, "plain", JSON, mapOf("a" to "b")).compatible(
         MediaType(
           Text,
@@ -186,9 +180,9 @@ class MediaTypeTest {
           parameters = mapOf("a" to "c"),
         ),
       ),
-    ) { "Test incompatibility in parameter values missing suffix" }
+    ).isFalse()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html", parameters = mapOf("custom-charset" to "utf-8")).compatible(
         MediaType(
           Text,
@@ -199,9 +193,9 @@ class MediaTypeTest {
             ),
         ),
       ),
-    ) { "Test compatibility with different parameters" }
+    ).isTrue()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
         MediaType(
           Text,
@@ -212,9 +206,9 @@ class MediaTypeTest {
             ),
         ),
       ),
-    ) { "Test compatibility with different parameter cases" }
+    ).isTrue()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
         MediaType(
           Text,
@@ -225,9 +219,9 @@ class MediaTypeTest {
             ),
         ),
       ),
-    ) { "Test compatibility with different parameters" }
+    ).isTrue()
 
-    assertFalse(
+    expectThat(
       MediaType(Text, subtype = "html", parameters = mapOf("charset" to "utf-8")).compatible(
         MediaType(
           Text,
@@ -238,129 +232,113 @@ class MediaTypeTest {
             ),
         ),
       ),
-    ) { "Test compatibility with different parameter values" }
+    ).isFalse()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Any,
           subtype = "*",
         ),
       ),
-    ) { "Test compatibility with wildcard type & subtype" }
+    ).isTrue()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Any,
           subtype = "html",
         ),
       ),
-    ) { "Test compatibility with wildcard type" }
+    ).isTrue()
 
-    assertTrue(
+    expectThat(
       MediaType(Text, subtype = "html").compatible(
         MediaType(
           Text,
           subtype = "*",
         ),
       ),
-    ) { "Test compatibility with wildcard subtype" }
+    ).isTrue()
   }
 
   @Test
   @Suppress("LongMethod")
   fun `test parse`() {
-    assertThat(
-      "Test parsing",
-      MediaType(Application, Standard, "problem", JSON, mapOf("charset" to "utf-8")),
-      equalTo(MediaType.from("application/problem+json;charset=utf-8")),
-    )
+    expectThat(MediaType(Application, Standard, "problem", JSON, mapOf("charset" to "utf-8")))
+      .isEqualTo(MediaType.from("application/problem+json;charset=utf-8"))
 
-    assertThat(
-      "Test parsing with non-standard tree",
-      MediaType(Application, Obsolete, "www-form-urlencoded"),
-      equalTo(MediaType.from("application/x-www-form-urlencoded")),
-    )
+    expectThat(MediaType(Application, Obsolete, "www-form-urlencoded"))
+      .isEqualTo(MediaType.from("application/x-www-form-urlencoded"))
 
-    assertThat(
-      "Test parsing with non-standard tree and complexs subtype",
-      MediaType(Application, Obsolete, "x509-ca-cert"),
-      equalTo(MediaType.from("application/x-x509-ca-cert")),
-    )
+    expectThat(MediaType(Application, Obsolete, "x509-ca-cert"))
+      .isEqualTo(MediaType.from("application/x-x509-ca-cert"))
 
-    assertThat(
-      "Test parsing with multiple parameters",
+    expectThat(
       MediaType(
         Application,
         Vendor,
         "yaml",
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("application/vnd.yaml;charset=utf-8;something=else")),
-    )
+    ).isEqualTo(MediaType.from("application/vnd.yaml;charset=utf-8;something=else"))
 
-    assertThat(
-      "Test parsing with different cases",
+    expectThat(
       MediaType(
         Application,
         Vendor,
         "yaml",
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("APPLICATION/VND.YAML;CHARSET=UTF-8;SOMETHING=ELSE")),
-    )
+    ).isEqualTo(MediaType.from("APPLICATION/VND.YAML;CHARSET=UTF-8;SOMETHING=ELSE"))
 
-    assertThat(
-      "Test parsing with different random spacing",
+    expectThat(
       MediaType(
         Application,
         Vendor,
         "yaml",
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ),
-      equalTo(MediaType.from("APPLICATION/VND.YAML  ;  CHARSET=UTF-8 ; SOMETHING=ELSE   ")),
-    )
+    ).isEqualTo(MediaType.from("APPLICATION/VND.YAML  ;  CHARSET=UTF-8 ; SOMETHING=ELSE   "))
 
-    assertThat(MediaType.from("application/*").type, equalTo(Application))
-    assertThat(MediaType.from("audio/*").type, equalTo(Audio))
-    assertThat(MediaType.from("example/*").type, equalTo(Example))
-    assertThat(MediaType.from("font/*").type, equalTo(Font))
-    assertThat(MediaType.from("image/*").type, equalTo(Image))
-    assertThat(MediaType.from("message/*").type, equalTo(Message))
-    assertThat(MediaType.from("model/*").type, equalTo(Model))
-    assertThat(MediaType.from("multipart/*").type, equalTo(Multipart))
-    assertThat(MediaType.from("text/*").type, equalTo(Text))
-    assertThat(MediaType.from("video/*").type, equalTo(Video))
-    assertThat(MediaType.from("*/*").type, equalTo(Any))
+    expectThat(MediaType.from("application/*").type).isEqualTo(Application)
+    expectThat(MediaType.from("audio/*").type).isEqualTo(Audio)
+    expectThat(MediaType.from("example/*").type).isEqualTo(Example)
+    expectThat(MediaType.from("font/*").type).isEqualTo(Font)
+    expectThat(MediaType.from("image/*").type).isEqualTo(Image)
+    expectThat(MediaType.from("message/*").type).isEqualTo(Message)
+    expectThat(MediaType.from("model/*").type).isEqualTo(Model)
+    expectThat(MediaType.from("multipart/*").type).isEqualTo(Multipart)
+    expectThat(MediaType.from("text/*").type).isEqualTo(Text)
+    expectThat(MediaType.from("video/*").type).isEqualTo(Video)
+    expectThat(MediaType.from("*/*").type).isEqualTo(Any)
 
-    assertThat(MediaType.from("application/test").tree, equalTo(Standard))
-    assertThat(MediaType.from("application/vnd.test").tree, equalTo(Vendor))
-    assertThat(MediaType.from("application/prs.test").tree, equalTo(Personal))
-    assertThat(MediaType.from("application/x.test").tree, equalTo(Unregistered))
-    assertThat(MediaType.from("application/x-test").tree, equalTo(Obsolete))
+    expectThat(MediaType.from("application/test").tree).isEqualTo(Standard)
+    expectThat(MediaType.from("application/vnd.test").tree).isEqualTo(Vendor)
+    expectThat(MediaType.from("application/prs.test").tree).isEqualTo(Personal)
+    expectThat(MediaType.from("application/x.test").tree).isEqualTo(Unregistered)
+    expectThat(MediaType.from("application/x-test").tree).isEqualTo(Obsolete)
 
-    assertThat(MediaType.from("application/text+xml").suffix, equalTo(XML))
-    assertThat(MediaType.from("application/text+json").suffix, equalTo(JSON))
-    assertThat(MediaType.from("application/text+ber").suffix, equalTo(BER))
-    assertThat(MediaType.from("application/text+der").suffix, equalTo(DER))
-    assertThat(MediaType.from("application/text+fastinfoset").suffix, equalTo(FastInfoSet))
-    assertThat(MediaType.from("application/text+wbxml").suffix, equalTo(WBXML))
-    assertThat(MediaType.from("application/text+zip").suffix, equalTo(Zip))
-    assertThat(MediaType.from("application/text+cbor").suffix, equalTo(CBOR))
+    expectThat(MediaType.from("application/text+xml").suffix).isEqualTo(XML)
+    expectThat(MediaType.from("application/text+json").suffix).isEqualTo(JSON)
+    expectThat(MediaType.from("application/text+ber").suffix).isEqualTo(BER)
+    expectThat(MediaType.from("application/text+der").suffix).isEqualTo(DER)
+    expectThat(MediaType.from("application/text+fastinfoset").suffix).isEqualTo(FastInfoSet)
+    expectThat(MediaType.from("application/text+wbxml").suffix).isEqualTo(WBXML)
+    expectThat(MediaType.from("application/text+zip").suffix).isEqualTo(Zip)
+    expectThat(MediaType.from("application/text+cbor").suffix).isEqualTo(CBOR)
   }
 
   @Test
   fun `test value`() {
-    assertEquals(
+    expectThat(
       MediaType(
         Application,
         Vendor,
         "yaml",
         parameters = mapOf("charset" to "utf-8", "something" to "else"),
       ).value,
-      "application/vnd.yaml;charset=utf-8;something=else",
-    )
+    ).isEqualTo("application/vnd.yaml;charset=utf-8;something=else")
   }
 
   @Test
@@ -368,50 +346,55 @@ class MediaTypeTest {
     val mediaType =
       MediaType.HTML.with(CharSet, "utf-8").with("test", "123")
 
-    assertEquals(mediaType.parameter(CharSet), "utf-8")
-    assertEquals(mediaType.parameter("test"), "123")
-    assertNull(mediaType.parameter("none"))
+    expectThat(mediaType.parameter(CharSet)).isEqualTo("utf-8")
+    expectThat(mediaType.parameter("test")).isEqualTo("123")
+    expectThat(mediaType.parameter("none")).isNull()
   }
 
   @Test
   fun `test parameter override`() {
-    assertEquals(
+    expectThat(
       MediaType.HTML
         .with("test", "123")
         .with("test", "456")
         .parameter("test"),
-      "456",
-    )
-    assertEquals(
+    ).isEqualTo("456")
+    expectThat(
       MediaType.HTML
         .with("test", "456")
         .with("test", "123")
         .parameter("test"),
-      "123",
-    )
+    ).isEqualTo("123")
   }
 
   @Test
   fun `test sanity`() {
     val jsonWithCharset = MediaType.JSON.with(parameters = mapOf("charset" to "utf-8"))
 
-    assertTrue(jsonWithCharset.compatible(MediaType.JSON))
-    assertFalse(jsonWithCharset.compatible(MediaType.JSONStructured))
-    assertFalse(jsonWithCharset.compatible(MediaType.HTML))
-    assertTrue(jsonWithCharset.compatible(MediaType.Any))
+    expectThat(jsonWithCharset.compatible(MediaType.JSON)).isTrue()
+    expectThat(jsonWithCharset.compatible(MediaType.JSONStructured)).isFalse()
+    expectThat(jsonWithCharset.compatible(MediaType.HTML)).isFalse()
+    expectThat(jsonWithCharset.compatible(MediaType.Any)).isTrue()
 
     val htmlWithCharset = MediaType.HTML.with(parameters = mapOf("charset" to "utf-8"))
 
-    assertTrue(htmlWithCharset.compatible(MediaType.HTML))
-    assertFalse(htmlWithCharset.compatible(MediaType.JSON))
-    assertFalse(htmlWithCharset.compatible(MediaType.JSONStructured))
-    assertTrue(htmlWithCharset.compatible(MediaType.Any))
+    expectThat(htmlWithCharset.compatible(MediaType.HTML)).isTrue()
+    expectThat(htmlWithCharset.compatible(MediaType.JSON)).isFalse()
+    expectThat(htmlWithCharset.compatible(MediaType.JSONStructured)).isFalse()
+    expectThat(htmlWithCharset.compatible(MediaType.Any)).isTrue()
   }
 
   @Test
   fun `test constructor`() {
     val mediaType = MediaType(Application, Vendor, "test", Zip, "charset" to "utf-8")
 
-    assertEquals(mediaType.value, "application/vnd.test+zip;charset=utf-8")
+    expectThat(mediaType.value).isEqualTo("application/vnd.test+zip;charset=utf-8")
+  }
+
+  @Test
+  fun `test fromCode lookups`() {
+    expectThat(MediaType.Type.fromCode("application")).isEqualTo(MediaType.Type.Application)
+    expectThat(MediaType.Tree.fromCode("vnd.")).isEqualTo(MediaType.Tree.Vendor)
+    expectThat(MediaType.Suffix.fromCode("json")).isEqualTo(MediaType.Suffix.JSON)
   }
 }

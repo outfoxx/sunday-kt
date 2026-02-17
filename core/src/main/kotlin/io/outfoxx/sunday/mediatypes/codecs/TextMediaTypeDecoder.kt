@@ -40,7 +40,7 @@ interface TextMediaTypeDecoder : MediaTypeDecoder {
 /**
  * Decodes text into a specific Java/Kotlin type.
  *
+ * @param T Target Java/Kotlin type.
  * @param data Text data.
- * @param type Target Java/Kotlin type.
  */
 inline fun <reified T : Any> TextMediaTypeDecoder.decode(data: String): T = decode(data, typeOf<T>())

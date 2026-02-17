@@ -18,11 +18,11 @@ import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.utils.Problems
-import okio.BufferedSource
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
+import kotlinx.io.Source
 import org.junit.jupiter.api.Test
 import org.zalando.problem.Status
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 
 class ProblemsTest {
 
@@ -30,29 +30,29 @@ class ProblemsTest {
   fun `test forResponse`() {
     val problem = Problems.forResponse(TestResponse(400, "Bad Request", listOf(), null))
 
-    assertThat(problem.status, equalTo(Status.BAD_REQUEST))
+    expectThat(problem.status).isEqualTo(Status.BAD_REQUEST)
   }
 
   @Test
   fun `test forStatus`() {
     val problem = Problems.forStatus(400, "Bad Request")
 
-    assertThat(problem.status, equalTo(Status.BAD_REQUEST))
+    expectThat(problem.status).isEqualTo(Status.BAD_REQUEST)
   }
 
   @Test
   fun `test forStatus supports non-standard values`() {
     val problem = Problems.forStatus(195, "AI Thinking")
 
-    assertThat(problem.status?.statusCode, equalTo(195))
-    assertThat(problem.status?.reasonPhrase, equalTo("AI Thinking"))
+    expectThat(problem.status?.statusCode).isEqualTo(195)
+    expectThat(problem.status?.reasonPhrase).isEqualTo("AI Thinking")
   }
 
   data class TestResponse(
     override val statusCode: Int,
     override val reasonPhrase: String?,
     override val headers: Headers,
-    override val body: BufferedSource?,
+    override val body: Source?,
   ) : Response {
 
     override val trailers: Headers?

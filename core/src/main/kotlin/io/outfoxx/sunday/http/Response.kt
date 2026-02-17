@@ -17,7 +17,7 @@
 package io.outfoxx.sunday.http
 
 import io.outfoxx.sunday.MediaType
-import okio.BufferedSource
+import kotlinx.io.Source
 
 /**
  * HTTP response.
@@ -32,14 +32,14 @@ interface Response {
   /**
    * HTTP status message of the response.
    *
-   * Some implementations (e.g. JDK HTTP Client) do not support reporting
+   * Some implementations (e.g., JDK HTTP Client) do not support reporting
    * the reason phrase. When not supported a standard phrase will be provided
    * unless there is no standard phrase, in which case `null` will be returned.
    */
   val reasonPhrase: String?
 
   /**
-   * HTTP response headers, if any were delivered.
+   * HTTP response headers, if any, were delivered.
    */
   val headers: Headers
 
@@ -50,10 +50,10 @@ interface Response {
    * available; as when the [response][Response] is provided by
    * a [Request.Event.Start] event.
    */
-  val body: BufferedSource?
+  val body: Source?
 
   /**
-   * HTTP response trailers, if any were delivered.
+   * HTTP response trailers, if any, were delivered.
    *
    * [Response.trailers] will be null if the trailers are not yet
    * available. Trailers won't be available until the [Response.body]

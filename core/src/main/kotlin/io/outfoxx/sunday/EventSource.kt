@@ -36,7 +36,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import okio.Buffer
+import kotlinx.io.Buffer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.Closeable
@@ -104,7 +104,7 @@ class EventSource(
     /**
      * Global default time interval for event timeout.
      *
-     * If an event is not received within the specified timeout the connection is
+     * If an event is not received within the specified timeout, the connection is
      * forcibly restarted. If set to null, the default will be that event timeouts are disabled.
      *
      * Each [EventSource] can override this setting in its constructor using the `eventTimeout`
@@ -319,7 +319,7 @@ class EventSource(
               }
             }.collect(::dispatchEvent)
 
-        } catch (ignored: CancellationException) {
+        } catch (_: CancellationException) {
           // do nothing
         } catch (error: Throwable) {
           receivedError(error)
@@ -443,7 +443,7 @@ class EventSource(
     retryAttempt = 0
 
     // Start event timeout check, treating this
-    // connection as last time we received an event
+    // connection as the last time we received an event
     startEventTimeoutCheck(Instant.now())
 
     stateLock.read { openHandler }?.invoke()
@@ -556,13 +556,13 @@ class EventSource(
         retryTimeMs * MAX_RETRY_TIME_MULTIPLE,
       )
 
-    // Adjust delay by amount of time last connect
+    // Adjust delay by the amount of time the last connection
     // cycle took, except on the first attempt
     if (retryAttempt > 0) {
       retryDelayMs -= lastConnectTime.toMillis()
 
-      // Ensure delay is at least as large as
-      // minimum retry time interval
+      // Ensure the delay is at least as large as
+      // a minimum retry time interval
       retryDelayMs = max(retryDelayMs, retryTimeMs.toDouble())
     }
 
@@ -597,7 +597,7 @@ class EventSource(
       return
     }
 
-    // Save event id, if it does not contain null
+    // Save event id if it does not contain null
     val eventId = info.id
     if (eventId != null) {
       // Check for NULL as it is not allowed

@@ -18,12 +18,12 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidHeaderValue
 import io.outfoxx.sunday.http.HeaderParameters
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsInAnyOrder
-import org.hamcrest.Matchers.emptyIterable
-import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import strikt.api.expectThat
+import strikt.api.expectThrows
+import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
 
 class HeaderParametersTest {
 
@@ -31,48 +31,44 @@ class HeaderParametersTest {
   fun `test encodes array values as repeated headers`() {
     val headers = HeaderParameters.encode(mapOf("test" to arrayOf(MediaType.JSON, MediaType.CBOR)))
 
-    assertThat(
-      headers,
-      containsInAnyOrder("test" to "application/json", "test" to "application/cbor"),
-    )
+    expectThat(headers)
+      .containsExactlyInAnyOrder("test" to "application/json", "test" to "application/cbor")
   }
 
   @Test
   fun `test encodes iterables as repeated headers`() {
     val headers = HeaderParameters.encode(mapOf("test" to listOf(MediaType.JSON, MediaType.CBOR)))
 
-    assertThat(
-      headers,
-      containsInAnyOrder("test" to "application/json", "test" to "application/cbor"),
-    )
+    expectThat(headers)
+      .containsExactlyInAnyOrder("test" to "application/json", "test" to "application/cbor")
   }
 
   @Test
   fun `test string encoding`() {
     val headers = HeaderParameters.encode(mapOf("test" to "header"))
 
-    assertThat(headers, containsInAnyOrder("test" to "header"))
+    expectThat(headers).containsExactlyInAnyOrder("test" to "header")
   }
 
   @Test
   fun `test integer encoding`() {
     val headers = HeaderParameters.encode(mapOf("test" to 123456789))
 
-    assertThat(headers, containsInAnyOrder("test" to "123456789"))
+    expectThat(headers).containsExactlyInAnyOrder("test" to "123456789")
   }
 
   @Test
   fun `test decimal encoding`() {
     val headers = HeaderParameters.encode(mapOf("test" to 12345.6789))
 
-    assertThat(headers, containsInAnyOrder("test" to "12345.6789"))
+    expectThat(headers).containsExactlyInAnyOrder("test" to "12345.6789")
   }
 
   @Test
   fun `test null values are ignored`() {
     val headers = HeaderParameters.encode(mapOf("test" to null))
 
-    assertThat(headers, emptyIterable())
+    expectThat(headers.toList()).isEmpty()
   }
 
   @Test
@@ -85,38 +81,38 @@ class HeaderParametersTest {
         ),
       )
 
-    assertThat(headers, emptyIterable())
+    expectThat(headers.toList()).isEmpty()
   }
 
   @Test
   fun `test fails on invalid header values`() {
     val nullError =
-      assertThrows<SundayError> {
+      expectThrows<SundayError> {
         HeaderParameters.encode(mapOf("test" to "a${0.toChar()}b"))
       }
 
-    assertThat(nullError.reason, equalTo(InvalidHeaderValue))
+    nullError.get { reason }.isEqualTo(InvalidHeaderValue)
 
     val lineFeedError =
-      assertThrows<SundayError> {
+      expectThrows<SundayError> {
         HeaderParameters.encode(mapOf("test" to "a\nb"))
       }
 
-    assertThat(lineFeedError.reason, equalTo(InvalidHeaderValue))
+    lineFeedError.get { reason }.isEqualTo(InvalidHeaderValue)
 
     val carriageReturnError =
-      assertThrows<SundayError> {
+      expectThrows<SundayError> {
         HeaderParameters.encode(mapOf("test" to "a\rb"))
       }
 
-    assertThat(carriageReturnError.reason, equalTo(InvalidHeaderValue))
+    carriageReturnError.get { reason }.isEqualTo(InvalidHeaderValue)
 
     val nonAsciiReturnError =
-      assertThrows<SundayError> {
+      expectThrows<SundayError> {
         HeaderParameters.encode(mapOf("test" to "a\u1234b"))
       }
 
-    assertThat(nonAsciiReturnError.reason, equalTo(InvalidHeaderValue))
+    nonAsciiReturnError.get { reason }.isEqualTo(InvalidHeaderValue)
   }
 
 }

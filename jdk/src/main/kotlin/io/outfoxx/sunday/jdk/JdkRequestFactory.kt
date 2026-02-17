@@ -39,7 +39,7 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
-import okio.buffer
+import kotlinx.io.asInputStream
 import org.slf4j.LoggerFactory
 import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
@@ -121,7 +121,7 @@ class JdkRequestFactory(
       requestBuilder.header(headerName, headerValue)
     }
 
-    // Add `Accept` header based on accept types
+    // Add `Accept` header based on accepted types
     if (acceptTypes != null) {
       val supportedAcceptTypes = acceptTypes.filter(mediaTypeDecoders::supports)
       if (supportedAcceptTypes.isEmpty()) {
@@ -135,7 +135,7 @@ class JdkRequestFactory(
 
     val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
 
-    // Add `Content-Type` header (even if body is null, to match any expected server requirements)
+    // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.header(ContentType, contentType.toString()) }
 
     var requestBodyPublisher =
@@ -148,10 +148,10 @@ class JdkRequestFactory(
 
         val encodedBody = mediaTypeEncoder.encode(body)
 
-        BodyPublishers.ofInputStream { encodedBody.buffer().inputStream() }
+        BodyPublishers.ofInputStream { encodedBody.asInputStream() }
       }
 
-    if (requestBodyPublisher == null && method.requiresBody) {
+    if (requestBodyPublisher == null && method.bodyAllowed) {
       requestBodyPublisher = BodyPublishers.ofByteArray(byteArrayOf())
     }
 

@@ -21,8 +21,8 @@ import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver
-import okio.Source
-import okio.buffer
+import kotlinx.io.Source
+import kotlinx.io.asInputStream
 import org.zalando.problem.AbstractThrowableProblem
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
@@ -64,7 +64,7 @@ open class ObjectMapperDecoder(
     type: KType,
   ): T =
     objectMapper.readValue(
-      data.buffer().inputStream(),
+      data.asInputStream(),
       objectMapper.typeFactory.constructType(type.javaType),
     )
 

@@ -19,26 +19,28 @@ import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.JSONDecoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.mediatypes.codecs.ObjectMapperEncoder
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
 import io.outfoxx.sunday.utils.buffer
-import okio.Buffer
-import okio.BufferedSource
-import okio.ByteString
-import okio.Source
-import okio.buffer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.`is`
-import org.hamcrest.Matchers.not
-import org.hamcrest.Matchers.nullValue
+import kotlinx.io.Buffer
+import kotlinx.io.Source
+import kotlinx.io.bytestring.ByteString
+import kotlinx.io.readByteArray
+import kotlinx.io.readByteString
+import kotlinx.io.write
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.zalando.problem.Status
+import strikt.api.expectThat
+import strikt.api.expectThrows
+import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import kotlin.reflect.typeOf
@@ -53,15 +55,15 @@ class MediaTypeCodecTest {
     fun `test decoder decodes text`() {
       val decoder = TextDecoder.default
 
-      assertThat(decoder.decode<String>("testing".buffer()), equalTo("testing"))
-      assertThat(decoder.decode<CharSequence>("testing".buffer()), equalTo("testing"))
+      expectThat(decoder.decode<String>("testing".buffer())).isEqualTo("testing")
+      expectThat(decoder.decode<CharSequence>("testing".buffer())).isEqualTo("testing")
     }
 
     @Test
     fun `test decoder fails to decode non text`() {
       val decoder = TextDecoder.default
 
-      assertThrows<IllegalArgumentException> {
+      expectThrows<IllegalArgumentException> {
         decoder.decode<Int>("testing".buffer())
       }
     }
@@ -70,15 +72,15 @@ class MediaTypeCodecTest {
     fun `test encoder encodes text`() {
       val encoder = TextEncoder.default
 
-      assertThat(encoder.encode("testing"), equalTo("testing".buffer()))
-      assertThat(encoder.encode(StringBuilder("testing")), equalTo("testing".buffer()))
+      expectThat(sourceBytes(encoder.encode("testing"))).isEqualTo("testing".encodeToByteArray())
+      expectThat(sourceBytes(encoder.encode(StringBuilder("testing")))).isEqualTo("testing".encodeToByteArray())
     }
 
     @Test
     fun `test encoder fails to encode non text values`() {
       val encoder = TextEncoder.default
 
-      assertThrows<IllegalArgumentException> {
+      expectThrows<IllegalArgumentException> {
         encoder.encode(10)
       }
     }
@@ -93,27 +95,21 @@ class MediaTypeCodecTest {
       val decoder = BinaryDecoder()
 
       val buffer = "testing".buffer()
-      assertThat(decoder.decode<ByteArray>(buffer.copy()), equalTo(buffer.copy().readByteArray()))
-      assertThat(decoder.decode<ByteString>(buffer.copy()), equalTo(buffer.copy().readByteString()))
-      assertThat(
-        decoder.decode<InputStream>(buffer.copy()).readAllBytes(),
-        equalTo(buffer.copy().readByteArray()),
-      )
-      assertThat(
-        decoder.decode<Source>(buffer.copy()).buffer().readByteArray(),
-        equalTo(buffer.copy().readByteArray()),
-      )
-      assertThat(
-        decoder.decode<BufferedSource>(buffer.copy()).readByteArray(),
-        equalTo(buffer.copy().readByteArray()),
-      )
+      expectThat(decoder.decode<ByteArray>(bufferCopy(buffer)))
+        .isEqualTo(bufferCopy(buffer).readByteArray())
+      expectThat(decoder.decode<ByteString>(bufferCopy(buffer)))
+        .isEqualTo(bufferCopy(buffer).readByteString())
+      expectThat(decoder.decode<InputStream>(bufferCopy(buffer)).readAllBytes())
+        .isEqualTo(bufferCopy(buffer).readByteArray())
+      expectThat(decoder.decode<Source>(bufferCopy(buffer)).readByteArray())
+        .isEqualTo(bufferCopy(buffer).readByteArray())
     }
 
     @Test
     fun `test decoder fails to decode non binary`() {
       val decoder = BinaryDecoder()
 
-      assertThrows<IllegalArgumentException> {
+      expectThrows<IllegalArgumentException> {
         decoder.decode("testing".buffer(), typeOf<Int>())
       }
     }
@@ -122,32 +118,50 @@ class MediaTypeCodecTest {
     fun `test encoder encodes binary values`() {
       val encoder = BinaryEncoder()
 
-      assertThat(
-        encoder.encode(byteArrayOf(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
-      )
-      assertThat(
-        encoder.encode(ByteString.of(1, 2, 3)),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
-      )
-      assertThat(
-        encoder.encode(ByteArrayInputStream(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
-      )
-      assertThat(
-        encoder.encode(Buffer().write(byteArrayOf(1, 2, 3))),
-        equalTo(Buffer().write(byteArrayOf(1, 2, 3))),
-      )
+      expectThat(sourceBytes(encoder.encode(byteArrayOf(1, 2, 3))))
+        .isEqualTo(byteArrayOf(1, 2, 3))
+      expectThat(sourceBytes(encoder.encode(ByteString(byteArrayOf(1, 2, 3)))))
+        .isEqualTo(byteArrayOf(1, 2, 3))
+      expectThat(sourceBytes(encoder.encode(ByteArrayInputStream(byteArrayOf(1, 2, 3)))))
+        .isEqualTo(byteArrayOf(1, 2, 3))
+      expectThat(sourceBytes(encoder.encode(Buffer().apply { write(byteArrayOf(1, 2, 3)) })))
+        .isEqualTo(byteArrayOf(1, 2, 3))
     }
 
     @Test
     fun `test encoder fails to encode non binary values`() {
       val encoder = BinaryEncoder()
 
-      assertThrows<IllegalArgumentException> {
+      expectThrows<IllegalArgumentException> {
         encoder.encode(10)
       }
     }
+  }
+
+  @Nested
+  @DisplayName("json decoding")
+  inner class JsonCodec {
+    @Test
+    fun `test decoder handles numeric and string statuses`() {
+      val decoder = JSONDecoder.default
+
+      val numeric = decoder.decode<StatusHolder>("""{"status":400}""", typeOf<StatusHolder>())
+      val numericString = decoder.decode<StatusHolder>("""{"status":"404"}""", typeOf<StatusHolder>())
+      val nameString = decoder.decode<StatusHolder>("""{"status":"BAD_REQUEST"}""", typeOf<StatusHolder>())
+
+      expectThat(numeric.status).isEqualTo(Status.BAD_REQUEST)
+      expectThat(numericString.status).isEqualTo(Status.NOT_FOUND)
+      expectThat(nameString.status).isEqualTo(Status.BAD_REQUEST)
+    }
+  }
+
+  @Test
+  fun `test object mapper encoder writes bytes`() {
+    val encoder = ObjectMapperEncoder(JsonMapper())
+
+    val bytes = sourceBytes(encoder.encode(mapOf("a" to 1)))
+
+    expectThat(bytes).isEqualTo("""{"a":1}""".encodeToByteArray())
   }
 
   @Test
@@ -159,8 +173,8 @@ class MediaTypeCodecTest {
         .registerCBOR(CBORMapper())
         .build()
 
-    assertThat(encoders.find(MediaType.JSON), `is`(not(nullValue())))
-    assertThat(encoders.find(MediaType.CBOR), `is`(not(nullValue())))
+    expectThat(encoders.find(MediaType.JSON)).isNotNull()
+    expectThat(encoders.find(MediaType.CBOR)).isNotNull()
   }
 
   @Test
@@ -172,7 +186,15 @@ class MediaTypeCodecTest {
         .registerCBOR(CBORMapper())
         .build()
 
-    assertThat(decoders.find(MediaType.JSON), `is`(not(nullValue())))
-    assertThat(decoders.find(MediaType.CBOR), `is`(not(nullValue())))
+    expectThat(decoders.find(MediaType.JSON)).isNotNull()
+    expectThat(decoders.find(MediaType.CBOR)).isNotNull()
   }
+
+  private fun bufferCopy(source: Buffer): Buffer = Buffer().also { source.copyTo(it) }
+
+  private fun sourceBytes(source: Source): ByteArray = source.readByteArray()
 }
+
+data class StatusHolder(
+  val status: Status,
+)

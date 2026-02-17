@@ -19,8 +19,8 @@ package io.outfoxx.sunday.mediatypes.codecs
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import io.outfoxx.sunday.http.Parameters
-import okio.Buffer
-import okio.Source
+import kotlinx.io.Buffer
+import kotlinx.io.Source
 import java.net.URLEncoder
 import java.time.Instant
 import java.time.format.DateTimeFormatter.ISO_INSTANT
@@ -75,6 +75,7 @@ class WWWFormURLEncoder(
   enum class ArrayEncoding(
     val encode: (String) -> String,
   ) {
+
     Bracketed({ "$it[]" }),
     Unbracketed({ it }),
   }
@@ -82,6 +83,7 @@ class WWWFormURLEncoder(
   enum class BoolEncoding(
     val encode: (Boolean) -> String,
   ) {
+
     Numeric({ if (it) "1" else "0" }),
     Literal({ if (it) "true" else "false" }),
   }
@@ -89,6 +91,7 @@ class WWWFormURLEncoder(
   enum class DateEncoding(
     val encode: (Instant) -> String,
   ) {
+
     FractionalSecondsSinceEpoch(
       {
         (it.epochSecond + (it.nano / TimeUnit.SECONDS.toNanos(1).toDouble()))
@@ -103,7 +106,9 @@ class WWWFormURLEncoder(
   override fun <T> encode(value: T): Source {
     val parameters = mapper.convertValue<Map<String, Any>>(value as Any)
 
-    return Buffer().write(encodeQueryString(parameters).toByteArray(US_ASCII))
+    val buffer = Buffer()
+    buffer.write(encodeQueryString(parameters).toByteArray(US_ASCII))
+    return buffer
   }
 
   override fun encodeQueryString(parameters: Parameters): String =

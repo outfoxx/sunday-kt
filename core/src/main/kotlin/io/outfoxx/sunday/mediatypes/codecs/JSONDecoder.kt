@@ -18,10 +18,16 @@ package io.outfoxx.sunday.mediatypes.codecs
 
 import com.fasterxml.jackson.core.Base64Variant
 import com.fasterxml.jackson.core.Base64Variants
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.type.TypeFactory
+import org.zalando.problem.Status
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
@@ -44,7 +50,9 @@ class JSONDecoder(
       JSONDecoder(
         JsonMapper()
           .findAndRegisterModules()
-          .setBase64Variant(
+          .registerModule(
+            SimpleModule().addDeserializer(Status::class.java, StatusDeserializer()),
+          ).setBase64Variant(
             Base64Variants.MIME_NO_LINEFEEDS
               .withReadPadding(Base64Variant.PaddingReadBehaviour.PADDING_ALLOWED)
               .withWritePadding(false),
@@ -52,6 +60,25 @@ class JSONDecoder(
           .enable(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS) as JsonMapper,
       )
 
+  }
+
+  private class StatusDeserializer : JsonDeserializer<Status>() {
+
+    override fun deserialize(
+      p: JsonParser,
+      ctxt: DeserializationContext,
+    ): Status {
+      val node: JsonNode = p.codec.readTree(p)
+      if (node.isInt || node.isLong) {
+        return Status.valueOf(node.asInt())
+      }
+      if (node.isTextual) {
+        val text = node.asText()
+        text.toIntOrNull()?.let { return Status.valueOf(it) }
+        return Status.valueOf(text)
+      }
+      return ctxt.handleUnexpectedToken(Status::class.java, p) as Status
+    }
   }
 
   override fun <T : Any> decode(

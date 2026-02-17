@@ -19,12 +19,11 @@ import io.outfoxx.sunday.http.HeaderParameters
 import io.outfoxx.sunday.http.getAll
 import io.outfoxx.sunday.http.getFirst
 import io.outfoxx.sunday.http.toMultiMap
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsInAnyOrder
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.`is`
-import org.hamcrest.Matchers.oneOf
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.isContainedIn
+import strikt.assertions.isEqualTo
 
 class HeaderExtensionsTest {
 
@@ -32,30 +31,24 @@ class HeaderExtensionsTest {
   fun `test getFirst`() {
     val headers = HeaderParameters.encode(mapOf("test" to arrayOf(MediaType.JSON, MediaType.CBOR)))
 
-    assertThat(
-      headers.getFirst("test"),
-      `is`(oneOf(MediaType.JSON.value, MediaType.CBOR.value)),
-    )
+    expectThat(headers.getFirst("test"))
+      .isContainedIn(listOf(MediaType.JSON.value, MediaType.CBOR.value))
   }
 
   @Test
   fun `test getAll`() {
     val headers = HeaderParameters.encode(mapOf("test" to arrayOf(MediaType.JSON, MediaType.CBOR)))
 
-    assertThat(
-      headers.getAll("test"),
-      containsInAnyOrder(MediaType.JSON.value, MediaType.CBOR.value),
-    )
+    expectThat(headers.getAll("test"))
+      .containsExactlyInAnyOrder(MediaType.JSON.value, MediaType.CBOR.value)
   }
 
   @Test
   fun `test toMultiMap`() {
     val headers = HeaderParameters.encode(mapOf("test" to arrayOf(MediaType.JSON, MediaType.CBOR)))
 
-    assertThat(
-      headers.toMultiMap(),
-      equalTo(mapOf("test" to listOf(MediaType.JSON.value, MediaType.CBOR.value))),
-    )
+    expectThat(headers.toMultiMap())
+      .isEqualTo(mapOf("test" to listOf(MediaType.JSON.value, MediaType.CBOR.value)))
   }
 
 }

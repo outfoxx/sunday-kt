@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday
 
-import okio.Buffer
+import kotlinx.io.Buffer
+import kotlinx.io.bytestring.decodeToString
+import kotlinx.io.readByteString
 import org.slf4j.LoggerFactory
 import kotlin.text.Charsets.UTF_8
 
@@ -84,12 +86,12 @@ class EventParser {
         findEventSeparator(unprocessedData)
           ?: break
 
-      val eventData = unprocessedData.readByteString(eventSeparatorRange.first)
+      val eventData = unprocessedData.readByteString(eventSeparatorRange.first.toInt())
       unprocessedData.skip(eventSeparatorRange.second - eventSeparatorRange.first)
 
       val eventString =
         try {
-          eventData.string(charSet)
+          eventData.decodeToString(charSet)
         } catch (t: Throwable) {
           logger.warn("Error reading event data", t)
           continue
@@ -115,7 +117,7 @@ class EventParser {
         when (data[idx]) {
           // line-feed
           LF -> {
-            // if next char is same,
+            // if the next char is the same,
             // we found a separator
             if ((data.size > idx + 1) && data[idx + 1] == LF) {
               return idx to idx + 2
@@ -124,7 +126,7 @@ class EventParser {
 
           // carriage-return
           CR -> {
-            // if next char is same,
+            // if the next char is the same,
             // we found a separator
             if (data.size > idx + 1 && data[idx + 1] == CR) {
               return idx to idx + 2

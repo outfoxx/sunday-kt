@@ -14,24 +14,34 @@
  * limitations under the License.
  */
 
-package io.outfoxx.sunday.jdk
+package io.outfoxx.sunday.okhttp
 
+import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.URITemplate
+import io.outfoxx.sunday.http.Method
+import kotlinx.coroutines.test.runTest
+import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
-import strikt.assertions.isNull
 
-class ReasonPhrasesTest {
+class OkHttpRequestBodyTest {
 
   @Test
-  fun `test lookups`() {
-    expectThat(ReasonPhrases.lookup(99)).isNull()
-    expectThat(ReasonPhrases.lookup(100)).isEqualTo("Continue")
-    expectThat(ReasonPhrases.lookup(200)).isEqualTo("OK")
-    expectThat(ReasonPhrases.lookup(300)).isEqualTo("Multiple Choices")
-    expectThat(ReasonPhrases.lookup(400)).isEqualTo("Bad Request")
-    expectThat(ReasonPhrases.lookup(500)).isEqualTo("Server Error")
-    expectThat(ReasonPhrases.lookup(600)).isNull()
-  }
+  fun `request bodies can be read`() =
+    runTest {
+      val factory = OkHttpRequestFactory(URITemplate("http://example.com"))
 
+      val request =
+        factory.request(
+          Method.Post,
+          "/body",
+          body = mapOf("a" to 1),
+          contentTypes = listOf(MediaType.JSON),
+        )
+
+      val body = request.body()
+
+      expectThat(body?.readByteArray()).isEqualTo("""{"a":1}""".encodeToByteArray())
+    }
 }

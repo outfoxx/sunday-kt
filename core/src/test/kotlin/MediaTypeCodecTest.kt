@@ -19,8 +19,10 @@ import com.fasterxml.jackson.dataformat.cbor.databind.CBORMapper
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
+import io.outfoxx.sunday.mediatypes.codecs.JSONDecoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.mediatypes.codecs.ObjectMapperEncoder
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.TextEncoder
 import io.outfoxx.sunday.mediatypes.codecs.decode
@@ -34,6 +36,7 @@ import kotlinx.io.write
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.zalando.problem.Status
 import strikt.api.expectThat
 import strikt.api.expectThrows
 import strikt.assertions.isEqualTo
@@ -135,6 +138,32 @@ class MediaTypeCodecTest {
     }
   }
 
+  @Nested
+  @DisplayName("json decoding")
+  inner class JsonCodec {
+    @Test
+    fun `test decoder handles numeric and string statuses`() {
+      val decoder = JSONDecoder.default
+
+      val numeric = decoder.decode<StatusHolder>("""{"status":400}""", typeOf<StatusHolder>())
+      val numericString = decoder.decode<StatusHolder>("""{"status":"404"}""", typeOf<StatusHolder>())
+      val nameString = decoder.decode<StatusHolder>("""{"status":"BAD_REQUEST"}""", typeOf<StatusHolder>())
+
+      expectThat(numeric.status).isEqualTo(Status.BAD_REQUEST)
+      expectThat(numericString.status).isEqualTo(Status.NOT_FOUND)
+      expectThat(nameString.status).isEqualTo(Status.BAD_REQUEST)
+    }
+  }
+
+  @Test
+  fun `test object mapper encoder writes bytes`() {
+    val encoder = ObjectMapperEncoder(JsonMapper())
+
+    val bytes = sourceBytes(encoder.encode(mapOf("a" to 1)))
+
+    expectThat(bytes).isEqualTo("""{"a":1}""".encodeToByteArray())
+  }
+
   @Test
   fun `test encoders builder registers specific codecs`() {
     val encoders =
@@ -165,3 +194,7 @@ class MediaTypeCodecTest {
 
   private fun sourceBytes(source: Source): ByteArray = source.readByteArray()
 }
+
+data class StatusHolder(
+  val status: Status,
+)

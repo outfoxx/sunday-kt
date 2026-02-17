@@ -684,6 +684,52 @@ abstract class RequestFactoryTest {
   }
 
   @Test
+  fun `test problem responses convert numeric status values`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(400)
+        .addHeader(ContentType, Problem)
+        .setBody("""{"type":"about:blank","status":499,"title":"Test"}"""),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { status?.statusCode }.isEqualTo(499)
+          }
+        }
+    }
+  }
+
+  @Test
+  fun `test problem responses convert numeric status strings`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(400)
+        .addHeader(ContentType, Problem)
+        .setBody("""{"type":"about:blank","status":"404","title":"Test"}"""),
+    )
+    server.start()
+    server.use {
+      createRequestFactory(URITemplate(server.url("/").toString()))
+        .use { requestFactory ->
+
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { status?.statusCode }.isEqualTo(404)
+          }
+        }
+    }
+  }
+
+  @Test
   fun `test non problem error responses are translated to predefined problems`() {
     val server = MockWebServer()
     server.enqueue(

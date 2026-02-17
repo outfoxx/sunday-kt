@@ -390,4 +390,11 @@ class MediaTypeTest {
 
     expectThat(mediaType.value).isEqualTo("application/vnd.test+zip;charset=utf-8")
   }
+
+  @Test
+  fun `test fromCode lookups`() {
+    expectThat(MediaType.Type.fromCode("application")).isEqualTo(MediaType.Type.Application)
+    expectThat(MediaType.Tree.fromCode("vnd.")).isEqualTo(MediaType.Tree.Vendor)
+    expectThat(MediaType.Suffix.fromCode("json")).isEqualTo(MediaType.Suffix.JSON)
+  }
 }

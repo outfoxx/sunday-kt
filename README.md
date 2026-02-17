@@ -15,14 +15,27 @@ Kotlin framework for generated REST clients.
 Maven
 -----
 
-Sunday is delivered as a Maven artifact and releases are available from Maven Central.
+Sunday is delivered as a set of Maven artifacts and releases are available from Maven Central.
+Since 1.0.0-beta.24, the previous monolithic `sunday` artifact has been split into modules.
+
+Artifacts
+---------
+
+- `sunday-core`: Core types and client abstractions.
+- `sunday-okhttp`: OkHttp-based request factory implementation.
+- `sunday-jdk`: JDK `HttpClient`-based request factory implementation.
+- `sunday-problem`: Default RFC7807 problem type (`SundayHttpProblem`) and adapters.
+- `sunday-problem-quarkus`: Quarkus `HttpProblem` integration.
+- `sunday-problem-zalando`: Zalando `problem` integration.
 
 ### Dependency Declaration
 
 ##### Gradle
 
 ```kotlin
-implementation("io.outfoxx.sunday:sunday:$version")
+implementation("io.outfoxx.sunday:sunday-core:$version")
+implementation("io.outfoxx.sunday:sunday-okhttp:$version") // or sunday-jdk
+implementation("io.outfoxx.sunday:sunday-problem:$version") // or sunday-problem-quarkus / sunday-problem-zalando
 ```
 
 ##### Maven
@@ -30,10 +43,58 @@ implementation("io.outfoxx.sunday:sunday:$version")
 ```xml
 <dependency>
   <groupId>io.outfoxx.sunday</groupId>
-  <artifactId>sunday</artifactId>
+  <artifactId>sunday-core</artifactId>
+  <version>${sunday.version}</version>
+</dependency>
+<dependency>
+  <groupId>io.outfoxx.sunday</groupId>
+  <artifactId>sunday-okhttp</artifactId>
+  <version>${sunday.version}</version>
+</dependency>
+<dependency>
+  <groupId>io.outfoxx.sunday</groupId>
+  <artifactId>sunday-problem</artifactId>
   <version>${sunday.version}</version>
 </dependency>
 ```
+
+Default Factories
+-----------------
+
+Request factory and problem modules now register SPI providers for automatic discovery.
+Use `DefaultFactories` to create instances without wiring implementations manually:
+
+```kotlin
+val requestFactory = DefaultFactories.requestFactory(
+  URITemplate("https://api.example.com"),
+)
+```
+
+If multiple providers are on the classpath, specify which one to use:
+
+```kotlin
+val requestFactory = DefaultFactories.requestFactory(
+  URITemplate("https://api.example.com"),
+  providerId = "okhttp", // "okhttp" or "jdk"
+)
+
+val problemFactory = DefaultFactories.problemFactory(
+  providerId = "quarkus", // "sunday", "quarkus", or "zalando"
+)
+```
+
+Problem providers are chosen by highest priority when multiple are present; if there is a
+tie, or if multiple request providers are present, specify `providerId` explicitly.
+
+Major Changes Since 1.0.0-beta.24
+---------------------------------
+
+- New problem abstraction (`Problem`, `ProblemFactory`, `ProblemAdapter`) decouples Sunday from
+  any specific problem library while still allowing integration modules.
+- Failure responses now decode RFC7807 problems into registered types or `ProblemFactory`-built
+  problems; non-problem error bodies are attached as `responseText` or `responseData` extensions.
+- Added `io.outfoxx.sunday.http.Status` to model HTTP status codes and reason phrases consistently
+  across core and problem modules.
 
 
 License

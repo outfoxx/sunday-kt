@@ -14,4 +14,5 @@ dependencies {
   implementation(libs.ktlint.gradle.plugin)
   implementation(libs.licenser.gradle.plugin)
   implementation(libs.vanniktech.maven.publish.gradle.plugin)
+  implementation(libs.kover.gradle.plugin)
 }

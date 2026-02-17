@@ -58,6 +58,8 @@ jobs:
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        -Pgithub.token=${{ secrets.GITHUB_TOKEN }}
         githubRelease
         -x test
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

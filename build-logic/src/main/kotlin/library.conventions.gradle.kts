@@ -6,6 +6,7 @@ plugins {
   kotlin("jvm")
   id("org.jetbrains.dokka-javadoc")
   id("org.jlleitschuh.gradle.ktlint")
+  id("org.jetbrains.kotlinx.kover")
 }
 
 

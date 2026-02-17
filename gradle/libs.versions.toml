@@ -1,23 +1,23 @@
 [versions]
 kotlin = "2.3.10"
-kover = "0.8.3"
+kover = "0.9.7"
 ktlint = "14.0.1"
 dokka = "2.1.0"
 licenser = "1.2.0"
 githubRelease = "2.5.2"
-sonarqube = "5.1.0.4882"
+sonarqube = "7.2.2.6593"
 vanniktechPublish = "0.36.0"
 zalando-problem = "0.27.1"
-checker-qual = "3.49.1"
+checker-qual = "3.53.0"
 
-slf4j = "2.0.4"
+slf4j = "2.0.17"
 kotlinCoroutines = "1.10.2"
 kotlinIO = "0.8.2"
 uriTemplate = "1.3.0"
-jackson = "2.19.4"
+jackson = "2.21.0"
 okhttp = "4.12.0"
-junit = "5.10.2"
-junitPlatform = "1.10.2"
+junit = "5.14.3"
+junitPlatform = "1.14.2"
 strikt = "0.35.1"
 
 [libraries]
@@ -60,6 +60,7 @@ dokka-javadoc-gradle-plugin = { module = "org.jetbrains.dokka-javadoc:org.jetbra
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle:ktlint-gradle", version.ref = "ktlint" }
 licenser-gradle-plugin = { module = "net.minecraftforge.licenser:net.minecraftforge.licenser.gradle.plugin", version.ref = "licenser" }
 vanniktech-maven-publish-gradle-plugin = { module = "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin", version.ref = "vanniktechPublish" }
+kover-gradle-plugin = { module="org.jetbrains.kotlinx.kover:org.jetbrains.kotlinx.kover.gradle.plugin", version.ref = "kover" }
 
 [bundles]
 kotlin-io = ["kotlinx-io-core", "kotlinx-io-bytestring"]

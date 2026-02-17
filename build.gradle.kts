@@ -1,9 +1,9 @@
 
 plugins {
-  alias(libs.plugins.dokka)
-  alias(libs.plugins.kotlin.jvm) apply false
-  alias(libs.plugins.github.release)
   alias(libs.plugins.sonarqube)
+  alias(libs.plugins.dokka)
+  alias(libs.plugins.github.release)
+  alias(libs.plugins.kotlin.jvm) apply false // For dokka even though plugins are applied by conventions
 }
 
 val releaseVersion: String by project

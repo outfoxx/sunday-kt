@@ -30,12 +30,14 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.io.Buffer
+import kotlinx.io.Source
+import kotlinx.io.buffered
+import kotlinx.io.okio.asKotlinxIoRawSource
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.internal.connection.RealCall
-import okio.Buffer
-import okio.BufferedSource
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.URI
@@ -69,11 +71,11 @@ open class OkHttpRequest(
   override val headers: Headers
     get() = request.headers
 
-  override suspend fun body(): BufferedSource? =
+  override suspend fun body(): Source? =
     request.body?.let { requestBody ->
-      val buffer = Buffer()
+      val buffer = okio.Buffer()
       requestBody.writeTo(buffer)
-      buffer
+      buffer.asKotlinxIoRawSource().buffered()
     }
 
   override suspend fun execute(): OkHttpResponse {
@@ -166,7 +168,7 @@ open class OkHttpRequest(
               while (isActive && scope.isActive) {
                 val buffer = Buffer()
 
-                val bytesRead = body.source().read(buffer, READ_SIZE)
+                val bytesRead = body.source().asKotlinxIoRawSource().buffered().readAtMostTo(buffer, READ_SIZE)
                 if (bytesRead == EOF) {
                   break
                 }

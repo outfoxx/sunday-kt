@@ -16,9 +16,9 @@
 
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.add
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.hasSize
 import java.util.UUID
 
 class PathEncodersTest {
@@ -26,13 +26,13 @@ class PathEncodersTest {
   @Test
   fun `adding implicitly typed encoders`() {
     val encoders = PathEncoders.default.add(UUID::toString)
-    assertThat(encoders, Matchers.aMapWithSize(2))
+    expectThat(encoders).hasSize(2)
   }
 
   @Test
   fun `adding explicitly typed encoders`() {
     val encoders = PathEncoders.default.add(UUID::class, UUID::toString)
-    assertThat(encoders, Matchers.aMapWithSize(2))
+    expectThat(encoders).hasSize(2)
   }
 
 }

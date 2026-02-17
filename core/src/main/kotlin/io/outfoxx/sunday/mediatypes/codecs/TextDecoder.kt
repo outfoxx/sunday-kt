@@ -16,8 +16,8 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.Source
-import okio.buffer
+import kotlinx.io.Source
+import kotlinx.io.readString
 import java.nio.charset.Charset
 import kotlin.reflect.KType
 
@@ -45,7 +45,7 @@ class TextDecoder(
   ): T =
     @Suppress("UNCHECKED_CAST")
     when (type.classifier) {
-      String::class, CharSequence::class -> data.buffer().readString(charset) as T
+      String::class, CharSequence::class -> data.readString(charset) as T
       else -> throw IllegalArgumentException("Unsupported type for text decode")
     }
 

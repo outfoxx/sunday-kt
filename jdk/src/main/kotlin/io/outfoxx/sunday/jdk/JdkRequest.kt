@@ -29,8 +29,9 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.jdk9.collect
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
-import okio.Buffer
-import okio.BufferedSource
+import kotlinx.io.Buffer
+import kotlinx.io.Source
+import kotlinx.io.write
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
@@ -70,7 +71,7 @@ open class JdkRequest(
     request.headers().map().flatMap { entry -> entry.value.map { entry.key to it } }
   }
 
-  override suspend fun body(): BufferedSource? {
+  override suspend fun body(): Source? {
     val bodyPublisher = request.bodyPublisher().orElse(null) ?: return null
     val requestBody = Buffer()
     bodyPublisher.collect { requestBody.write(it) }
@@ -116,12 +117,12 @@ open class JdkRequest(
       }
     }
 
-  class BufferedSourceBodyHandler : BodyHandler<BufferedSource> {
+  class BufferedSourceBodyHandler : BodyHandler<Source> {
 
-    class Subscriber : BodySubscriber<BufferedSource> {
+    class Subscriber : BodySubscriber<Source> {
 
       private val buffer = Buffer()
-      private var bodyFuture = CompletableFuture<BufferedSource>()
+      private var bodyFuture = CompletableFuture<Source>()
       private var subscription: Subscription? = null
 
       fun cancel() {
@@ -145,7 +146,7 @@ open class JdkRequest(
         bodyFuture.complete(buffer)
       }
 
-      override fun getBody(): CompletionStage<BufferedSource> = bodyFuture
+      override fun getBody(): CompletionStage<Source> = bodyFuture
 
     }
 
@@ -155,7 +156,7 @@ open class JdkRequest(
       subscriber?.cancel()
     }
 
-    override fun apply(responseInfo: HttpResponse.ResponseInfo?): BodySubscriber<BufferedSource> {
+    override fun apply(responseInfo: HttpResponse.ResponseInfo?): BodySubscriber<Source> {
       subscriber = Subscriber()
       return subscriber!!
     }

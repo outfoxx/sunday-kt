@@ -48,7 +48,7 @@ class MediaType(
   }
 
   /**
-   * Allowed types of media type.
+   * Allowed types of a media type.
    */
   enum class Type(
     val code: String,
@@ -71,15 +71,15 @@ class MediaType(
       /**
        * Looks up a [Type] from a media type code.
        *
-       * @param code Code name of type.
+       * @param code Code name of a type.
        * @return [Type] instance matching the [code].
        */
-      fun fromCode(code: String) = values().firstOrNull { it.code == code }
+      fun fromCode(code: String) = entries.firstOrNull { it.code == code }
     }
   }
 
   /**
-   * Allowed trees of media type.
+   * Allowed trees of a media type.
    */
   enum class Tree(
     val code: String,
@@ -97,15 +97,15 @@ class MediaType(
       /**
        * Looks up a [Tree] from a media type code.
        *
-       * @param code Code name of tree.
+       * @param code Code name of a tree.
        * @return [Tree] instance matching the [code].
        */
-      fun fromCode(code: String) = values().firstOrNull { it.code == code }
+      fun fromCode(code: String) = entries.firstOrNull { it.code == code }
     }
   }
 
   /**
-   * Allowed suffixes of media type.
+   * Allowed suffixes of a media type.
    */
   enum class Suffix(
     val code: String,
@@ -128,7 +128,7 @@ class MediaType(
        * @param code Code name of suffix.
        * @return [Suffix] instance matching the [code].
        */
-      fun fromCode(code: String) = values().firstOrNull { it.code == code }
+      fun fromCode(code: String) = entries.firstOrNull { it.code == code }
     }
   }
 
@@ -269,10 +269,10 @@ class MediaType(
   companion object {
 
     /**
-     * Parses a list of Accept headers into a list of [media types][MediaType].
+     * Parses a list of `Accept` headers into a list of [media types][MediaType].
      *
-     * @param acceptHeaders Accept headers to parse into media types.
-     * @return List of [media types][MediaType] parsed from the given Accept headers.
+     * @param acceptHeaders `Accept` headers to parse into media types.
+     * @return List of [media types][MediaType] parsed from the given `Accept` headers.
      */
     fun from(acceptHeaders: List<String>): List<MediaType> =
       acceptHeaders.flatMap { header -> header.split(",") }.map { from(it.trim()) }

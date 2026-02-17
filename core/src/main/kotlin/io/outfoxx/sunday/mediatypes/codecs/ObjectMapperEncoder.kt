@@ -17,8 +17,8 @@
 package io.outfoxx.sunday.mediatypes.codecs
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import okio.Buffer
-import okio.Source
+import kotlinx.io.Buffer
+import kotlinx.io.Source
 
 /**
  * Common Jackson [ObjectMapper] encoder that supports encoding
@@ -28,5 +28,9 @@ open class ObjectMapperEncoder(
   private val objectMapper: ObjectMapper,
 ) : MediaTypeEncoder {
 
-  override fun <B> encode(value: B): Source = Buffer().write(objectMapper.writeValueAsBytes(value))
+  override fun <B> encode(value: B): Source {
+    val buffer = Buffer()
+    buffer.write(objectMapper.writeValueAsBytes(value))
+    return buffer
+  }
 }

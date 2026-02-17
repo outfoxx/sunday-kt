@@ -16,23 +16,22 @@
 
 package io.outfoxx.sunday.jdk
 
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.`is`
-import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
 
 class ReasonPhrasesTest {
 
   @Test
   fun `test lookups`() {
-    assertThat(ReasonPhrases.lookup(99), `is`(nullValue()))
-    assertThat(ReasonPhrases.lookup(100), equalTo("Continue"))
-    assertThat(ReasonPhrases.lookup(200), equalTo("OK"))
-    assertThat(ReasonPhrases.lookup(300), equalTo("Multiple Choices"))
-    assertThat(ReasonPhrases.lookup(400), equalTo("Bad Request"))
-    assertThat(ReasonPhrases.lookup(500), equalTo("Server Error"))
-    assertThat(ReasonPhrases.lookup(600), `is`(nullValue()))
+    expectThat(ReasonPhrases.lookup(99)).isNull()
+    expectThat(ReasonPhrases.lookup(100)).isEqualTo("Continue")
+    expectThat(ReasonPhrases.lookup(200)).isEqualTo("OK")
+    expectThat(ReasonPhrases.lookup(300)).isEqualTo("Multiple Choices")
+    expectThat(ReasonPhrases.lookup(400)).isEqualTo("Bad Request")
+    expectThat(ReasonPhrases.lookup(500)).isEqualTo("Server Error")
+    expectThat(ReasonPhrases.lookup(600)).isNull()
   }
 
 }

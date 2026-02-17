@@ -19,7 +19,7 @@ package io.outfoxx.sunday.jdk
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import okio.BufferedSource
+import kotlinx.io.Source
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
 
@@ -27,7 +27,7 @@ import java.net.http.HttpResponse
  * JDK11 HTTP Client implementation of [Response] based on [HttpResponse].
  */
 class JdkResponse(
-  private val response: HttpResponse<BufferedSource>,
+  private val response: HttpResponse<Source>,
   private val httpClient: HttpClient,
 ) : Response {
 
@@ -42,7 +42,7 @@ class JdkResponse(
     response.headers().map().flatMap { entry -> entry.value.map { entry.key to it } }
   }
 
-  override val body: BufferedSource?
+  override val body: Source?
     get() = response.body()
 
   override val trailers: Headers?

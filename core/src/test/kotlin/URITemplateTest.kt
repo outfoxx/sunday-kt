@@ -18,9 +18,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.URITemplate
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 import java.util.UUID
 import kotlin.reflect.KClass
 
@@ -39,7 +39,7 @@ class URITemplateTest {
         .toURI()
         .toString()
 
-    assertThat(path, equalTo("http://example.com/test-value"))
+    expectThat(path).isEqualTo("http://example.com/test-value")
   }
 
   @Test
@@ -50,7 +50,7 @@ class URITemplateTest {
         .toURI()
         .toString()
 
-    assertThat(path, equalTo("http://example.com/test-value"))
+    expectThat(path).isEqualTo("http://example.com/test-value")
   }
 
   @Test
@@ -67,10 +67,8 @@ class URITemplateTest {
         .toURI()
         .toString()
 
-    assertThat(
-      path,
-      equalTo("http://example.com/objects/${id.toString().replace("-", "")}"),
-    )
+    expectThat(path)
+      .isEqualTo("http://example.com/objects/${id.toString().replace("-", "")}")
   }
 
 }

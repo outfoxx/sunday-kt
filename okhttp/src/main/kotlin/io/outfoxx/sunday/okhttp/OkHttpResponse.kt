@@ -18,8 +18,10 @@ package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Response
+import kotlinx.io.Source
+import kotlinx.io.buffered
+import kotlinx.io.okio.asKotlinxIoRawSource
 import okhttp3.OkHttpClient
-import okio.BufferedSource
 
 /**
  * Okhttp implementation of [Response].
@@ -38,14 +40,14 @@ class OkHttpResponse(
   override val headers: Headers
     get() = response.headers
 
-  override val body: BufferedSource?
-    get() = response.body?.source()
+  override val body: Source?
+    get() = response.body?.source()?.asKotlinxIoRawSource()?.buffered()
 
   override val trailers: Headers?
     get() =
       try {
         response.trailers()
-      } catch (ignored: IllegalStateException) {
+      } catch (_: IllegalStateException) {
         null
       }
 

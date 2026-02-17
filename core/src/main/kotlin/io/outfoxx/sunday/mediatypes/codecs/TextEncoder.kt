@@ -16,8 +16,9 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.Buffer
-import okio.Source
+import kotlinx.io.Buffer
+import kotlinx.io.Source
+import kotlinx.io.writeString
 import java.nio.charset.Charset
 
 /**
@@ -40,8 +41,18 @@ class TextEncoder(
 
   override fun <B> encode(value: B): Source =
     when (value) {
-      is String -> Buffer().writeString(value, charset)
-      is CharSequence -> Buffer().writeString(value.toString(), charset)
+      is String -> {
+        val buffer = Buffer()
+        buffer.writeString(value, charset)
+        buffer
+      }
+
+      is CharSequence -> {
+        val buffer = Buffer()
+        buffer.writeString(value.toString(), charset)
+        buffer
+      }
+
       else -> throw IllegalArgumentException("Unsupported value for text encode")
     }
 }

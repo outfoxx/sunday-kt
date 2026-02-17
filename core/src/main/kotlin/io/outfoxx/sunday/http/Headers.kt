@@ -47,6 +47,6 @@ fun Headers.getAll(name: String): Iterable<String> =
 
 
 /**
- * Converts the header list into an equivalent multi-map.
+ * Converts the header list into an equivalent multimap.
  */
 fun Headers.toMultiMap(): Map<String, List<String>> = groupBy({ it.first.lowercase() }, { it.second })

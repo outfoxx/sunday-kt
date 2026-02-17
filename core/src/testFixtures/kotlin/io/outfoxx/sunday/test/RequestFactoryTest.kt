@@ -16,7 +16,7 @@
 
 package io.outfoxx.sunday.test
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.CBOR
@@ -34,34 +34,34 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames
 import io.outfoxx.sunday.http.HeaderNames.ContentType
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.getFirst
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
-import io.outfoxx.sunday.test.Implementation.JDK
-import io.outfoxx.sunday.test.Implementation.OkHttp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.io.readByteArray
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.anEmptyMap
-import org.hamcrest.Matchers.contains
-import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.hasEntry
-import org.hamcrest.Matchers.hasItem
-import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 import org.zalando.problem.AbstractThrowableProblem
-import org.zalando.problem.DefaultProblem
+import org.zalando.problem.Exceptional
 import org.zalando.problem.Status
 import org.zalando.problem.ThrowableProblem
+import strikt.api.expectThat
+import strikt.api.expectThrows
+import strikt.assertions.contains
+import strikt.assertions.containsKey
+import strikt.assertions.getValue
+import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
 import java.net.URI
 import kotlin.coroutines.resume
 import kotlin.reflect.typeOf
@@ -95,8 +95,8 @@ abstract class RequestFactoryTest {
     createRequestFactory(URITemplate("http://example.com"), specialEncoders, specialDecoders)
       .use { requestFactory ->
 
-        assertThat(requestFactory.mediaTypeEncoders, equalTo(specialEncoders))
-        assertThat(requestFactory.mediaTypeDecoders, equalTo(specialDecoders))
+        expectThat(requestFactory.mediaTypeEncoders).isEqualTo(specialEncoders)
+        expectThat(requestFactory.mediaTypeDecoders).isEqualTo(specialDecoders)
       }
   }
 
@@ -106,44 +106,36 @@ abstract class RequestFactoryTest {
    */
 
   @Test
-  fun `encodes path parameters`() {
+  fun `encodes path parameters`() = runTest {
     createRequestFactory(URITemplate("http://example.com/{id}"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/encoded-params",
-              pathParameters = mapOf("id" to 123),
-            )
-          }
+          requestFactory.request(
+            Method.Get,
+            "/encoded-params",
+            pathParameters = mapOf("id" to 123),
+          )
 
-        assertThat(
-          request.uri,
-          equalTo(URI("http://example.com/123/encoded-params")),
-        )
+        expectThat(request.uri)
+          .isEqualTo(URI("http://example.com/123/encoded-params"))
       }
   }
 
   @Test
-  fun `encodes query parameters`() {
+  fun `encodes query parameters`() = runTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/encode-query-params",
-              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
-            )
-          }
+          requestFactory.request(
+            Method.Get,
+            "/encode-query-params",
+            queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+          )
 
-        assertThat(
-          request.uri,
-          equalTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202")),
-        )
+        expectThat(request.uri)
+          .isEqualTo(URI("http://example.com/encode-query-params?limit=5&search=1%20%26%202"))
       }
   }
 
@@ -159,18 +151,15 @@ abstract class RequestFactoryTest {
           .build(),
     ).use { requestFactory ->
 
-      val error =
-        assertThrows<SundayError> {
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/encode-query-params",
-              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
-            )
-          }
-        }
-
-      assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+      expectThrows<SundayError> {
+        requestFactory.request(
+          Method.Get,
+          "/encode-query-params",
+          queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+        )
+      }.and {
+        get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+      }
     }
   }
 
@@ -181,58 +170,49 @@ abstract class RequestFactoryTest {
       encoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build(),
     ).use { requestFactory ->
 
-      val error =
-        assertThrows<SundayError> {
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/encode-query-params",
-              queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
-            )
-          }
-        }
-
-      assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
-      assertThat(error.message, containsString(URLQueryParamsEncoder::class.simpleName))
+      expectThrows<SundayError> {
+        requestFactory.request(
+          Method.Get,
+          "/encode-query-params",
+          queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
+        )
+      }.and {
+        get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+        get { message.orEmpty() }.contains(URLQueryParamsEncoder::class.simpleName ?: "")
+      }
     }
   }
 
   @Test
-  fun `adds custom headers`() {
+  fun `adds custom headers`() = runTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/add-custom-headers",
-              headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
-            )
-          }
+          requestFactory.request(
+            Method.Get,
+            "/add-custom-headers",
+            headers = mapOf(HeaderNames.Authorization to "Bearer 12345"),
+          )
 
-        assertThat(request.headers, contains(HeaderNames.Authorization to "Bearer 12345"))
+        expectThat(request.headers).contains(HeaderNames.Authorization to "Bearer 12345")
       }
   }
 
   @Test
-  fun `adds accept headers`() {
+  fun `adds accept headers`() = runTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/add-accept-headers",
-              acceptTypes = listOf(JSON, CBOR),
-            )
-          }
+          requestFactory.request(
+            Method.Get,
+            "/add-accept-headers",
+            acceptTypes = listOf(JSON, CBOR),
+          )
 
-        assertThat(
-          request.headers,
-          contains(HeaderNames.Accept to "application/json , application/cbor"),
-        )
+        expectThat(request.headers)
+          .contains(HeaderNames.Accept to "application/json , application/cbor")
       }
   }
 
@@ -243,18 +223,15 @@ abstract class RequestFactoryTest {
       decoders = MediaTypeDecoders.Builder().build(),
     ).use { requestFactory ->
 
-      val error =
-        assertThrows<SundayError> {
-          runBlocking {
-            requestFactory.request(
-              Method.Get,
-              "/add-accept-headers",
-              acceptTypes = listOf(JSON, CBOR),
-            )
-          }
-        }
-
-      assertThat(error.reason, equalTo(NoSupportedAcceptTypes))
+      expectThrows<SundayError> {
+        requestFactory.request(
+          Method.Get,
+          "/add-accept-headers",
+          acceptTypes = listOf(JSON, CBOR),
+        )
+      }.and {
+        get { reason }.isEqualTo(NoSupportedAcceptTypes)
+      }
     }
   }
 
@@ -263,57 +240,50 @@ abstract class RequestFactoryTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
-        val error =
-          assertThrows<SundayError> {
-            runBlocking {
-              requestFactory.request(
-                Method.Post,
-                "/add-accept-headers",
-                body = "a body",
-                contentTypes = listOf(MediaType.from("application/x-unknown")),
-              )
-            }
-          }
-
-        assertThat(error.reason, equalTo(NoSupportedContentTypes))
+        expectThrows<SundayError> {
+          requestFactory.request(
+            Method.Post,
+            "/add-accept-headers",
+            body = "a body",
+            contentTypes = listOf(MediaType.from("application/x-unknown")),
+          )
+        }.and {
+          get { reason }.isEqualTo(NoSupportedContentTypes)
+        }
       }
   }
 
   @Test
-  fun `attaches encoded body based on content-type`() {
+  fun `attaches encoded body based on content-type`() = runTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Post,
-              "/attach-body",
-              body = mapOf("a" to 5),
-              contentTypes = listOf(JSON),
-            )
-          }
+          requestFactory.request(
+            Method.Post,
+            "/attach-body",
+            body = mapOf("a" to 5),
+            contentTypes = listOf(JSON),
+          )
 
-        val body = runBlocking { request.body() }
-        assertThat(body?.readByteArray(), equalTo("""{"a":5}""".encodeToByteArray()))
+        val body = request.body()
+        expectThat(body?.readByteArray()).isEqualTo("""{"a":5}""".encodeToByteArray())
       }
   }
 
   @Test
-  fun `set content-type when body is non-existent`() {
+  fun `set content-type when body is non-existent`() = runTest {
     createRequestFactory(URITemplate("http://example.com"))
       .use { requestFactory ->
 
         val request =
-          runBlocking {
-            requestFactory.request(
-              Method.Post,
-              "/attach-body",
-              contentTypes = listOf(JSON),
-            )
-          }
+          requestFactory.request(
+            Method.Post,
+            "/attach-body",
+            contentTypes = listOf(JSON),
+          )
 
-        assertThat(request.headers, contains(ContentType to "application/json"))
+        expectThat(request.headers).contains(ContentType to "application/json")
       }
   }
 
@@ -322,7 +292,7 @@ abstract class RequestFactoryTest {
    */
 
   @Test
-  fun `fetches typed results`() {
+  fun `fetches typed results`() = runTest {
     data class Tester(
       val name: String,
       val count: Int,
@@ -343,21 +313,19 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val result =
-            runBlocking {
-              requestFactory.resultResponse<Tester>(
-                Method.Get,
-                "",
-              )
-            }
+            requestFactory.resultResponse<Tester>(
+              Method.Get,
+              "",
+            )
 
-          assertThat(result.headers, hasItem(ContentType to "application/json"))
-          assertThat(result.result, equalTo(tester))
+          expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+          expectThat(result.result).isEqualTo(tester)
         }
     }
   }
 
   @Test
-  fun `fetches typed results with body`() {
+  fun `fetches typed results with body`() = runTest {
     data class Tester(
       val name: String,
       val count: Int,
@@ -378,22 +346,20 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val result =
-            runBlocking {
-              requestFactory.resultResponse<Unit, Tester>(
-                Method.Get,
-                "",
-                body = null,
-              )
-            }
+            requestFactory.resultResponse<Unit, Tester>(
+              Method.Get,
+              "",
+              body = null,
+            )
 
-          assertThat(result.headers, hasItem(ContentType to "application/json"))
-          assertThat(result.result, equalTo(tester))
+          expectThat(result.headers.getFirst(ContentType)).isEqualTo("application/json")
+          expectThat(result.result).isEqualTo(tester)
         }
     }
   }
 
   @Test
-  fun `executes requests with empty responses`() {
+  fun `executes requests with empty responses`() = runTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
@@ -404,17 +370,13 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          assertDoesNotThrow {
-            runBlocking {
-              requestFactory.result<Unit>(Method.Post, "")
-            }
-          }
+          requestFactory.result<Unit>(Method.Post, "")
         }
     }
   }
 
   @Test
-  fun `executes manual requests for responses`() {
+  fun `executes manual requests for responses`() = runTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
@@ -428,17 +390,15 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val response =
-            runBlocking {
-              requestFactory.response(Method.Get, "")
-            }
+            requestFactory.response(Method.Get, "")
 
-          assertThat(response.body?.readByteArray(), equalTo("[]".encodeToByteArray()))
+          expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
         }
     }
   }
 
   @Test
-  fun `executes manual requests with body for responses`() {
+  fun `executes manual requests with body for responses`() = runTest {
     val server = MockWebServer()
     server.enqueue(
       MockResponse()
@@ -452,11 +412,9 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val response =
-            runBlocking {
-              requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
-            }
+            requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
 
-          assertThat(response.body?.readByteArray(), equalTo("[]".encodeToByteArray()))
+          expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
         }
     }
   }
@@ -475,18 +433,14 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val problem =
-            assertThrows<ThrowableProblem> {
-              runBlocking {
-                requestFactory.result<Unit, List<String>>(Method.Get, "", body = null)
-              }
-            }
+          val expectedReasonPhrase: String? = null
 
-          assertThat(problem.status?.statusCode, equalTo(484))
-          assertThat(problem.title, equalTo(problem.status?.reasonPhrase))
-          when (implementation) {
-            OkHttp -> assertThat(problem.status?.reasonPhrase, equalTo("Special Status"))
-            JDK -> assertThat(problem.status?.reasonPhrase, nullValue())
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<Unit, List<String>>(Method.Get, "", body = null)
+          }.and {
+            get { status?.statusCode }.isEqualTo(484)
+            get { status?.reasonPhrase }.isEqualTo(expectedReasonPhrase)
+            get { title }.isNull()
           }
         }
     }
@@ -504,14 +458,10 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking {
-                requestFactory.result<Array<String>>(Method.Get, "")
-              }
+          expectThrows<SundayError> { requestFactory.result<Array<String>>(Method.Get, "") }
+            .and {
+              get { reason }.isEqualTo(SundayError.Reason.UnexpectedEmptyResponse)
             }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.UnexpectedEmptyResponse))
         }
     }
   }
@@ -528,14 +478,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking {
-                requestFactory.result<Array<String>>(Method.Get, "")
-              }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.NoData))
+          expectThrows<SundayError> {
+            requestFactory.result<Array<String>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.NoData)
+          }
         }
     }
   }
@@ -553,15 +500,12 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking {
-                requestFactory.result<Array<String>>(Method.Get, "")
-              }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
-          assertThat(error.message, containsString("<none provided>"))
+          expectThrows<SundayError> {
+            requestFactory.result<Array<String>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.InvalidContentType)
+            get { message.orEmpty() }.contains("<none provided>")
+          }
         }
     }
   }
@@ -580,15 +524,12 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking {
-                requestFactory.result<Array<String>>(Method.Get, "")
-              }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.InvalidContentType))
-          assertThat(error.message, containsString("bad/x-unknown"))
+          expectThrows<SundayError> {
+            requestFactory.result<Array<String>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.InvalidContentType)
+            get { message.orEmpty() }.contains("bad/x-unknown")
+          }
         }
     }
   }
@@ -607,14 +548,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking {
-                requestFactory.result<Array<String>>(Method.Get, "")
-              }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+          expectThrows<SundayError> {
+            requestFactory.result<Array<String>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+          }
         }
     }
   }
@@ -633,12 +571,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+          expectThrows<SundayError> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+          }
         }
     }
   }
@@ -657,12 +594,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<SundayError> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.reason, equalTo(SundayError.Reason.ResponseDecodingFailed))
+          expectThrows<SundayError> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.ResponseDecodingFailed)
+          }
         }
     }
   }
@@ -688,18 +624,17 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
           requestFactory.registerProblem(TestProblem.TYPE, TestProblem::class)
 
-          val error =
-            assertThrows<TestProblem> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.type, equalTo(testProblem.type))
-          assertThat(error.title, equalTo(testProblem.title))
-          assertThat(error.status, equalTo(testProblem.status))
-          assertThat(error.detail, equalTo(testProblem.detail))
-          assertThat(error.instance, equalTo(testProblem.instance))
-          assertThat(error.parameters, equalTo(testProblem.parameters))
-          assertThat(error.extra, equalTo(testProblem.extra))
+          expectThrows<TestProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { type }.isEqualTo(testProblem.type)
+            get { title }.isEqualTo(testProblem.title)
+            get { status }.isEqualTo(testProblem.status)
+            get { detail }.isEqualTo(testProblem.detail)
+            get { instance }.isEqualTo(testProblem.instance)
+            get { parameters }.isEqualTo(testProblem.parameters)
+            get { extra }.isEqualTo(testProblem.extra)
+          }
         }
     }
   }
@@ -720,17 +655,19 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<DefaultProblem> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.type, equalTo(testProblem.type))
-          assertThat(error.title, equalTo(testProblem.title))
-          assertThat(error.status, equalTo(testProblem.status))
-          assertThat(error.detail, equalTo(testProblem.detail))
-          assertThat(error.instance, equalTo(testProblem.instance))
-          assertThat(error.parameters, hasEntry("extra", testProblem.extra))
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { type }.isEqualTo(testProblem.type)
+            get { title }.isEqualTo(testProblem.title)
+            get { status }.isEqualTo(testProblem.status)
+            get { detail }.isEqualTo(testProblem.detail)
+            get { instance }.isEqualTo(testProblem.instance)
+            get { parameters }
+              .containsKey("extra")
+              .getValue("extra")
+              .isEqualTo(testProblem.extra)
+          }
         }
     }
   }
@@ -749,17 +686,19 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<DefaultProblem> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.type, equalTo(URI("about:blank")))
-          assertThat(error.title, equalTo("Bad Request"))
-          assertThat(error.status, equalTo(Status.BAD_REQUEST))
-          assertThat(error.detail, nullValue())
-          assertThat(error.instance, nullValue())
-          assertThat(error.parameters, hasEntry("responseText", "<error>An Error Occurred</error>"))
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { type }.isEqualTo(URI("about:blank"))
+            get { title }.isNull()
+            get { status }.isEqualTo(Status.BAD_REQUEST)
+            get { detail }.isNull()
+            get { instance }.isNull()
+            get { parameters }
+              .containsKey("responseText")
+              .getValue("responseText")
+              .isEqualTo("<error>An Error Occurred</error>")
+          }
         }
     }
   }
@@ -777,17 +716,16 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          val error =
-            assertThrows<DefaultProblem> {
-              runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-            }
-
-          assertThat(error.type, equalTo(URI("about:blank")))
-          assertThat(error.title, equalTo("Bad Request"))
-          assertThat(error.status, equalTo(Status.BAD_REQUEST))
-          assertThat(error.detail, nullValue())
-          assertThat(error.instance, nullValue())
-          assertThat(error.parameters, anEmptyMap())
+          expectThrows<ThrowableProblem> {
+            requestFactory.result<String>(Method.Get, "/problem")
+          }.and {
+            get { type }.isEqualTo(URI("about:blank"))
+            get { title }.isNull()
+            get { status }.isEqualTo(Status.BAD_REQUEST)
+            get { detail }.isNull()
+            get { instance }.isNull()
+            get { parameters }.isEmpty()
+          }
         }
     }
   }
@@ -808,12 +746,11 @@ abstract class RequestFactoryTest {
         decoders = MediaTypeDecoders.Builder().build(),
       ).use { requestFactory ->
 
-        val error =
-          assertThrows<SundayError> {
-            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-          }
-
-        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+        expectThrows<SundayError> {
+          requestFactory.result<String>(Method.Get, "/problem")
+        }.and {
+          get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+        }
       }
     }
   }
@@ -834,12 +771,11 @@ abstract class RequestFactoryTest {
         decoders = MediaTypeDecoders.Builder().register(TextDecoder.default, JSON).build(),
       ).use { requestFactory ->
 
-        val error =
-          assertThrows<SundayError> {
-            runBlocking { requestFactory.result<String>(Method.Get, "/problem") }
-          }
-
-        assertThat(error.reason, equalTo(SundayError.Reason.NoDecoder))
+        expectThrows<SundayError> {
+          requestFactory.result<String>(Method.Get, "/problem")
+        }.and {
+          get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
+        }
       }
     }
   }
@@ -850,7 +786,7 @@ abstract class RequestFactoryTest {
    */
 
   @Test
-  fun `builds event sources`() {
+  fun `builds event sources`() = runTest {
     val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
     val server = MockWebServer()
@@ -865,11 +801,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          runBlocking {
+          withContext(Dispatchers.IO) {
             withTimeout(5000) {
               val eventSource = requestFactory.eventSource(Method.Get, "")
               eventSource.use {
-                suspendCancellableCoroutine<Unit> { continuation ->
+                suspendCancellableCoroutine { continuation ->
                   eventSource.onMessage = { _ ->
                     continuation.resume(Unit)
                   }
@@ -884,7 +820,7 @@ abstract class RequestFactoryTest {
   }
 
   @Test
-  fun `builds event sources with explicit body`() {
+  fun `builds event sources with explicit body`() = runTest {
     val encodedEvent = "event: hello\nid: 12345\ndata: Hello World!\n\n"
 
     val server = MockWebServer()
@@ -899,11 +835,11 @@ abstract class RequestFactoryTest {
       createRequestFactory(URITemplate(server.url("/").toString()))
         .use { requestFactory ->
 
-          runBlocking {
+          withContext(Dispatchers.IO) {
             withTimeout(5000) {
               val eventSource = requestFactory.eventSource<Unit>(Method.Get, "", body = null)
               eventSource.use {
-                suspendCancellableCoroutine<Unit> { continuation ->
+                suspendCancellableCoroutine { continuation ->
                   eventSource.onMessage = { _ ->
                     continuation.resume(Unit)
                   }
@@ -918,7 +854,7 @@ abstract class RequestFactoryTest {
   }
 
   @Test
-  fun `builds event streams`() {
+  fun `builds event streams`() = runTest {
     val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
     val server = MockWebServer()
@@ -934,7 +870,7 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val result =
-            runBlocking {
+            withContext(Dispatchers.IO) {
               withTimeout(50000) {
                 val eventStream =
                   requestFactory.eventStream(
@@ -955,13 +891,16 @@ abstract class RequestFactoryTest {
               }
             }
 
-          assertThat(result, hasEntry("target", "world"))
+          expectThat(result)
+            .containsKey("target")
+            .getValue("target")
+            .isEqualTo("world")
         }
     }
   }
 
   @Test
-  fun `builds event streams with explicit body`() {
+  fun `builds event streams with explicit body`() = runTest {
     val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
 
     val server = MockWebServer()
@@ -977,7 +916,7 @@ abstract class RequestFactoryTest {
         .use { requestFactory ->
 
           val result =
-            runBlocking {
+            withContext(Dispatchers.IO) {
               withTimeout(50000) {
                 val eventStream =
                   requestFactory.eventStream<Unit, Map<String, Any>>(
@@ -986,7 +925,7 @@ abstract class RequestFactoryTest {
                     body = null,
                     decoder = { decoder, event, _, data, logger ->
                       when (event) {
-                        "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                        "hello" -> decoder.decode(data, typeOf<Map<String, Any>>())
                         else -> {
                           logger.error("unsupported event type")
                           null
@@ -999,21 +938,28 @@ abstract class RequestFactoryTest {
               }
             }
 
-          assertThat(result, hasEntry("target", "world"))
+          expectThat(result)
+            .containsKey("target")
+            .getValue("target")
+            .isEqualTo("world")
         }
     }
   }
 
+  @JsonIgnoreProperties(ignoreUnknown = true)
   class TestProblem(
-    @JsonProperty("extra") val extra: String,
+    extra: String,
     instance: URI? = null,
-  ) : AbstractThrowableProblem(
-      URI.create(TYPE),
-      TITLE,
-      STATUS,
-      DETAIL,
-      instance,
-    ) {
+    type: URI = URI.create(TYPE),
+    title: String? = TITLE,
+    status: Status? = STATUS,
+    detail: String? = DETAIL,
+    parameters: Map<String, Any?> = mapOf("extra" to extra),
+  ) : AbstractThrowableProblem(type, title, status, detail, instance, null, parameters) {
+
+    override fun getCause(): Exceptional? = null
+
+    var extra: String by this.parameters
 
     companion object {
 
@@ -1022,8 +968,6 @@ abstract class RequestFactoryTest {
       const val TITLE = "Test Problem"
       const val DETAIL = "A Test Problem"
     }
-
-    override fun getCause(): org.zalando.problem.Exceptional? = super.cause
   }
 
 }

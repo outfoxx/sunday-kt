@@ -16,9 +16,10 @@
 
 import io.outfoxx.sunday.mediatypes.codecs.WWWFormURLEncoder
 import io.outfoxx.sunday.utils.buffer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
+import kotlinx.io.readByteArray
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -33,10 +34,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test/data" to listOf(1, 2, 3))),
-      equalTo("test%2Fdata=1&test%2Fdata=2&test%2Fdata=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test/data" to listOf(1, 2, 3))))
+      .isEqualTo("test%2Fdata=1&test%2Fdata=2&test%2Fdata=3")
   }
 
   @Test
@@ -48,20 +47,16 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf("1/1", "1/2", "1/3", " !'()~"))),
-      equalTo("test=1%2F1&test=1%2F2&test=1%2F3&test=%20!'()~"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf("1/1", "1/2", "1/3", " !'()~"))))
+      .isEqualTo("test=1%2F1&test=1%2F2&test=1%2F3&test=%20!'()~")
   }
 
   @Test
   fun `encodes complex values`() {
     val encoder = WWWFormURLEncoder.default
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to mapOf("a" to 1, "b" to 2), "c" to "3")),
-      equalTo("c=3&test%5Ba%5D=1&test%5Bb%5D=2"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to mapOf("a" to 1, "b" to 2), "c" to "3")))
+      .isEqualTo("c=3&test%5Ba%5D=1&test%5Bb%5D=2")
   }
 
   @Test
@@ -73,10 +68,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(1, 2, 3))),
-      equalTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(1, 2, 3))))
+      .isEqualTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3")
   }
 
   @Test
@@ -88,10 +81,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(1, 2, 3))),
-      equalTo("test=1&test=2&test=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(1, 2, 3))))
+      .isEqualTo("test=1&test=2&test=3")
   }
 
   @Test
@@ -103,10 +94,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))),
-      equalTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))))
+      .isEqualTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3")
   }
 
   @Test
@@ -118,10 +107,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))),
-      equalTo("test=1&test=2&test=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to setOf(1, 2, 3))))
+      .isEqualTo("test=1&test=2&test=3")
   }
 
   @Test
@@ -133,10 +120,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))),
-      equalTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))))
+      .isEqualTo("test%5B%5D=1&test%5B%5D=2&test%5B%5D=3")
   }
 
   @Test
@@ -148,10 +133,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))),
-      equalTo("test=1&test=2&test=3"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to arrayOf(1, 2, 3))))
+      .isEqualTo("test=1&test=2&test=3")
   }
 
   @Test
@@ -163,10 +146,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(true, false))),
-      equalTo("test=1&test=0"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(true, false))))
+      .isEqualTo("test=1&test=0")
   }
 
   @Test
@@ -178,10 +159,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(true, false))),
-      equalTo("test=true&test=false"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(true, false))))
+      .isEqualTo("test=true&test=false")
   }
 
 
@@ -197,10 +176,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.ISO8601,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=2017-05-15T08%3A30%3A00.123456789Z&test=2018-06-16T02%3A40%3A10.123456789Z"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))))
+      .isEqualTo("test=2017-05-15T08%3A30%3A00.123456789Z&test=2018-06-16T02%3A40%3A10.123456789Z")
   }
 
   @Test
@@ -212,10 +189,8 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.FractionalSecondsSinceEpoch,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=1494837000.1234567&test=1529116810.1234567"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))))
+      .isEqualTo("test=1494837000.1234567&test=1529116810.1234567")
   }
 
   @Test
@@ -227,27 +202,24 @@ class WWWFormURLEncoderTest {
         WWWFormURLEncoder.DateEncoding.MillisecondsSinceEpoch,
       )
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))),
-      equalTo("test=1494837000123&test=1529116810123"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("test" to listOf(date1, date2))))
+      .isEqualTo("test=1494837000123&test=1529116810123")
   }
 
   @Test
   fun `encodes null values as flags`() {
     val encoder = WWWFormURLEncoder.default
 
-    assertThat(
-      encoder.encodeQueryString(mapOf("flagged" to null)),
-      equalTo("flagged"),
-    )
+    expectThat(encoder.encodeQueryString(mapOf("flagged" to null)))
+      .isEqualTo("flagged")
   }
 
   @Test
   fun `encodes to byte arrays`() {
     val encoder = WWWFormURLEncoder.default
 
-    assertThat(encoder.encode(mapOf("test" to 10)), equalTo("test=10".buffer()))
+    expectThat(encoder.encode(mapOf("test" to 10)).readByteArray())
+      .isEqualTo("test=10".encodeToByteArray())
   }
 
 }

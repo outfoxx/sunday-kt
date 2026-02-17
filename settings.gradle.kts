@@ -1,35 +1,22 @@
+@file:Suppress("UnstableApiUsage")
+
+import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
-
   repositories {
     gradlePluginPortal()
     mavenCentral()
   }
-
-  val kotlinPluginVersion: String by settings
-  val koverPluginVersion: String by settings
-  val dokkaPluginVersion: String by settings
-  val licenserPluginVersion: String by settings
-  val kotlinterPluginVersion: String by settings
-  val detektPluginVersion: String by settings
-  val githubReleasePluginVersion: String by settings
-  val sonarqubePluginVersion: String by settings
-  val vanniktechPublishPluginVersion: String by settings
-
-  plugins {
-    kotlin("jvm") version kotlinPluginVersion
-    id("org.jetbrains.kotlinx.kover") version koverPluginVersion
-    id("org.jetbrains.dokka") version dokkaPluginVersion
-    id("org.jetbrains.dokka-javadoc") version dokkaPluginVersion
-    id("org.cadixdev.licenser") version licenserPluginVersion
-    id("org.jmailen.kotlinter") version kotlinterPluginVersion
-    id("io.gitlab.arturbosch.detekt") version detektPluginVersion
-    id("com.github.breadmoirai.github-release") version githubReleasePluginVersion
-    id("org.sonarqube") version sonarqubePluginVersion
-    id("com.vanniktech.maven.publish") version vanniktechPublishPluginVersion
-  }
-
 }
+
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    mavenCentral()
+  }
+}
+
+includeBuild("build-logic")
 
 rootProject.name = "sunday"
 

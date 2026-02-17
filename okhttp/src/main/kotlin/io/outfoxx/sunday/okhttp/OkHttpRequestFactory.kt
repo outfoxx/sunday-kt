@@ -39,11 +39,11 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
+import kotlinx.io.readByteString
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import okio.buffer
 import org.slf4j.LoggerFactory
 import org.zalando.problem.ThrowableProblem
 import java.io.Closeable
@@ -56,8 +56,7 @@ class OkHttpRequestFactory(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-) : RequestFactory(),
-  Closeable {
+) : RequestFactory(), Closeable {
 
   companion object {
 
@@ -118,7 +117,7 @@ class OkHttpRequestFactory(
       requestBuilder.addHeader(headerName, headerValue)
     }
 
-    // Add `Accept` header based on accept types
+    // Add `Accept` header based on accepted types
     if (acceptTypes != null) {
       val supportedAcceptTypes = acceptTypes.filter(mediaTypeDecoders::supports)
       if (supportedAcceptTypes.isEmpty()) {
@@ -132,7 +131,7 @@ class OkHttpRequestFactory(
 
     val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
 
-    // Add `Content-Type` header (even if body is null, to match any expected server requirements)
+    // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.addHeader(ContentType, contentType.toString()) }
 
     var requestBody =
@@ -143,12 +142,12 @@ class OkHttpRequestFactory(
           mediaTypeEncoders.find(contentType)
             ?: error("Cannot find encoder that was reported as supported")
 
-        val encodedBody = mediaTypeEncoder.encode(body).buffer().readByteString()
+        val encodedBody = mediaTypeEncoder.encode(body).readByteString().toByteArray()
 
         encodedBody.toRequestBody(contentType.value.toMediaType())
       }
 
-    if (requestBody == null && method.requiresBody) {
+    if (requestBody == null && method.bodyAllowed) {
       requestBody = byteArrayOf().toRequestBody()
     }
 
@@ -174,7 +173,8 @@ class OkHttpRequestFactory(
     return request.execute()
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource = EventSource(requestSupplier)
+  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
+    EventSource(requestSupplier)
 
   override fun close() {
     close(true)

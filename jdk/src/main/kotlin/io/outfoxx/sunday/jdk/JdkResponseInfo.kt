@@ -18,7 +18,7 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Response
-import okio.BufferedSource
+import kotlinx.io.Source
 import java.net.http.HttpResponse.ResponseInfo
 
 /**
@@ -39,7 +39,7 @@ class JdkResponseInfo(
     responseInfo.headers().map().flatMap { entry -> entry.value.map { entry.key to it } }
   }
 
-  override val body: BufferedSource?
+  override val body: Source?
     get() = null
 
   override val trailers: Headers?

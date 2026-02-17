@@ -16,16 +16,17 @@
 
 package io.outfoxx.sunday.mediatypes.codecs
 
-import okio.Buffer
-import okio.BufferedSource
-import okio.ByteString
-import okio.Source
+import kotlinx.io.Buffer
+import kotlinx.io.Source
+import kotlinx.io.bytestring.ByteString
+import kotlinx.io.transferFrom
+import kotlinx.io.write
 import java.io.InputStream
 
 /**
  * Encodes binary data into a binary data [Source].
  *
- * Encoding from [ByteArray], [ByteString], [InputStream], [Source], and [BufferedSource]
+ * Encoding from [ByteArray], [ByteString], [InputStream], and [Source]
  * is supported.
  */
 class BinaryEncoder : MediaTypeEncoder {
@@ -41,10 +42,26 @@ class BinaryEncoder : MediaTypeEncoder {
 
   override fun <B> encode(value: B): Source =
     when (value) {
-      is ByteArray -> Buffer().write(value)
-      is ByteString -> Buffer().write(value)
-      is InputStream -> value.use { Buffer().readFrom(it) }
+      is ByteArray -> {
+        val buffer = Buffer()
+        buffer.write(value)
+        buffer
+      }
+
+      is ByteString -> {
+        val buffer = Buffer()
+        buffer.write(value)
+        buffer
+      }
+
+      is InputStream -> {
+        val buffer = Buffer()
+        value.use { buffer.transferFrom(it) }
+        buffer
+      }
+
       is Source -> value
+
       else -> throw IllegalArgumentException("Unsupported value for binary encode")
     }
 }

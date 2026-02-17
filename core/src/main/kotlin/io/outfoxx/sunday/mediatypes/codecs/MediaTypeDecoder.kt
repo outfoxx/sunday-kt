@@ -17,12 +17,12 @@
 package io.outfoxx.sunday.mediatypes.codecs
 
 import io.outfoxx.sunday.MediaType
-import okio.Source
+import kotlinx.io.Source
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
 /**
- * Decoder for binary data that is related to specific media type.
+ * Decoder for binary data that is related to a specific media type.
  *
  * @see MediaType
  */

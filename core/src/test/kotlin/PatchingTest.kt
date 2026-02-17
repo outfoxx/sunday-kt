@@ -21,9 +21,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.outfoxx.sunday.json.patch.Patch
 import io.outfoxx.sunday.json.patch.PatchOp
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 import java.util.Base64
 
 @JsonInclude(NON_EMPTY)
@@ -93,16 +93,14 @@ class PatchingTest {
       }
 
     val json = mapper.writeValueAsString(patch)
-    assertThat(
-      json,
-      equalTo("""{"name":"test","security":{"type":17,"enc":"AQID","sig":null}}"""),
-    )
+    expectThat(json)
+      .isEqualTo("""{"name":"test","security":{"type":17,"enc":"AQID","sig":null}}""")
 
     val encodedJSON = mapper.writeValueAsString(patch)
-    assertThat(encodedJSON, equalTo(json))
+    expectThat(encodedJSON).isEqualTo(json)
 
-    val decodedPatch = mapper.readValue<DeviceUpdate>(encodedJSON)
-    assertThat(decodedPatch, equalTo(patch))
+    val decodedPatch: Patch = mapper.readValue<DeviceUpdate>(encodedJSON)
+    expectThat(decodedPatch).isEqualTo(patch)
   }
 
 }

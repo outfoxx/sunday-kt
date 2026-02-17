@@ -27,20 +27,20 @@ package io.outfoxx.sunday.http
  */
 data class Method(
   val name: String,
-  val requiresBody: Boolean = false,
+  val bodyAllowed: Boolean,
 ) {
 
   companion object {
 
-    val Options = Method("OPTIONS")
-    val Get = Method("GET")
-    val Head = Method("HEAD")
+    val Options = Method("OPTIONS", false)
+    val Get = Method("GET", false)
+    val Head = Method("HEAD", false)
     val Post = Method("POST", true)
     val Put = Method("PUT", true)
     val Patch = Method("PATCH", true)
-    val Delete = Method("DELETE")
-    val Trace = Method("TRACE")
-    val Connect = Method("CONNECT")
+    val Delete = Method("DELETE", false)
+    val Trace = Method("TRACE", false)
+    val Connect = Method("CONNECT", false)
 
     fun values() = listOf(Options, Get, Head, Post, Put, Patch, Delete, Trace, Connect)
 

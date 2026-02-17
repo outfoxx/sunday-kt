@@ -17,11 +17,11 @@
 import io.outfoxx.sunday.EventParser
 import io.outfoxx.sunday.EventParser.EventInfo
 import io.outfoxx.sunday.utils.buffer
-import okio.Buffer
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.containsInAnyOrder
-import org.hamcrest.Matchers.hasSize
+import kotlinx.io.Buffer
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.hasSize
 import java.lang.Integer.min
 import kotlin.random.Random
 
@@ -33,8 +33,9 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!")))
+    expectThat(events).hasSize(1)
+    expectThat(events)
+      .containsExactlyInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!"))
   }
 
   @Test
@@ -43,8 +44,9 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!")))
+    expectThat(events).hasSize(1)
+    expectThat(events)
+      .containsExactlyInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!"))
   }
 
   @Test
@@ -53,8 +55,9 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!")))
+    expectThat(events).hasSize(1)
+    expectThat(events)
+      .containsExactlyInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!"))
   }
 
   @Test
@@ -63,8 +66,9 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!")))
+    expectThat(events).hasSize(1)
+    expectThat(events)
+      .containsExactlyInAnyOrder(EventInfo(null, "hello", "12345", "Hello World!"))
   }
 
   @Test
@@ -92,14 +96,11 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(3))
-    assertThat(
-      events,
-      containsInAnyOrder(
-        EventInfo(null, "hello", "12345", "Hello World!"),
-        EventInfo(null, "hello", "67890", "Hello World!"),
-        EventInfo(null, "hello", "abcde", "Hello World!"),
-      ),
+    expectThat(events).hasSize(3)
+    expectThat(events).containsExactlyInAnyOrder(
+      EventInfo(null, "hello", "12345", "Hello World!"),
+      EventInfo(null, "hello", "67890", "Hello World!"),
+      EventInfo(null, "hello", "abcde", "Hello World!"),
     )
   }
 
@@ -109,8 +110,9 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "hello", null, "Hello \nWorld!")))
+    expectThat(events).hasSize(1)
+    expectThat(events)
+      .containsExactlyInAnyOrder(EventInfo(null, "hello", null, "Hello \nWorld!"))
   }
 
   @Test
@@ -119,8 +121,8 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo("", "", "", "")))
+    expectThat(events).hasSize(1)
+    expectThat(events).containsExactlyInAnyOrder(EventInfo("", "", "", ""))
   }
 
   @Test
@@ -129,8 +131,8 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo("", "", "", "")))
+    expectThat(events).hasSize(1)
+    expectThat(events).containsExactlyInAnyOrder(EventInfo("", "", "", ""))
   }
 
   @Test
@@ -139,8 +141,8 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo("", "", "", "")))
+    expectThat(events).hasSize(1)
+    expectThat(events).containsExactlyInAnyOrder(EventInfo("", "", "", ""))
   }
 
   @Test
@@ -149,8 +151,8 @@ class EventParserTest {
 
     val events = run(EventParser(), eventBuffer)
 
-    assertThat(events, hasSize(1))
-    assertThat(events, containsInAnyOrder(EventInfo(null, "", "", "")))
+    expectThat(events).hasSize(1)
+    expectThat(events).containsExactlyInAnyOrder(EventInfo(null, "", "", ""))
   }
 
   @Test
@@ -188,7 +190,7 @@ class EventParserTest {
         |
       """.trimMargin()
 
-    val eventBuffers = mutableListOf<Buffer>()
+    val eventBuffers = mutableListOf<kotlinx.io.Buffer>()
     while (eventStream.isNotEmpty()) {
       val sliceSize = min(Random.nextInt(10), eventStream.length)
       val slice = eventStream.substring(0 until sliceSize)
@@ -202,24 +204,21 @@ class EventParserTest {
       parser.process(eventBuffer) { events.add(it) }
     }
 
-    assertThat(events, hasSize(5))
-    assertThat(
-      events,
-      containsInAnyOrder(
-        EventInfo(null, "hello", "1-12345", "Hello World!"),
-        EventInfo(null, "hello", "2-12345", "Hello World!"),
-        EventInfo(null, "hello", "3-12345", "Hello World!"),
-        EventInfo(null, "hello", "4-12345", "Hello World!"),
-        EventInfo(null, "hello", "5-12345", "Hello World!"),
-      ),
+    expectThat(events).hasSize(5)
+    expectThat(events).containsExactlyInAnyOrder(
+      EventInfo(null, "hello", "1-12345", "Hello World!"),
+      EventInfo(null, "hello", "2-12345", "Hello World!"),
+      EventInfo(null, "hello", "3-12345", "Hello World!"),
+      EventInfo(null, "hello", "4-12345", "Hello World!"),
+      EventInfo(null, "hello", "5-12345", "Hello World!"),
     )
   }
 
-  private fun source(data: String): Buffer = data.buffer()
+  private fun source(data: String): kotlinx.io.Buffer = data.buffer()
 
   private fun run(
     parser: EventParser,
-    source: Buffer,
+    source: kotlinx.io.Buffer,
   ): List<EventInfo> {
     val events = mutableListOf<EventInfo>()
     parser.process(source) { events.add(it) }

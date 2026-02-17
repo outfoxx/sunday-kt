@@ -25,12 +25,11 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.test.Implementation
 import io.outfoxx.sunday.test.RequestFactoryTest
-import kotlinx.coroutines.runBlocking
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.hasItem
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
+import strikt.api.expectThat
+import strikt.assertions.contains
+import strikt.assertions.isEqualTo
 import java.net.URI
 import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
@@ -53,7 +52,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
 
   @Test
   fun `adapt a an HTTP request`() =
-    runBlocking {
+    runTest {
       val factory =
         JdkRequestFactory(
           URITemplate("http://example.com"),
@@ -67,13 +66,13 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
 
       val request = factory.request(Method.Get, "test")
 
-      assertThat(request.headers, hasItem("Authorization" to "Bearer 12345"))
+      expectThat(request.headers).contains("Authorization" to "Bearer 12345")
     }
 
   @Test
   @Suppress("LongMethod")
   fun `copying requests to builder`() =
-    runBlocking {
+    runTest {
       val headers =
         HttpHeaders.of(
           mapOf(
@@ -90,11 +89,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val getCopy = assertDoesNotThrow { get.copyToBuilder().build() }
-      assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(getCopy.method(), equalTo("GET"))
-      assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
-      assertThat(getCopy.headers(), equalTo(headers))
+      val getCopy = get.copyToBuilder().build()
+      expectThat(getCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(getCopy.method()).isEqualTo("GET")
+      expectThat(getCopy.bodyPublisher().isPresent).isEqualTo(false)
+      expectThat(getCopy.headers()).isEqualTo(headers)
 
       val delete =
         HttpRequest
@@ -104,11 +103,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val deleteCopy = assertDoesNotThrow { delete.copyToBuilder().build() }
-      assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(deleteCopy.method(), equalTo("DELETE"))
-      assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
-      assertThat(deleteCopy.headers(), equalTo(headers))
+      val deleteCopy = delete.copyToBuilder().build()
+      expectThat(deleteCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(deleteCopy.method()).isEqualTo("DELETE")
+      expectThat(deleteCopy.bodyPublisher().isPresent).isEqualTo(false)
+      expectThat(deleteCopy.headers()).isEqualTo(headers)
 
       val post =
         HttpRequest
@@ -118,11 +117,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val postCopy = assertDoesNotThrow { post.copyToBuilder().build() }
-      assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(postCopy.method(), equalTo("POST"))
-      assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(postCopy.headers(), equalTo(headers))
+      val postCopy = post.copyToBuilder().build()
+      expectThat(postCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(postCopy.method()).isEqualTo("POST")
+      expectThat(postCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(postCopy.headers()).isEqualTo(headers)
 
       val put =
         HttpRequest
@@ -132,11 +131,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val putCopy = assertDoesNotThrow { put.copyToBuilder().build() }
-      assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(putCopy.method(), equalTo("PUT"))
-      assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(putCopy.headers(), equalTo(headers))
+      val putCopy = put.copyToBuilder().build()
+      expectThat(putCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(putCopy.method()).isEqualTo("PUT")
+      expectThat(putCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(putCopy.headers()).isEqualTo(headers)
 
       val custom =
         HttpRequest
@@ -146,17 +145,17 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val customCopy = assertDoesNotThrow { custom.copyToBuilder().build() }
-      assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(customCopy.method(), equalTo("TEST"))
-      assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(customCopy.headers(), equalTo(headers))
+      val customCopy = custom.copyToBuilder().build()
+      expectThat(customCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(customCopy.method()).isEqualTo("TEST")
+      expectThat(customCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(customCopy.headers()).isEqualTo(headers)
     }
 
   @Test
   @Suppress("LongMethod")
   fun `copying requests to builder without headers`() =
-    runBlocking {
+    runTest {
       val headers = HttpHeaders.of(mapOf()) { _, _ -> true }
 
       val get =
@@ -167,11 +166,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val getCopy = assertDoesNotThrow { get.copyToBuilder(includeHeaders = false).build() }
-      assertThat(getCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(getCopy.method(), equalTo("GET"))
-      assertThat(getCopy.bodyPublisher().isPresent, equalTo(false))
-      assertThat(getCopy.headers(), equalTo(headers))
+      val getCopy = get.copyToBuilder(includeHeaders = false).build()
+      expectThat(getCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(getCopy.method()).isEqualTo("GET")
+      expectThat(getCopy.bodyPublisher().isPresent).isEqualTo(false)
+      expectThat(getCopy.headers()).isEqualTo(headers)
 
       val delete =
         HttpRequest
@@ -181,11 +180,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val deleteCopy = assertDoesNotThrow { delete.copyToBuilder(includeHeaders = false).build() }
-      assertThat(deleteCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(deleteCopy.method(), equalTo("DELETE"))
-      assertThat(deleteCopy.bodyPublisher().isPresent, equalTo(false))
-      assertThat(deleteCopy.headers(), equalTo(headers))
+      val deleteCopy = delete.copyToBuilder(includeHeaders = false).build()
+      expectThat(deleteCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(deleteCopy.method()).isEqualTo("DELETE")
+      expectThat(deleteCopy.bodyPublisher().isPresent).isEqualTo(false)
+      expectThat(deleteCopy.headers()).isEqualTo(headers)
 
       val post =
         HttpRequest
@@ -195,11 +194,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val postCopy = assertDoesNotThrow { post.copyToBuilder(includeHeaders = false).build() }
-      assertThat(postCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(postCopy.method(), equalTo("POST"))
-      assertThat(postCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(postCopy.headers(), equalTo(headers))
+      val postCopy = post.copyToBuilder(includeHeaders = false).build()
+      expectThat(postCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(postCopy.method()).isEqualTo("POST")
+      expectThat(postCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(postCopy.headers()).isEqualTo(headers)
 
       val put =
         HttpRequest
@@ -209,11 +208,11 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val putCopy = assertDoesNotThrow { put.copyToBuilder(includeHeaders = false).build() }
-      assertThat(putCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(putCopy.method(), equalTo("PUT"))
-      assertThat(putCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(putCopy.headers(), equalTo(headers))
+      val putCopy = put.copyToBuilder(includeHeaders = false).build()
+      expectThat(putCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(putCopy.method()).isEqualTo("PUT")
+      expectThat(putCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(putCopy.headers()).isEqualTo(headers)
 
       val custom =
         HttpRequest
@@ -223,10 +222,10 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           .header(ContentType, "application/json")
           .header(ContentType, "application/cbor")
           .build()
-      val customCopy = assertDoesNotThrow { custom.copyToBuilder(includeHeaders = false).build() }
-      assertThat(customCopy.uri(), equalTo(URI("http://example.com")))
-      assertThat(customCopy.method(), equalTo("TEST"))
-      assertThat(customCopy.bodyPublisher().isPresent, equalTo(true))
-      assertThat(customCopy.headers(), equalTo(headers))
+      val customCopy = custom.copyToBuilder(includeHeaders = false).build()
+      expectThat(customCopy.uri()).isEqualTo(URI("http://example.com"))
+      expectThat(customCopy.method()).isEqualTo("TEST")
+      expectThat(customCopy.bodyPublisher().isPresent).isEqualTo(true)
+      expectThat(customCopy.headers()).isEqualTo(headers)
     }
 }

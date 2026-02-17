@@ -23,7 +23,15 @@ sonar {
     property("sonar.projectKey", "outfoxx_sunday-kt")
     property("sonar.organization", "outfoxx")
     property("sonar.host.url", "https://sonarcloud.io")
+    property(
+      "sonar.coverage.jacoco.xmlReportPaths",
+      "$rootDir/code-coverage/build/reports/kover/report.xml",
+    )
   }
+}
+
+tasks.named("sonar") {
+  dependsOn(":code-coverage:koverXmlReport")
 }
 
 

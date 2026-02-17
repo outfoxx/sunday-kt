@@ -71,5 +71,6 @@ strikt = ["strikt-jvm", "strikt-jackson"]
 [plugins]
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 github-release = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

@@ -1,6 +1,7 @@
 
 plugins {
   alias(libs.plugins.dokka)
+  alias(libs.plugins.kotlin.jvm) apply false
   alias(libs.plugins.github.release)
   alias(libs.plugins.sonarqube)
 }

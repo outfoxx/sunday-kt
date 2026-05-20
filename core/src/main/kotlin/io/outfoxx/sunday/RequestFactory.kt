@@ -38,6 +38,7 @@ import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.problems.ProblemFactory.Descriptor
 import io.outfoxx.sunday.utils.from
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
@@ -545,20 +546,28 @@ abstract class RequestFactory : Closeable {
 
         val data = event.data
         if (data != null) {
-          try {
-            val decodedEvent = decoder(jsonDecoder, event.event, event.id, data, logger)
-            if (decodedEvent != null) {
-              trySendBlocking(decodedEvent)
-                .onFailure {
-                  cancel("Event send failed", it)
-                }
-
+          val decodedEvent =
+            try {
+              decoder(jsonDecoder, event.event, event.id, data, logger)
+            } catch (x: CancellationException) {
+              cancel(x)
+              null
+            } catch (x: Exception) {
+              logger.warn(
+                "Skipping undecodable event from EventSource; event={}, id={}",
+                event.event,
+                event.id,
+                SundayError(EventDecodingFailed, cause = x),
+              )
+              null
             }
 
-          } catch (x: Throwable) {
-            cancel("Event decoding failed", SundayError(EventDecodingFailed, cause = x))
+          if (decodedEvent != null) {
+            trySendBlocking(decodedEvent)
+              .onFailure {
+                cancel("Event send failed", it)
+              }
           }
-
         }
 
       }

@@ -980,7 +980,7 @@ abstract class RequestFactoryTest {
 
             val result =
               withContext(Dispatchers.IO) {
-                withTimeout(50000) {
+                withTimeout(5000) {
                   val eventStream =
                     requestFactory.eventStream(
                       Method.Get,
@@ -1027,7 +1027,7 @@ abstract class RequestFactoryTest {
 
             expectThrows<CancellationException> {
               withContext(Dispatchers.IO) {
-                withTimeout(50000) {
+                withTimeout(5000) {
                   val eventStream =
                     requestFactory.eventStream(
                       Method.Get,

@@ -552,7 +552,7 @@ abstract class RequestFactory : Closeable {
             } catch (x: CancellationException) {
               cancel(x)
               null
-            } catch (x: Exception) {
+            } catch (x: Throwable) {
               logger.warn(
                 "Skipping undecodable event from EventSource; event={}, id={}",
                 event.event,

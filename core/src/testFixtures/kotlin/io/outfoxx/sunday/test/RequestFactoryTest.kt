@@ -43,6 +43,7 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.TextDecoder
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -954,6 +955,94 @@ abstract class RequestFactoryTest {
               .containsKey("target")
               .getValue("target")
               .isEqualTo("world")
+          }
+      }
+    }
+
+  @Test
+  fun `event streams skip undecodable events`() =
+    runTest {
+      val encodedEvents =
+        "event: hello\nid: 12345\ndata: {\"target\":}\n\n" +
+          "event: hello\nid: 67890\ndata: {\"target\":\"world\"}\n\n"
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(encodedEvents),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
+
+            val result =
+              withContext(Dispatchers.IO) {
+                withTimeout(5000) {
+                  val eventStream =
+                    requestFactory.eventStream(
+                      Method.Get,
+                      "",
+                      decoder = { decoder, event, _, data, logger ->
+                        when (event) {
+                          "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                          else -> {
+                            logger.error("unsupported event type")
+                            null
+                          }
+                        }
+                      },
+                    )
+
+                  eventStream.first()
+                }
+              }
+
+            expectThat(result)
+              .containsKey("target")
+              .getValue("target")
+              .isEqualTo("world")
+          }
+      }
+    }
+
+  @Test
+  fun `event streams cancel when decoder cancels`() =
+    runTest {
+      val encodedEvent = "event: hello\nid: 12345\ndata: {\"target\":\"world\"}\n\n"
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(encodedEvent),
+      )
+      server.start()
+      server.use {
+        createRequestFactory(URITemplate(server.url("/").toString()))
+          .use { requestFactory ->
+
+            expectThrows<CancellationException> {
+              withContext(Dispatchers.IO) {
+                withTimeout(5000) {
+                  val eventStream =
+                    requestFactory.eventStream(
+                      Method.Get,
+                      "",
+                      decoder = { _, _, _, _, _ ->
+                        throw CancellationException("decoder canceled")
+                      },
+                    )
+
+                  eventStream.first()
+                }
+              }
+            }.and {
+              get { message.orEmpty() }.isEqualTo("decoder canceled")
+            }
           }
       }
     }

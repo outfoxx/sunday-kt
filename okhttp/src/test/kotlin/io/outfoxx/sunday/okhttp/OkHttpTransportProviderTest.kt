@@ -1,7 +1,7 @@
-package io.outfoxx.sunday.jdk
+package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.PathEncoder
-import io.outfoxx.sunday.RequestFactoryConfig
+import io.outfoxx.sunday.TransportConfig
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-class JdkRequestFactoryProviderTest {
+class OkHttpTransportProviderTest {
 
   @Test
   fun `provider wires config`() {
@@ -19,7 +19,7 @@ class JdkRequestFactoryProviderTest {
     val pathEncoders: Map<kotlin.reflect.KClass<*>, PathEncoder> =
       mapOf(String::class to { value: Any -> value.toString() })
     val config =
-      RequestFactoryConfig(
+      TransportConfig(
         baseURI = URITemplate("http://example.com"),
         problemFactory = SundayHttpProblem.Factory,
         mediaTypeEncoders = encoders,
@@ -27,7 +27,7 @@ class JdkRequestFactoryProviderTest {
         pathEncoders = pathEncoders,
       )
 
-    val factory = JdkRequestFactoryProvider().create(config)
+    val factory = OkHttpTransportProvider().create(config)
 
     expectThat(factory.mediaTypeEncoders).isEqualTo(encoders)
     expectThat(factory.mediaTypeDecoders).isEqualTo(decoders)

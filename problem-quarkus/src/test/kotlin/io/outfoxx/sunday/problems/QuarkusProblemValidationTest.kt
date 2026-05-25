@@ -7,7 +7,7 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Status
-import io.outfoxx.sunday.jdk.JdkRequestFactory
+import io.outfoxx.sunday.jdk.JdkTransport
 import io.outfoxx.sunday.mediatypes.codecs.JSONDecoder
 import io.quarkiverse.resteasy.problem.HttpProblem
 import okhttp3.mockwebserver.MockResponse
@@ -76,11 +76,11 @@ class QuarkusProblemValidationTest {
     )
     server.start()
     server.use {
-      createRequestFactory(server).use { requestFactory ->
-        requestFactory.registerProblem(TYPE.toString(), GeneratedProblem::class)
+      createTransport(server).use { transport ->
+        transport.registerProblem(TYPE.toString(), GeneratedProblem::class)
 
         expectThrows<GeneratedProblem> {
-          requestFactory.result<String>(Method.Get, "/problem")
+          transport.result<String>(Method.Get, "/problem")
         }.and {
           get { type }.isEqualTo(TYPE)
           get { title }.isEqualTo(TITLE)
@@ -104,10 +104,10 @@ class QuarkusProblemValidationTest {
     )
     server.start()
     server.use {
-      createRequestFactory(server).use { requestFactory ->
+      createTransport(server).use { transport ->
         val thrown =
           expectThrows<HttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.subject
 
         val adapter = QuarkusProblemFactory.adapter()
@@ -134,8 +134,8 @@ class QuarkusProblemValidationTest {
     expectThat(adapter.getTitle(problem)).isEqualTo(REASON_PHRASE)
   }
 
-  private fun createRequestFactory(server: MockWebServer) =
-    JdkRequestFactory(
+  private fun createTransport(server: MockWebServer) =
+    JdkTransport(
       URITemplate(server.url("/").toString()),
       problemFactory = QuarkusProblemFactory,
     )

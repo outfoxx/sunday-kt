@@ -22,10 +22,10 @@ import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.http.HeaderParameters
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.OperationResponse
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.http.ResultResponse
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
@@ -58,13 +58,13 @@ import kotlin.reflect.full.createType
 import kotlin.reflect.typeOf
 
 /**
- * Factory for requests, responses and event sources.
+ * Transport for requests, responses and event sources.
  */
-abstract class RequestFactory : Closeable {
+abstract class Transport<out Req : Request> : Closeable {
 
   companion object {
 
-    private val logger = LoggerFactory.getLogger(RequestFactory::class.java)
+    private val logger = LoggerFactory.getLogger(Transport::class.java)
 
     private val failureStatusCodes = 400 until 600
     private val emptyDataStatusCodes = setOf(204, 205)
@@ -110,7 +110,7 @@ abstract class RequestFactory : Closeable {
   /**
    * Create a [Request].
    */
-  suspend inline fun request(
+  suspend inline fun transportRequest(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -118,7 +118,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ) = request(
+  ) = transportRequest(
     method,
     pathTemplate,
     pathParameters,
@@ -132,7 +132,7 @@ abstract class RequestFactory : Closeable {
   /**
    * Create a [Request].
    */
-  abstract suspend fun <B : Any> request(
+  abstract suspend fun <B : Any> transportRequest(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -142,7 +142,7 @@ abstract class RequestFactory : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     purpose: RequestPurpose = RequestPurpose.Normal,
-  ): Request
+  ): Req
 
   /**
    * Execute a [request][Request] and return the server's [response][Response].
@@ -150,7 +150,7 @@ abstract class RequestFactory : Closeable {
    * @param request Request used to generate the response.
    * @return [Response] returned from the executed [request].
    */
-  abstract suspend fun response(request: Request): Response
+  abstract suspend fun transportResponse(request: Request): Response
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -158,7 +158,7 @@ abstract class RequestFactory : Closeable {
    *
    * @return [Response] returned from the generated request.
    */
-  suspend inline fun response(
+  suspend inline fun transportResponse(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -166,7 +166,7 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ) = response(
+  ) = transportResponse(
     method,
     pathTemplate,
     pathParameters,
@@ -183,7 +183,7 @@ abstract class RequestFactory : Closeable {
    *
    * @return [Response] returned from the generated request.
    */
-  suspend inline fun <B : Any> response(
+  suspend inline fun <B : Any> transportResponse(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -194,7 +194,7 @@ abstract class RequestFactory : Closeable {
     headers: Parameters? = null,
   ): Response {
     val request =
-      request(
+      transportRequest(
         method,
         pathTemplate,
         pathParameters,
@@ -205,7 +205,7 @@ abstract class RequestFactory : Closeable {
         headers,
       )
 
-    return response(request)
+    return transportResponse(request)
   }
 
   /**
@@ -280,7 +280,7 @@ abstract class RequestFactory : Closeable {
     headers: Parameters? = null,
     resultType: KType,
   ): R =
-    resultResponse<B, R>(
+    response<B, R>(
       method,
       pathTemplate,
       pathParameters,
@@ -297,9 +297,9 @@ abstract class RequestFactory : Closeable {
    * parameters and return the server's [response][Response] along with a result
    * decoded from the server's response.
    *
-   * @return [ResultResponse] returned from the generated request.
+   * @return [OperationResponse] returned from the generated request.
    */
-  suspend inline fun <reified B : Any, reified R : Any> resultResponse(
+  suspend inline fun <reified B : Any, reified R : Any> response(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -308,8 +308,8 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ResultResponse<R> =
-    resultResponse(
+  ): OperationResponse<R> =
+    response(
       method,
       pathTemplate,
       pathParameters,
@@ -326,9 +326,9 @@ abstract class RequestFactory : Closeable {
    * parameters and return the server's [response][Response] along with a result
    * decoded from the server's response.
    *
-   * @return [ResultResponse] returned from the generated request.
+   * @return [OperationResponse] returned from the generated request.
    */
-  suspend inline fun <reified R : Any> resultResponse(
+  suspend inline fun <reified R : Any> response(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -336,8 +336,8 @@ abstract class RequestFactory : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): ResultResponse<R> =
-    resultResponse(
+  ): OperationResponse<R> =
+    response(
       method,
       pathTemplate,
       pathParameters,
@@ -354,9 +354,9 @@ abstract class RequestFactory : Closeable {
    * parameters and return the server's [response][Response] along with a result
    * decoded from the server's response.
    *
-   * @return [ResultResponse] returned from the generated request.
+   * @return [OperationResponse] returned from the generated request.
    */
-  suspend fun <B : Any, R : Any> resultResponse(
+  suspend fun <B : Any, R : Any> response(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters? = null,
@@ -366,9 +366,9 @@ abstract class RequestFactory : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     resultType: KType,
-  ): ResultResponse<R> {
+  ): OperationResponse<R> {
     val response =
-      response(
+      transportResponse(
         method,
         pathTemplate,
         pathParameters,
@@ -387,7 +387,7 @@ abstract class RequestFactory : Closeable {
 
     logger.trace("Parsing success response")
 
-    return ResultResponse(
+    return OperationResponse(
       parseSuccess(
         response,
         resultType,
@@ -413,7 +413,7 @@ abstract class RequestFactory : Closeable {
     headers: Parameters? = null,
   ): EventSource =
     eventSource {
-      request(
+      transportRequest(
         method,
         pathTemplate,
         pathParameters,
@@ -441,7 +441,7 @@ abstract class RequestFactory : Closeable {
     headers: Parameters? = null,
   ): EventSource =
     eventSource { eventSourceHeaders ->
-      request(
+      transportRequest(
         method,
         pathTemplate,
         pathParameters,
@@ -482,7 +482,7 @@ abstract class RequestFactory : Closeable {
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
     eventStream(decoder) {
-      request(
+      transportRequest(
         method,
         pathTemplate,
         pathParameters,
@@ -512,7 +512,7 @@ abstract class RequestFactory : Closeable {
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
     eventStream(decoder) {
-      request(
+      transportRequest(
         method,
         pathTemplate,
         pathParameters,

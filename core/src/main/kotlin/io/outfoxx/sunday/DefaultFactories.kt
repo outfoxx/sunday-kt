@@ -1,48 +1,48 @@
 package io.outfoxx.sunday
 
 import io.outfoxx.sunday.SundayError.Reason.MultipleProblemFactoryProviders
-import io.outfoxx.sunday.SundayError.Reason.MultipleRequestFactoryProviders
+import io.outfoxx.sunday.SundayError.Reason.MultipleTransportProviders
 import io.outfoxx.sunday.SundayError.Reason.NoProblemFactoryProvider
-import io.outfoxx.sunday.SundayError.Reason.NoRequestFactoryProvider
+import io.outfoxx.sunday.SundayError.Reason.NoTransportProvider
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
-import io.outfoxx.sunday.spi.RequestFactoryProvider
+import io.outfoxx.sunday.spi.TransportProvider
 import java.util.ServiceLoader
 import kotlin.reflect.KClass
 
 /**
- * Discover and create default request and problem factories via SPI providers on the classpath.
+ * Discover and create default transports and problem factories via SPI providers on the classpath.
  *
  * Examples:
- * - DefaultFactories.requestFactory(URITemplate("https://api.example.com"))
+ * - DefaultFactories.transport(URITemplate("https://api.example.com"))
  * - DefaultFactories.problemFactory(providerId = "quarkus")
  */
 object DefaultFactories {
 
-  fun availableRequestFactories(): List<RequestFactoryProvider> =
-    ServiceLoader.load(RequestFactoryProvider::class.java).toList()
+  fun availableTransports(): List<TransportProvider> = ServiceLoader.load(TransportProvider::class.java).toList()
 
   fun availableProblemFactories(): List<ProblemFactoryProvider> =
     ServiceLoader.load(ProblemFactoryProvider::class.java).toList()
 
-  fun requestFactory(
+  fun transport(
     baseURI: URITemplate,
     problemFactory: ProblemFactory = problemFactory(),
     providerId: String? = null,
     mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-  ): RequestFactory {
+  ): Transport<Request> {
     val provider =
-      selectRequestFactoryProvider(
-        availableRequestFactories(),
+      selectTransportProvider(
+        availableTransports(),
         providerId,
       )
 
     val config =
-      RequestFactoryConfig(
+      TransportConfig(
         baseURI = baseURI,
         problemFactory = problemFactory,
         mediaTypeEncoders = mediaTypeEncoders,
@@ -56,13 +56,13 @@ object DefaultFactories {
   fun problemFactory(providerId: String? = null): ProblemFactory =
     selectProblemFactoryProvider(availableProblemFactories(), providerId).create()
 
-  internal fun selectRequestFactoryProvider(
-    providers: List<RequestFactoryProvider>,
+  internal fun selectTransportProvider(
+    providers: List<TransportProvider>,
     providerId: String?,
-  ): RequestFactoryProvider {
+  ): TransportProvider {
     if (providers.isEmpty()) {
       throw SundayError(
-        NoRequestFactoryProvider,
+        NoTransportProvider,
         "Add sunday-okhttp or sunday-jdk to the classpath.",
       )
     }
@@ -80,13 +80,13 @@ object DefaultFactories {
       if (providerId == null) {
         val ids = providers.joinToString(", ") { it.id }
         throw SundayError(
-          MultipleRequestFactoryProviders,
-          "Multiple RequestFactory providers found: $ids. Specify providerId.",
+          MultipleTransportProviders,
+          "Multiple Transport providers found: $ids. Specify providerId.",
         )
       }
       val ids = providers.joinToString(", ") { it.id }
       throw SundayError(
-        NoRequestFactoryProvider,
+        NoTransportProvider,
         "Provider '$providerId' not found. Available providers: $ids.",
       )
     }

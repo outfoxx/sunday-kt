@@ -1,11 +1,12 @@
 package io.outfoxx.sunday
 
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemAdapter
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
-import io.outfoxx.sunday.spi.RequestFactoryProvider
+import io.outfoxx.sunday.spi.TransportProvider
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -38,11 +39,11 @@ class ProblemAdapterTest {
 
   @Test
   fun `default provider priority is zero`() {
-    val requestProvider =
-      object : RequestFactoryProvider {
-        override val id: String = "request"
+    val transportProvider =
+      object : TransportProvider {
+        override val id: String = "transport"
 
-        override fun create(config: RequestFactoryConfig): RequestFactory = error("unused")
+        override fun create(config: TransportConfig): Transport<Request> = error("unused")
       }
 
     val problemProvider =
@@ -52,7 +53,7 @@ class ProblemAdapterTest {
         override fun create(): ProblemFactory = error("unused")
       }
 
-    expectThat(requestProvider.priority).isEqualTo(0)
+    expectThat(transportProvider.priority).isEqualTo(0)
     expectThat(problemProvider.priority).isEqualTo(0)
   }
 }

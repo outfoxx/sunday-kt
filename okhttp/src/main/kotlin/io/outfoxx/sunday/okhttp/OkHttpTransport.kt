@@ -21,12 +21,12 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
-import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.ACCEPT
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.reflect.KClass
 
-class OkHttpRequestFactory(
+class OkHttpTransport(
   private val baseURI: URITemplate,
   override val problemFactory: ProblemFactory,
   private val httpClient: OkHttpClient = OkHttpClient(),
@@ -58,12 +58,12 @@ class OkHttpRequestFactory(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-) : RequestFactory(),
+) : Transport<OkHttpRequest>(),
   Closeable {
 
   companion object {
 
-    private val logger = LoggerFactory.getLogger(OkHttpRequestFactory::class.java)
+    private val logger = LoggerFactory.getLogger(OkHttpTransport::class.java)
   }
 
   override val registeredProblemTypes: Map<String, KClass<out Problem>>
@@ -77,7 +77,7 @@ class OkHttpRequestFactory(
     registeredProblemTypesStorage[typeId] = problemType
   }
 
-  override suspend fun <B : Any> request(
+  override suspend fun <B : Any> transportRequest(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters?,
@@ -87,7 +87,7 @@ class OkHttpRequestFactory(
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
     purpose: RequestPurpose,
-  ): Request {
+  ): OkHttpRequest {
     logger.trace("Building request")
 
     val urlBuilder =
@@ -170,7 +170,7 @@ class OkHttpRequestFactory(
     return OkHttpRequest(request, httpClient)
   }
 
-  override suspend fun response(request: Request): Response {
+  override suspend fun transportResponse(request: Request): Response {
     logger.debug("Initiating request")
 
     return request.execute()

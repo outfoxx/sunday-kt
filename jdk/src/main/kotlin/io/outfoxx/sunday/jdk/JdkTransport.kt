@@ -21,12 +21,12 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
-import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.ACCEPT
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
@@ -53,9 +53,9 @@ import java.time.Duration
 import kotlin.reflect.KClass
 
 /**
- * JDK11 HTTP Client implementation of [RequestFactory].
+ * JDK11 HTTP Client implementation of [Transport].
  */
-class JdkRequestFactory(
+class JdkTransport(
   private val baseURI: URITemplate,
   override val problemFactory: ProblemFactory,
   private val httpClient: HttpClient = defaultHttpClient(),
@@ -65,7 +65,7 @@ class JdkRequestFactory(
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault,
-) : RequestFactory(),
+) : Transport<JdkRequest>(),
   Closeable {
 
   companion object {
@@ -80,7 +80,7 @@ class JdkRequestFactory(
 
     val requestTimeoutDefault: Duration = Duration.ofSeconds(10)
 
-    private val logger = LoggerFactory.getLogger(JdkRequestFactory::class.java)
+    private val logger = LoggerFactory.getLogger(JdkTransport::class.java)
 
     private fun URI.replaceQuery(rawQuery: String?): URI {
       val authorityPart = rawAuthority
@@ -102,7 +102,7 @@ class JdkRequestFactory(
     registeredProblemTypesStorage[typeId] = problemType
   }
 
-  override suspend fun <B : Any> request(
+  override suspend fun <B : Any> transportRequest(
     method: Method,
     pathTemplate: String,
     pathParameters: Parameters?,
@@ -112,7 +112,7 @@ class JdkRequestFactory(
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
     purpose: RequestPurpose,
-  ): Request {
+  ): JdkRequest {
     logger.trace("Building request")
 
     val uri = uri(pathTemplate, pathParameters, queryParameters)
@@ -208,7 +208,7 @@ class JdkRequestFactory(
     }
   }
 
-  override suspend fun response(request: Request): Response {
+  override suspend fun transportResponse(request: Request): Response {
     logger.debug("Initiating request")
 
     return request.execute()

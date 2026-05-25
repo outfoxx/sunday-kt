@@ -22,8 +22,8 @@ Artifacts
 ---------
 
 - `sunday-core`: Core types and client abstractions.
-- `sunday-okhttp`: OkHttp-based request factory implementation.
-- `sunday-jdk`: JDK `HttpClient`-based request factory implementation.
+- `sunday-okhttp`: OkHttp-based transport implementation.
+- `sunday-jdk`: JDK `HttpClient`-based transport implementation.
 - `sunday-problem`: Default RFC7807 problem type (`SundayHttpProblem`) and adapters.
 - `sunday-problem-quarkus`: Quarkus `HttpProblem` integration.
 - `sunday-problem-zalando`: Zalando `problem` integration.
@@ -61,11 +61,11 @@ implementation("io.outfoxx.sunday:sunday-problem:$version") // or sunday-problem
 Default Factories
 -----------------
 
-Request factory and problem modules now register SPI providers for automatic discovery.
+Transport and problem modules now register SPI providers for automatic discovery.
 Use `DefaultFactories` to create instances without wiring implementations manually:
 
 ```kotlin
-val requestFactory = DefaultFactories.requestFactory(
+val transport = DefaultFactories.transport(
   URITemplate("https://api.example.com"),
 )
 ```
@@ -73,7 +73,7 @@ val requestFactory = DefaultFactories.requestFactory(
 If multiple providers are on the classpath, specify which one to use:
 
 ```kotlin
-val requestFactory = DefaultFactories.requestFactory(
+val transport = DefaultFactories.transport(
   URITemplate("https://api.example.com"),
   providerId = "okhttp", // "okhttp" or "jdk"
 )
@@ -84,7 +84,7 @@ val problemFactory = DefaultFactories.problemFactory(
 ```
 
 Problem providers are chosen by highest priority when multiple are present; if there is a
-tie, or if multiple request providers are present, specify `providerId` explicitly.
+tie, or if multiple transport providers are present, specify `providerId` explicitly.
 
 Major Changes Since 1.0.0-beta.24
 ---------------------------------

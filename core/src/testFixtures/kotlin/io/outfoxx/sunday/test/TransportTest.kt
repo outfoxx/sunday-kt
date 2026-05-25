@@ -27,14 +27,15 @@ import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.Plain
 import io.outfoxx.sunday.MediaType.Companion.Problem
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
-import io.outfoxx.sunday.RequestFactory
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.getFirst
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
@@ -66,7 +67,7 @@ import java.net.URI
 import kotlin.coroutines.resume
 import kotlin.reflect.typeOf
 
-abstract class RequestFactoryTest {
+abstract class TransportTest {
 
   companion object {
 
@@ -77,11 +78,11 @@ abstract class RequestFactoryTest {
 
   abstract val implementation: Implementation
 
-  abstract fun createRequestFactory(
+  abstract fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders = MediaTypeEncoders.default,
     decoders: MediaTypeDecoders = MediaTypeDecoders.default,
-  ): RequestFactory
+  ): Transport<Request>
 
   /**
    * General
@@ -92,11 +93,11 @@ abstract class RequestFactoryTest {
     val specialEncoders = MediaTypeEncoders.Builder().build()
     val specialDecoders = MediaTypeDecoders.Builder().build()
 
-    createRequestFactory(URITemplate("http://example.com"), specialEncoders, specialDecoders)
-      .use { requestFactory ->
+    createTransport(URITemplate("http://example.com"), specialEncoders, specialDecoders)
+      .use { transport ->
 
-        expectThat(requestFactory.mediaTypeEncoders).isEqualTo(specialEncoders)
-        expectThat(requestFactory.mediaTypeDecoders).isEqualTo(specialDecoders)
+        expectThat(transport.mediaTypeEncoders).isEqualTo(specialEncoders)
+        expectThat(transport.mediaTypeDecoders).isEqualTo(specialDecoders)
       }
   }
 
@@ -108,11 +109,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `encodes path parameters`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com/{id}"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com/{id}"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Get,
               "/encoded-params",
               pathParameters = mapOf("id" to 123),
@@ -126,11 +127,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `encodes query parameters`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Get,
               "/encode-query-params",
               queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
@@ -143,7 +144,7 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails when no query parameter encoder is registered and query params are provided`() {
-    createRequestFactory(
+    createTransport(
       URITemplate("http://example.com"),
       encoders =
         MediaTypeEncoders
@@ -151,10 +152,10 @@ abstract class RequestFactoryTest {
           .registerData()
           .registerJSON()
           .build(),
-    ).use { requestFactory ->
+    ).use { transport ->
 
       expectThrows<SundayError> {
-        requestFactory.request(
+        transport.transportRequest(
           Method.Get,
           "/encode-query-params",
           queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
@@ -167,13 +168,13 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails url query parameter encoder is not a URLQueryParamsEncoder`() {
-    createRequestFactory(
+    createTransport(
       URITemplate("http://example.com"),
       encoders = MediaTypeEncoders.Builder().register(BinaryEncoder(), WWWFormUrlEncoded).build(),
-    ).use { requestFactory ->
+    ).use { transport ->
 
       expectThrows<SundayError> {
-        requestFactory.request(
+        transport.transportRequest(
           Method.Get,
           "/encode-query-params",
           queryParameters = mapOf("limit" to 5, "search" to "1 & 2"),
@@ -188,11 +189,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `adds custom headers`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Get,
               "/add-custom-headers",
               headers = mapOf(HeaderNames.AUTHORIZATION to "Bearer 12345"),
@@ -205,11 +206,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `adds accept headers`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Get,
               "/add-accept-headers",
               acceptTypes = listOf(JSON, CBOR),
@@ -222,13 +223,13 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails if none of the accept types has a decoder`() {
-    createRequestFactory(
+    createTransport(
       URITemplate("http://example.com"),
       decoders = MediaTypeDecoders.Builder().build(),
-    ).use { requestFactory ->
+    ).use { transport ->
 
       expectThrows<SundayError> {
-        requestFactory.request(
+        transport.transportRequest(
           Method.Get,
           "/add-accept-headers",
           acceptTypes = listOf(JSON, CBOR),
@@ -241,11 +242,11 @@ abstract class RequestFactoryTest {
 
   @Test
   fun `fails if none of the content types has an encoder for the body`() {
-    createRequestFactory(URITemplate("http://example.com"))
-      .use { requestFactory ->
+    createTransport(URITemplate("http://example.com"))
+      .use { transport ->
 
         expectThrows<SundayError> {
-          requestFactory.request(
+          transport.transportRequest(
             Method.Post,
             "/add-accept-headers",
             body = "a body",
@@ -260,11 +261,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `attaches encoded body based on content-type`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Post,
               "/attach-body",
               body = mapOf("a" to 5),
@@ -279,11 +280,11 @@ abstract class RequestFactoryTest {
   @Test
   fun `set content-type when body is non-existent`() =
     runTest {
-      createRequestFactory(URITemplate("http://example.com"))
-        .use { requestFactory ->
+      createTransport(URITemplate("http://example.com"))
+        .use { transport ->
 
           val request =
-            requestFactory.request(
+            transport.transportRequest(
               Method.Post,
               "/attach-body",
               contentTypes = listOf(JSON),
@@ -316,11 +317,11 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val result =
-              requestFactory.resultResponse<Tester>(
+              transport.response<Tester>(
                 Method.Get,
                 "",
               )
@@ -350,11 +351,11 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val result =
-              requestFactory.resultResponse<Unit, Tester>(
+              transport.response<Unit, Tester>(
                 Method.Get,
                 "",
                 body = null,
@@ -376,10 +377,10 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
-            requestFactory.result<Unit>(Method.Post, "")
+            transport.result<Unit>(Method.Post, "")
           }
       }
     }
@@ -396,11 +397,11 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val response =
-              requestFactory.response(Method.Get, "")
+              transport.transportResponse(Method.Get, "")
 
             expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
           }
@@ -419,11 +420,11 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val response =
-              requestFactory.response(Method.Get, "", body = null, contentTypes = listOf(Plain))
+              transport.transportResponse(Method.Get, "", body = null, contentTypes = listOf(Plain))
 
             expectThat(response.body?.readByteArray()).isEqualTo("[]".encodeToByteArray())
           }
@@ -441,13 +442,13 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           val expectedReasonPhrase: String? = null
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<Unit, List<String>>(Method.Get, "", body = null)
+            transport.result<Unit, List<String>>(Method.Get, "", body = null)
           }.and {
             get { status }.isEqualTo(484)
             get { title }.isEqualTo(expectedReasonPhrase)
@@ -465,11 +466,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<Array<String>>(Method.Get, "")
+            transport.result<Array<String>>(Method.Get, "")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.UnexpectedEmptyResponse)
           }
@@ -486,11 +487,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<Array<String>>(Method.Get, "")
+            transport.result<Array<String>>(Method.Get, "")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.NoData)
           }
@@ -508,11 +509,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<Array<String>>(Method.Get, "")
+            transport.result<Array<String>>(Method.Get, "")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.InvalidContentType)
             get { message.orEmpty() }.contains("<none provided>")
@@ -532,11 +533,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<Array<String>>(Method.Get, "")
+            transport.result<Array<String>>(Method.Get, "")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.InvalidContentType)
             get { message.orEmpty() }.contains("bad/x-unknown")
@@ -556,11 +557,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<Array<String>>(Method.Get, "")
+            transport.result<Array<String>>(Method.Get, "")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
           }
@@ -579,11 +580,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
           }
@@ -602,11 +603,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayError> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { reason }.isEqualTo(SundayError.Reason.ResponseDecodingFailed)
           }
@@ -631,12 +632,12 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
-          requestFactory.registerProblem(TestProblem.TYPE, TestProblem::class)
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
+          transport.registerProblem(TestProblem.TYPE, TestProblem::class)
 
           expectThrows<TestProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(testProblem.type)
             get { title }.isEqualTo(testProblem.title)
@@ -663,11 +664,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(testProblem.type)
             get { title }.isEqualTo(testProblem.title)
@@ -694,11 +695,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { status }.isEqualTo(499)
           }
@@ -717,11 +718,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { status }.isEqualTo(404)
           }
@@ -740,11 +741,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(URI("about:blank"))
             get { title }.isEqualTo(Status.BadRequest.reasonPhrase)
@@ -770,11 +771,11 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(URITemplate(server.url("/").toString()))
-        .use { requestFactory ->
+      createTransport(URITemplate(server.url("/").toString()))
+        .use { transport ->
 
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.and {
             get { type }.isEqualTo(URI("about:blank"))
             get { title }.isEqualTo(Status.BadRequest.reasonPhrase)
@@ -798,13 +799,13 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(
+      createTransport(
         URITemplate(server.url("/").toString()),
         decoders = MediaTypeDecoders.Builder().build(),
-      ).use { requestFactory ->
+      ).use { transport ->
 
         expectThrows<SundayError> {
-          requestFactory.result<String>(Method.Get, "/problem")
+          transport.result<String>(Method.Get, "/problem")
         }.and {
           get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
         }
@@ -823,13 +824,13 @@ abstract class RequestFactoryTest {
     )
     server.start()
     server.use {
-      createRequestFactory(
+      createTransport(
         URITemplate(server.url("/").toString()),
         decoders = MediaTypeDecoders.Builder().register(TextDecoder.default, JSON).build(),
-      ).use { requestFactory ->
+      ).use { transport ->
 
         expectThrows<SundayError> {
-          requestFactory.result<String>(Method.Get, "/problem")
+          transport.result<String>(Method.Get, "/problem")
         }.and {
           get { reason }.isEqualTo(SundayError.Reason.NoDecoder)
         }
@@ -856,12 +857,12 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             withContext(Dispatchers.IO) {
               withTimeout(5000) {
-                val eventSource = requestFactory.eventSource(Method.Get, "")
+                val eventSource = transport.eventSource(Method.Get, "")
                 eventSource.use {
                   suspendCancellableCoroutine { continuation ->
                     eventSource.onMessage = { _ ->
@@ -891,12 +892,12 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             withContext(Dispatchers.IO) {
               withTimeout(5000) {
-                val eventSource = requestFactory.eventSource<Unit>(Method.Get, "", body = null)
+                val eventSource = transport.eventSource<Unit>(Method.Get, "", body = null)
                 eventSource.use {
                   suspendCancellableCoroutine { continuation ->
                     eventSource.onMessage = { _ ->
@@ -926,14 +927,14 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val result =
               withContext(Dispatchers.IO) {
                 withTimeout(50000) {
                   val eventStream =
-                    requestFactory.eventStream(
+                    transport.eventStream(
                       Method.Get,
                       "",
                       decoder = { decoder, event, _, data, logger ->
@@ -975,14 +976,14 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val result =
               withContext(Dispatchers.IO) {
                 withTimeout(5000) {
                   val eventStream =
-                    requestFactory.eventStream(
+                    transport.eventStream(
                       Method.Get,
                       "",
                       decoder = { decoder, event, _, data, logger ->
@@ -1022,14 +1023,14 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             expectThrows<CancellationException> {
               withContext(Dispatchers.IO) {
                 withTimeout(5000) {
                   val eventStream =
-                    requestFactory.eventStream(
+                    transport.eventStream(
                       Method.Get,
                       "",
                       decoder = { _, _, _, _, _ ->
@@ -1061,14 +1062,14 @@ abstract class RequestFactoryTest {
       )
       server.start()
       server.use {
-        createRequestFactory(URITemplate(server.url("/").toString()))
-          .use { requestFactory ->
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
 
             val result =
               withContext(Dispatchers.IO) {
                 withTimeout(50000) {
                   val eventStream =
-                    requestFactory.eventStream<Unit, Map<String, Any>>(
+                    transport.eventStream<Unit, Map<String, Any>>(
                       Method.Get,
                       "",
                       body = null,

@@ -8,8 +8,8 @@ import strikt.assertions.contains
 class DefaultFactoriesJdkTest {
 
   @Test
-  fun `registers jdk request factory provider`() {
-    val ids = DefaultFactories.availableRequestFactories().map { it.id }
+  fun `registers jdk transport provider`() {
+    val ids = DefaultFactories.availableTransports().map { it.id }
     expectThat(ids).contains("jdk")
   }
 

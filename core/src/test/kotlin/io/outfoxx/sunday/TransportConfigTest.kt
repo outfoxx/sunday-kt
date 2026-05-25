@@ -10,7 +10,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.net.URI
 
-class RequestFactoryConfigTest {
+class TransportConfigTest {
 
   private object TestProblemFactory : ProblemFactory {
     override fun typed(type: URI) = error("unused")
@@ -25,7 +25,7 @@ class RequestFactoryConfigTest {
   @Test
   fun `defaults are applied`() {
     val config =
-      RequestFactoryConfig(
+      TransportConfig(
         baseURI = URITemplate("http://example.com"),
         problemFactory = TestProblemFactory,
       )

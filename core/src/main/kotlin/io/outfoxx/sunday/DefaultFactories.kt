@@ -73,7 +73,9 @@ object DefaultFactories {
       } else if (providers.size == 1) {
         providers.first()
       } else {
-        null
+        val maxPriority = providers.maxOf { it.priority }
+        val candidates = providers.filter { it.priority == maxPriority }
+        if (candidates.size == 1) candidates.first() else null
       }
 
     if (provider == null) {
@@ -81,7 +83,7 @@ object DefaultFactories {
         val ids = providers.joinToString(", ") { it.id }
         throw SundayError(
           MultipleTransportProviders,
-          "Multiple Transport providers found: $ids. Specify providerId.",
+          "Available providers: $ids. Specify providerId.",
         )
       }
       val ids = providers.joinToString(", ") { it.id }

@@ -12,6 +12,7 @@ class DefaultFactoriesTest {
 
   private class TestTransportProvider(
     override val id: String,
+    override val priority: Int = 0,
   ) : TransportProvider {
     override fun create(config: TransportConfig): Transport<Request> = error("unused")
   }
@@ -24,7 +25,20 @@ class DefaultFactoriesTest {
   }
 
   @Test
-  fun `transport selection requires id when multiple available`() {
+  fun `transport selection prefers highest priority`() {
+    val providers =
+      listOf(
+        TestTransportProvider("okhttp", priority = 0),
+        TestTransportProvider("jdk", priority = 100),
+      )
+
+    val selected = DefaultFactories.selectTransportProvider(providers, null)
+
+    expectThat(selected.id).isEqualTo("jdk")
+  }
+
+  @Test
+  fun `transport selection requires id when multiple share priority`() {
     val providers =
       listOf(
         TestTransportProvider("okhttp"),
@@ -37,6 +51,8 @@ class DefaultFactoriesTest {
       }
 
     expectThat(error.reason).isEqualTo(SundayError.Reason.MultipleTransportProviders)
+    expectThat(error.message.orEmpty())
+      .isEqualTo("Multiple Transport providers found Available providers: okhttp, jdk. Specify providerId.")
   }
 
   @Test

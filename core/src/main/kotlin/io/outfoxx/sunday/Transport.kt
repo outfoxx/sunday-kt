@@ -412,7 +412,7 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
   ): EventSource =
-    eventSource {
+    eventSource { eventSourceHeaders ->
       transportRequest(
         method,
         pathTemplate,
@@ -421,7 +421,7 @@ abstract class Transport<out Req : Request> : Closeable {
         body,
         contentTypes,
         acceptTypes,
-        headers,
+        mergeEventSourceHeaders(headers, eventSourceHeaders),
       )
     }
 
@@ -449,9 +449,7 @@ abstract class Transport<out Req : Request> : Closeable {
         null as Unit?,
         contentTypes,
         acceptTypes,
-        eventSourceHeaders.let { esHeaders ->
-          (headers?.let { esHeaders + HeaderParameters.encode(headers) } ?: esHeaders).toMap()
-        },
+        mergeEventSourceHeaders(headers, eventSourceHeaders),
       )
     }
 
@@ -481,7 +479,7 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
-    eventStream(decoder) {
+    eventStream(decoder) { eventSourceHeaders ->
       transportRequest(
         method,
         pathTemplate,
@@ -490,7 +488,7 @@ abstract class Transport<out Req : Request> : Closeable {
         body,
         contentTypes,
         acceptTypes,
-        headers,
+        mergeEventSourceHeaders(headers, eventSourceHeaders),
       )
     }
 
@@ -511,7 +509,7 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
-    eventStream(decoder) {
+    eventStream(decoder) { eventSourceHeaders ->
       transportRequest(
         method,
         pathTemplate,
@@ -520,7 +518,7 @@ abstract class Transport<out Req : Request> : Closeable {
         null as Unit?,
         contentTypes,
         acceptTypes,
-        headers,
+        mergeEventSourceHeaders(headers, eventSourceHeaders),
       )
     }
 
@@ -586,6 +584,11 @@ abstract class Transport<out Req : Request> : Closeable {
     }
 
   abstract fun close(cancelOutstandingRequests: Boolean)
+
+  private fun mergeEventSourceHeaders(
+    headers: Parameters?,
+    eventSourceHeaders: Headers,
+  ): Parameters = (eventSourceHeaders + HeaderParameters.encode(headers)).toMap()
 
   private fun isFailureResponse(response: Response) = failureStatusCodes.contains(response.statusCode)
 

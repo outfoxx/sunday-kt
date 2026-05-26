@@ -47,6 +47,8 @@ import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -961,6 +963,64 @@ abstract class TransportTest {
     }
 
   @Test
+  fun `event streams reconnect with last-event-id`() =
+    runTest {
+      val firstEvent = "event: hello\nid: 12345\ndata: {\"target\":\"first\"}\n\n"
+      val secondEvent = "event: hello\nid: 67890\ndata: {\"target\":\"second\"}\n\n"
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(firstEvent),
+      )
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(secondEvent),
+      )
+      server.start()
+      server.use {
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
+
+            val result =
+              withContext(Dispatchers.IO) {
+                withTimeout(5000) {
+                  val eventStream =
+                    transport.eventStream(
+                      Method.Get,
+                      "",
+                      decoder = { decoder, event, _, data, logger ->
+                        when (event) {
+                          "hello" -> decoder.decode<Map<String, Any>>(data, typeOf<Map<String, Any>>())
+                          else -> {
+                            logger.error("unsupported event type")
+                            null
+                          }
+                        }
+                      },
+                    )
+
+                  eventStream.take(2).toList()
+                }
+              }
+
+            expectThat(result)
+              .get { size }
+              .isEqualTo(2)
+
+            server.takeRequest()
+            val reconnectRequest = server.takeRequest()
+
+            expectThat(reconnectRequest.getHeader(HeaderNames.LAST_EVENT_ID)).isEqualTo("12345")
+          }
+      }
+    }
+
+  @Test
   fun `event streams skip undecodable events`() =
     runTest {
       val encodedEvents =
@@ -1092,6 +1152,66 @@ abstract class TransportTest {
               .containsKey("target")
               .getValue("target")
               .isEqualTo("world")
+          }
+      }
+    }
+
+  @Test
+  fun `event streams with explicit body reconnect with last-event-id`() =
+    runTest {
+      val firstEvent = "event: hello\nid: 12345\ndata: {\"target\":\"first\"}\n\n"
+      val secondEvent = "event: hello\nid: 67890\ndata: {\"target\":\"second\"}\n\n"
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(firstEvent),
+      )
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream)
+          .setBody(secondEvent),
+      )
+      server.start()
+      server.use {
+        createTransport(URITemplate(server.url("/").toString()))
+          .use { transport ->
+
+            val result =
+              withContext(Dispatchers.IO) {
+                withTimeout(5000) {
+                  val eventStream =
+                    transport.eventStream<Map<String, Any>, Map<String, Any>>(
+                      Method.Post,
+                      "",
+                      body = mapOf("filter" to "all"),
+                      contentTypes = listOf(JSON),
+                      decoder = { decoder, event, _, data, logger ->
+                        when (event) {
+                          "hello" -> decoder.decode(data, typeOf<Map<String, Any>>())
+                          else -> {
+                            logger.error("unsupported event type")
+                            null
+                          }
+                        }
+                      },
+                    )
+
+                  eventStream.take(2).toList()
+                }
+              }
+
+            expectThat(result)
+              .get { size }
+              .isEqualTo(2)
+
+            server.takeRequest()
+            val reconnectRequest = server.takeRequest()
+
+            expectThat(reconnectRequest.getHeader(HeaderNames.LAST_EVENT_ID)).isEqualTo("12345")
           }
       }
     }

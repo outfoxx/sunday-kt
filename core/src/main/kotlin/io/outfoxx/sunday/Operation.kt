@@ -21,6 +21,7 @@ import io.outfoxx.sunday.http.OperationResponse
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.problems.Problem
+import kotlinx.coroutines.CancellationException
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
@@ -143,6 +144,8 @@ class NullableOperation<B : Any, R : Any, Req : Request>(
   suspend fun executeOrNull(): R? =
     try {
       execute()
+    } catch (cancellation: CancellationException) {
+      throw cancellation
     } catch (problem: Problem) {
       if (matchesNullify(problem)) {
         null

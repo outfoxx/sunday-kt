@@ -37,8 +37,8 @@ class SundayError(
     NoSupportedContentTypes("None of the provided Content-Types for the request has a registered encoder"),
     NoSupportedAcceptTypes("None of the provided Accept types for the request has a registered decoder"),
     InvalidHeaderValue("The encoded header value contains one or more invalid characters"),
-    NoRequestFactoryProvider("No RequestFactory provider found"),
-    MultipleRequestFactoryProviders("Multiple RequestFactory providers found"),
+    NoTransportProvider("No Transport provider found"),
+    MultipleTransportProviders("Multiple Transport providers found"),
     NoProblemFactoryProvider("No ProblemFactory provider found"),
     MultipleProblemFactoryProviders("Multiple ProblemFactory providers found"),
   }

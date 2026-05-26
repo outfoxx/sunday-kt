@@ -8,8 +8,8 @@ import strikt.assertions.contains
 class DefaultFactoriesOkHttpTest {
 
   @Test
-  fun `registers okHttp request factory provider`() {
-    val ids = DefaultFactories.availableRequestFactories().map { it.id }
+  fun `registers okHttp transport provider`() {
+    val ids = DefaultFactories.availableTransports().map { it.id }
     expectThat(ids).contains("okhttp")
   }
 

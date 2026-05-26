@@ -16,8 +16,9 @@
 
 package io.outfoxx.sunday.okhttp
 
-import io.outfoxx.sunday.RequestFactory
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.SundayHttpProblem
@@ -25,12 +26,12 @@ import io.outfoxx.sunday.test.GeneratedAPITests
 
 class OkHttpGeneratedAPITest : GeneratedAPITests() {
 
-  override fun createRequestFactory(
+  override fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): RequestFactory =
-    OkHttpRequestFactory(
+  ): Transport<Request> =
+    OkHttpTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,
       mediaTypeEncoders = encoders,

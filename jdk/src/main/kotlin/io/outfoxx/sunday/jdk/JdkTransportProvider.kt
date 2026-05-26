@@ -1,15 +1,16 @@
 package io.outfoxx.sunday.jdk
 
-import io.outfoxx.sunday.RequestFactory
-import io.outfoxx.sunday.RequestFactoryConfig
-import io.outfoxx.sunday.spi.RequestFactoryProvider
+import io.outfoxx.sunday.Transport
+import io.outfoxx.sunday.TransportConfig
+import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.spi.TransportProvider
 
-class JdkRequestFactoryProvider : RequestFactoryProvider {
+class JdkTransportProvider : TransportProvider {
 
   override val id: String = "jdk"
 
-  override fun create(config: RequestFactoryConfig): RequestFactory =
-    JdkRequestFactory(
+  override fun create(config: TransportConfig): Transport<Request> =
+    JdkTransport(
       baseURI = config.baseURI,
       problemFactory = config.problemFactory,
       mediaTypeEncoders = config.mediaTypeEncoders,

@@ -18,14 +18,21 @@ package io.outfoxx.sunday.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.MediaType.Companion.JSON
-import io.outfoxx.sunday.RequestFactory
+import io.outfoxx.sunday.NullableOperation
+import io.outfoxx.sunday.NullifySpec
+import io.outfoxx.sunday.Operation
+import io.outfoxx.sunday.OperationSpec
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_LENGTH
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.ResultResponse
+import io.outfoxx.sunday.http.OperationResponse
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
+import io.outfoxx.sunday.nullableOperation
+import io.outfoxx.sunday.operation
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -43,14 +50,14 @@ abstract class GeneratedAPITests {
         .findAndRegisterModules()
   }
 
-  abstract fun createRequestFactory(
+  abstract fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders = MediaTypeEncoders.default,
     decoders: MediaTypeDecoders = MediaTypeDecoders.default,
-  ): RequestFactory
+  ): Transport<Request>
 
   class API(
-    private val requestFactory: RequestFactory,
+    private val transport: Transport<Request>,
   ) {
 
     data class TestResult(
@@ -59,23 +66,50 @@ abstract class GeneratedAPITests {
     )
 
     suspend fun testResult(): TestResult =
-      requestFactory.result(
+      transport.result(
         method = Method.Get,
         pathTemplate = "/test",
         acceptTypes = listOf(JSON),
       )
 
-    suspend fun testResultResponse(): ResultResponse<TestResult> =
-      requestFactory.resultResponse(
+    suspend fun testOperationResponse(): OperationResponse<TestResult> =
+      transport.response(
         method = Method.Get,
         pathTemplate = "/test",
         acceptTypes = listOf(JSON),
       )
 
-    suspend fun testVoidResultResponse(): ResultResponse<Unit> =
-      requestFactory.resultResponse(
+    suspend fun testVoidOperationResponse(): OperationResponse<Unit> =
+      transport.response(
         method = Method.Get,
         pathTemplate = "/test",
+      )
+
+    fun testOperation(): Operation<Unit, TestResult, Request> =
+      transport.operation(
+        OperationSpec(
+          method = Method.Get,
+          pathTemplate = "/test",
+          acceptTypes = listOf(JSON),
+        ),
+      )
+
+    fun testVoidOperation(): Operation<Unit, Unit, Request> =
+      transport.operation(
+        OperationSpec(
+          method = Method.Get,
+          pathTemplate = "/test",
+        ),
+      )
+
+    fun testNullableOperation(): NullableOperation<Unit, TestResult, Request> =
+      transport.nullableOperation(
+        OperationSpec(
+          method = Method.Get,
+          pathTemplate = "/test",
+          acceptTypes = listOf(JSON),
+        ),
+        NullifySpec(statuses = listOf(404)),
       )
 
   }
@@ -94,7 +128,7 @@ abstract class GeneratedAPITests {
       )
       server.start()
       server.use {
-        val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
 
         val result = api.testResult()
 
@@ -116,12 +150,12 @@ abstract class GeneratedAPITests {
       )
       server.start()
       server.use {
-        val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
 
-        val resultResponse = api.testResultResponse()
+        val response = api.testOperationResponse()
 
-        expectThat(resultResponse.result).isEqualTo(testResult)
-        expectThat(resultResponse.headers.map { it.first.lowercase() to it.second.lowercase() })
+        expectThat(response.result).isEqualTo(testResult)
+        expectThat(response.headers.map { it.first.lowercase() to it.second.lowercase() })
           .contains(CONTENT_TYPE.lowercase() to JSON.value, CONTENT_LENGTH.lowercase() to "29")
       }
     }
@@ -137,9 +171,106 @@ abstract class GeneratedAPITests {
       )
       server.start()
       server.use {
-        val api = API(createRequestFactory(URITemplate(server.url("/").toString())))
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
 
-        val responseResult = api.testVoidResultResponse()
+        val responseResult = api.testVoidOperationResponse()
+
+        expectThat(responseResult.result).isEqualTo(Unit)
+        expectThat(responseResult.headers.map { it.first.lowercase() to it.second.lowercase() })
+          .contains(CONTENT_LENGTH.lowercase() to "0")
+      }
+    }
+
+  @Test
+  fun `generated style API operation execute method`() =
+    runTest {
+      val testResult = API.TestResult("Test", 10)
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, JSON)
+          .setBody(objectMapper.writeValueAsString(testResult)),
+      )
+      server.start()
+      server.use {
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
+
+        val result = api.testOperation().execute()
+
+        expectThat(result).isEqualTo(testResult)
+      }
+    }
+
+  @Test
+  fun `generated style API operation request method`() =
+    runTest {
+      val server = MockWebServer()
+      server.start()
+      server.use {
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
+
+        val request = api.testOperation().transportRequest()
+
+        expectThat(request.uri.toString()).isEqualTo(server.url("/test").toString())
+      }
+    }
+
+  @Test
+  fun `generated style API nullable operation execute or null method returns value`() =
+    runTest {
+      val testResult = API.TestResult("Test", 10)
+
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, JSON)
+          .setBody(objectMapper.writeValueAsString(testResult)),
+      )
+      server.start()
+      server.use {
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
+
+        val result = api.testNullableOperation().executeOrNull()
+
+        expectThat(result).isEqualTo(testResult)
+      }
+    }
+
+  @Test
+  fun `generated style API nullable operation execute or null method returns null for matching status`() =
+    runTest {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(404),
+      )
+      server.start()
+      server.use {
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
+
+        val result = api.testNullableOperation().executeOrNull()
+
+        expectThat(result).isEqualTo(null)
+      }
+    }
+
+  @Test
+  fun `generated style API unit operation result response method`() =
+    runTest {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .addHeader(CONTENT_LENGTH, "0")
+          .setResponseCode(204),
+      )
+      server.start()
+      server.use {
+        val api = API(createTransport(URITemplate(server.url("/").toString())))
+
+        val responseResult = api.testVoidOperation().response()
 
         expectThat(responseResult.result).isEqualTo(Unit)
         expectThat(responseResult.headers.map { it.first.lowercase() to it.second.lowercase() })

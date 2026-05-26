@@ -7,7 +7,7 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Status
-import io.outfoxx.sunday.jdk.JdkRequestFactory
+import io.outfoxx.sunday.jdk.JdkTransport
 import io.outfoxx.sunday.mediatypes.codecs.JSONDecoder
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -72,12 +72,12 @@ class ProblemValidationTest {
     )
     server.start()
     server.use {
-      createRequestFactory(server).use { requestFactory ->
-        requestFactory.registerProblem(TYPE.toString(), GeneratedProblem::class)
+      createTransport(server).use { transport ->
+        transport.registerProblem(TYPE.toString(), GeneratedProblem::class)
 
         val thrown =
           expectThrows<GeneratedProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.subject
 
         expectThat(thrown.type).isEqualTo(TYPE)
@@ -101,10 +101,10 @@ class ProblemValidationTest {
     )
     server.start()
     server.use {
-      createRequestFactory(server).use { requestFactory ->
+      createTransport(server).use { transport ->
         val thrown =
           expectThrows<SundayHttpProblem> {
-            requestFactory.result<String>(Method.Get, "/problem")
+            transport.result<String>(Method.Get, "/problem")
           }.subject
 
         val adapter = SundayHttpProblem.Factory.adapter()
@@ -131,8 +131,8 @@ class ProblemValidationTest {
     expectThat(adapter.getTitle(problem)).isEqualTo(REASON_PHRASE)
   }
 
-  private fun createRequestFactory(server: MockWebServer) =
-    JdkRequestFactory(
+  private fun createTransport(server: MockWebServer) =
+    JdkTransport(
       URITemplate(server.url("/").toString()),
       problemFactory = SundayHttpProblem.Factory,
     )

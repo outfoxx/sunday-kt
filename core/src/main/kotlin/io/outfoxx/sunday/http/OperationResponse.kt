@@ -16,10 +16,30 @@
 
 package io.outfoxx.sunday.http
 
+import io.outfoxx.sunday.MediaType
+
 /**
  * HTTP response that includes a parsed/decoded result.
  */
-data class ResultResponse<T : Any>(
+data class OperationResponse<T : Any>(
   val result: T,
   private val response: Response,
-) : Response by response
+) : Response by response {
+
+  /**
+   * Retrieves all response header values matching the given name.
+   */
+  fun headers(name: String): Iterable<String> = response.headers.getAll(name)
+
+  /**
+   * Retrieves the first response header value matching the given name, or `null`.
+   */
+  fun header(name: String): String? = response.headers.getFirstOrNull(name)
+
+  /**
+   * Parsed `Content-Type` header value.
+   */
+  val contentType: MediaType?
+    get() = response.contentType
+
+}

@@ -31,10 +31,10 @@ class JdkRequestBodyTest {
   @Test
   fun `request bodies can be read`() =
     runTest {
-      val factory = JdkRequestFactory(URITemplate("http://example.com"), SundayHttpProblem.Factory)
+      val factory = JdkTransport(URITemplate("http://example.com"), SundayHttpProblem.Factory)
 
       val request =
-        factory.request(
+        factory.transportRequest(
           Method.Post,
           "/body",
           body = mapOf("a" to 1),

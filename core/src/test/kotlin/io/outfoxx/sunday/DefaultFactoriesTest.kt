@@ -1,7 +1,8 @@
 package io.outfoxx.sunday
 
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
-import io.outfoxx.sunday.spi.RequestFactoryProvider
+import io.outfoxx.sunday.spi.TransportProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import strikt.api.expectThat
@@ -9,10 +10,11 @@ import strikt.assertions.isEqualTo
 
 class DefaultFactoriesTest {
 
-  private class TestRequestProvider(
+  private class TestTransportProvider(
     override val id: String,
-  ) : RequestFactoryProvider {
-    override fun create(config: RequestFactoryConfig): RequestFactory = error("unused")
+    override val priority: Int = 0,
+  ) : TransportProvider {
+    override fun create(config: TransportConfig): Transport<Request> = error("unused")
   }
 
   private class TestProblemProvider(
@@ -23,58 +25,73 @@ class DefaultFactoriesTest {
   }
 
   @Test
-  fun `request factory selection requires id when multiple available`() {
+  fun `transport selection prefers highest priority`() {
     val providers =
       listOf(
-        TestRequestProvider("okhttp"),
-        TestRequestProvider("jdk"),
+        TestTransportProvider("okhttp", priority = 0),
+        TestTransportProvider("jdk", priority = 100),
       )
 
-    val error =
-      assertThrows<SundayError> {
-        DefaultFactories.selectRequestFactoryProvider(providers, null)
-      }
-
-    expectThat(error.reason).isEqualTo(SundayError.Reason.MultipleRequestFactoryProviders)
-  }
-
-  @Test
-  fun `request factory selection fails when none available`() {
-    val error =
-      assertThrows<SundayError> {
-        DefaultFactories.selectRequestFactoryProvider(emptyList(), null)
-      }
-
-    expectThat(error.reason).isEqualTo(SundayError.Reason.NoRequestFactoryProvider)
-  }
-
-  @Test
-  fun `request factory selection uses provider id when provided`() {
-    val providers =
-      listOf(
-        TestRequestProvider("okhttp"),
-        TestRequestProvider("jdk"),
-      )
-
-    val selected = DefaultFactories.selectRequestFactoryProvider(providers, "jdk")
+    val selected = DefaultFactories.selectTransportProvider(providers, null)
 
     expectThat(selected.id).isEqualTo("jdk")
   }
 
   @Test
-  fun `request factory selection fails when provider id not found`() {
+  fun `transport selection requires id when multiple share priority`() {
     val providers =
       listOf(
-        TestRequestProvider("okhttp"),
-        TestRequestProvider("jdk"),
+        TestTransportProvider("okhttp"),
+        TestTransportProvider("jdk"),
       )
 
     val error =
       assertThrows<SundayError> {
-        DefaultFactories.selectRequestFactoryProvider(providers, "missing")
+        DefaultFactories.selectTransportProvider(providers, null)
       }
 
-    expectThat(error.reason).isEqualTo(SundayError.Reason.NoRequestFactoryProvider)
+    expectThat(error.reason).isEqualTo(SundayError.Reason.MultipleTransportProviders)
+    expectThat(error.message.orEmpty())
+      .isEqualTo("Multiple Transport providers found Available providers: okhttp, jdk. Specify providerId.")
+  }
+
+  @Test
+  fun `transport selection fails when none available`() {
+    val error =
+      assertThrows<SundayError> {
+        DefaultFactories.selectTransportProvider(emptyList(), null)
+      }
+
+    expectThat(error.reason).isEqualTo(SundayError.Reason.NoTransportProvider)
+  }
+
+  @Test
+  fun `transport selection uses provider id when provided`() {
+    val providers =
+      listOf(
+        TestTransportProvider("okhttp"),
+        TestTransportProvider("jdk"),
+      )
+
+    val selected = DefaultFactories.selectTransportProvider(providers, "jdk")
+
+    expectThat(selected.id).isEqualTo("jdk")
+  }
+
+  @Test
+  fun `transport selection fails when provider id not found`() {
+    val providers =
+      listOf(
+        TestTransportProvider("okhttp"),
+        TestTransportProvider("jdk"),
+      )
+
+    val error =
+      assertThrows<SundayError> {
+        DefaultFactories.selectTransportProvider(providers, "missing")
+      }
+
+    expectThat(error.reason).isEqualTo(SundayError.Reason.NoTransportProvider)
   }
 
   @Test

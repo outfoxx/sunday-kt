@@ -5,7 +5,7 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.ProblemFactory
 import kotlin.reflect.KClass
 
-data class RequestFactoryConfig(
+data class TransportConfig(
   val baseURI: URITemplate,
   val problemFactory: ProblemFactory,
   val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,

@@ -31,10 +31,10 @@ class OkHttpRequestBodyTest {
   @Test
   fun `request bodies can be read`() =
     runTest {
-      val factory = OkHttpRequestFactory(URITemplate("http://example.com"), SundayHttpProblem.Factory)
+      val factory = OkHttpTransport(URITemplate("http://example.com"), SundayHttpProblem.Factory)
 
       val request =
-        factory.request(
+        factory.transportRequest(
           Method.Post,
           "/body",
           body = mapOf("a" to 1),

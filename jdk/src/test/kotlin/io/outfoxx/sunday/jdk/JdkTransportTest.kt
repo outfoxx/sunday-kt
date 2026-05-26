@@ -16,16 +16,17 @@
 
 package io.outfoxx.sunday.jdk
 
-import io.outfoxx.sunday.RequestFactory
+import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.AUTHORIZATION
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
+import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.Implementation
-import io.outfoxx.sunday.test.RequestFactoryTest
+import io.outfoxx.sunday.test.TransportTest
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -36,16 +37,16 @@ import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 
-class JdkRequestFactoryTest : RequestFactoryTest() {
+class JdkTransportTest : TransportTest() {
 
   override val implementation = Implementation.JDK
 
-  override fun createRequestFactory(
+  override fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): RequestFactory =
-    JdkRequestFactory(
+  ): Transport<Request> =
+    JdkTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,
       mediaTypeEncoders = encoders,
@@ -56,7 +57,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
   fun `adapt a an HTTP request`() =
     runTest {
       val factory =
-        JdkRequestFactory(
+        JdkTransport(
           URITemplate("http://example.com"),
           problemFactory = SundayHttpProblem.Factory,
           adapter = { request ->
@@ -67,7 +68,7 @@ class JdkRequestFactoryTest : RequestFactoryTest() {
           },
         )
 
-      val request = factory.request(Method.Get, "test")
+      val request = factory.transportRequest(Method.Get, "test")
 
       expectThat(request.headers).contains("Authorization" to "Bearer 12345")
     }

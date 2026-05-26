@@ -22,7 +22,7 @@ import strikt.assertions.isEqualTo
 import java.net.URI
 import kotlin.reflect.KClass
 
-class RequestFactoryFailureResponseTest {
+class TransportFailureResponseTest {
 
   private data class TestRequest(
     override val method: Method,
@@ -46,13 +46,13 @@ class RequestFactoryFailureResponseTest {
     override val request: Request = TestRequest(Method.Get, URI.create("http://example.com"), emptyList())
   }
 
-  private class TestRequestFactory(
+  private class TestTransport(
     private val response: Response,
     override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
     override val problemFactory: ProblemFactory = SundayHttpProblem.Factory,
-  ) : RequestFactory() {
+  ) : Transport<Request>() {
 
     override val registeredProblemTypes: Map<String, KClass<out Problem>> = emptyMap()
 
@@ -61,7 +61,7 @@ class RequestFactoryFailureResponseTest {
       problemType: KClass<out Problem>,
     ) = Unit
 
-    override suspend fun <B : Any> request(
+    override suspend fun <B : Any> transportRequest(
       method: Method,
       pathTemplate: String,
       pathParameters: io.outfoxx.sunday.http.Parameters?,
@@ -73,7 +73,7 @@ class RequestFactoryFailureResponseTest {
       purpose: RequestPurpose,
     ): Request = TestRequest(method, URI.create("http://example.com$pathTemplate"), emptyList())
 
-    override suspend fun response(request: Request): Response = response
+    override suspend fun transportResponse(request: Request): Response = response
 
     override fun eventSource(requestSupplier: suspend (Headers) -> Request) = error("unused")
 
@@ -98,7 +98,7 @@ class RequestFactoryFailureResponseTest {
           body = body,
         )
 
-      val factory = TestRequestFactory(response)
+      val factory = TestTransport(response)
 
       val thrown =
         expectThrows<SundayHttpProblem> {
@@ -120,7 +120,7 @@ class RequestFactoryFailureResponseTest {
           body = body,
         )
 
-      val factory = TestRequestFactory(response)
+      val factory = TestTransport(response)
 
       val thrown =
         expectThrows<SundayHttpProblem> {
@@ -149,7 +149,7 @@ class RequestFactoryFailureResponseTest {
           body = body,
         )
 
-      val factory = TestRequestFactory(response)
+      val factory = TestTransport(response)
 
       val thrown =
         expectThrows<SundayHttpProblem> {
@@ -172,7 +172,7 @@ class RequestFactoryFailureResponseTest {
           body = null,
         )
 
-      val factory = TestRequestFactory(response)
+      val factory = TestTransport(response)
 
       expectThat(factory.result<Unit>(Method.Get, "/test")).isEqualTo(Unit)
 

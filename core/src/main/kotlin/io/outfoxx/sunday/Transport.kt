@@ -422,6 +422,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
+        RequestPurpose.Events,
       )
     }
 
@@ -450,6 +451,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
+        RequestPurpose.Events,
       )
     }
 
@@ -489,6 +491,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
+        RequestPurpose.Events,
       )
     }
 
@@ -519,6 +522,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
+        RequestPurpose.Events,
       )
     }
 

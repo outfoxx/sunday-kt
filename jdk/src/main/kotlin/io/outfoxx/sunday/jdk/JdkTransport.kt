@@ -21,6 +21,7 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
+import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
@@ -135,13 +136,23 @@ class JdkTransport(
       requestBuilder.header(ACCEPT, accept)
     }
 
-    val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+    val streamingBody = body as? StreamingBody
+    val contentType =
+      if (streamingBody != null) {
+        contentTypes?.firstOrNull()
+      } else {
+        contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+      }
 
     // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.header(CONTENT_TYPE, contentType.toString()) }
 
     var requestBodyPublisher =
-      body?.let {
+      streamingBody?.let {
+        contentType ?: throw SundayError(NoSupportedContentTypes)
+
+        BodyPublishers.ofInputStream { streamingBody.openSource().asInputStream() }
+      } ?: body?.let {
         contentType ?: throw SundayError(NoSupportedContentTypes)
 
         val mediaTypeEncoder =

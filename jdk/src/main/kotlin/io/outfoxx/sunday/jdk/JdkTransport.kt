@@ -50,7 +50,9 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
+import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.Flow
 import kotlin.reflect.KClass
 
 /**
@@ -151,7 +153,7 @@ class JdkTransport(
       streamingBody?.let {
         contentType ?: throw SundayError(NoSupportedContentTypes)
 
-        BodyPublishers.ofInputStream { streamingBody.openSource().asInputStream() }
+        streamingBody.bodyPublisher()
       } ?: body?.let {
         contentType ?: throw SundayError(NoSupportedContentTypes)
 
@@ -234,5 +236,24 @@ class JdkTransport(
 
   override fun close(cancelOutstandingRequests: Boolean) {
     // TODO track outstanding requests and implement appropriately
+  }
+
+  private fun StreamingBody.bodyPublisher(): HttpRequest.BodyPublisher {
+    val publisher = BodyPublishers.ofInputStream { openSource().asInputStream() }
+    return contentLength?.let { contentLength ->
+      ContentLengthBodyPublisher(publisher, contentLength)
+    } ?: publisher
+  }
+
+  private class ContentLengthBodyPublisher(
+    private val delegate: HttpRequest.BodyPublisher,
+    private val contentLength: Long,
+  ) : HttpRequest.BodyPublisher {
+
+    override fun contentLength(): Long = contentLength
+
+    override fun subscribe(subscriber: Flow.Subscriber<in ByteBuffer>) {
+      delegate.subscribe(subscriber)
+    }
   }
 }

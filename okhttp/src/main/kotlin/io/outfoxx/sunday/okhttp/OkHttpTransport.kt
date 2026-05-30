@@ -218,8 +218,8 @@ class OkHttpTransport(
 
     override fun writeTo(sink: BufferedSink) {
       body.openSource().use { source ->
+        val buffer = Buffer()
         while (true) {
-          val buffer = Buffer()
           val bytesRead = source.readAtMostTo(buffer, READ_SIZE)
           if (bytesRead == EOF) {
             break

@@ -54,7 +54,16 @@ class JdkRequestBodyTest {
   @Test
   fun `streaming request bodies are opened lazily and replayed`() =
     runTest {
-      val factory = JdkTransport(URITemplate("http://example.com"), SundayHttpProblem.Factory)
+      var contentLength: Long? = null
+      val factory =
+        JdkTransport(
+          URITemplate("http://example.com"),
+          SundayHttpProblem.Factory,
+          adapter = { request ->
+            contentLength = request.bodyPublisher().orElseThrow().contentLength()
+            request
+          },
+        )
       var opened = 0
       val requestBody =
         StreamingBody.source(contentLength = 3) {
@@ -71,6 +80,7 @@ class JdkRequestBodyTest {
         )
 
       expectThat(opened).isEqualTo(0)
+      expectThat(contentLength).isEqualTo(3)
       expectThat(request.headers.getFirstOrNull(CONTENT_TYPE)).isEqualTo("image/png")
       expectThat(request.body()?.readByteArray()).isEqualTo(byteArrayOf(1, 2, 3))
       expectThat(request.body()?.readByteArray()).isEqualTo(byteArrayOf(1, 2, 3))

@@ -21,6 +21,7 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
+import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
@@ -41,11 +42,15 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
 import kotlinx.io.readByteString
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.reflect.KClass
@@ -64,6 +69,8 @@ class OkHttpTransport(
   companion object {
 
     private val logger = LoggerFactory.getLogger(OkHttpTransport::class.java)
+    private const val EOF = -1L
+    private const val READ_SIZE = 8192L
   }
 
   override val registeredProblemTypes: Map<String, KClass<out Problem>>
@@ -132,13 +139,23 @@ class OkHttpTransport(
       requestBuilder.header(ACCEPT, accept)
     }
 
-    val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+    val streamingBody = body as? StreamingBody
+    val contentType =
+      if (streamingBody != null) {
+        contentTypes?.firstOrNull()
+      } else {
+        contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+      }
 
     // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.addHeader(CONTENT_TYPE, contentType.toString()) }
 
     var requestBody =
-      body?.let {
+      streamingBody?.let {
+        contentType ?: throw SundayError(NoSupportedContentTypes)
+
+        StreamingRequestBody(streamingBody, contentType.value.toMediaType())
+      } ?: body?.let {
         contentType ?: throw SundayError(NoSupportedContentTypes)
 
         val mediaTypeEncoder =
@@ -187,6 +204,29 @@ class OkHttpTransport(
     if (cancelOutstandingRequests) {
       httpClient.dispatcher.cancelAll()
       eventHttpClient.dispatcher.cancelAll()
+    }
+  }
+
+  private class StreamingRequestBody(
+    private val body: StreamingBody,
+    private val contentType: okhttp3.MediaType,
+  ) : RequestBody() {
+
+    override fun contentType(): okhttp3.MediaType = contentType
+
+    override fun contentLength(): Long = body.contentLength ?: -1L
+
+    override fun writeTo(sink: BufferedSink) {
+      body.openSource().use { source ->
+        val buffer = Buffer()
+        while (true) {
+          val bytesRead = source.readAtMostTo(buffer, READ_SIZE)
+          if (bytesRead == EOF) {
+            break
+          }
+          sink.write(buffer.readByteArray())
+        }
+      }
     }
   }
 }

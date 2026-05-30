@@ -21,6 +21,7 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
+import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
 import io.outfoxx.sunday.SundayError.Reason.NoDecoder
@@ -49,7 +50,9 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
+import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.Flow
 import kotlin.reflect.KClass
 
 /**
@@ -135,13 +138,23 @@ class JdkTransport(
       requestBuilder.header(ACCEPT, accept)
     }
 
-    val contentType = contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+    val streamingBody = body as? StreamingBody
+    val contentType =
+      if (streamingBody != null) {
+        contentTypes?.firstOrNull()
+      } else {
+        contentTypes?.firstOrNull(mediaTypeEncoders::supports)
+      }
 
     // Add a `Content-Type` header (even if the body is null, to match any expected server requirements)
     contentType?.let { requestBuilder.header(CONTENT_TYPE, contentType.toString()) }
 
     var requestBodyPublisher =
-      body?.let {
+      streamingBody?.let {
+        contentType ?: throw SundayError(NoSupportedContentTypes)
+
+        streamingBody.bodyPublisher()
+      } ?: body?.let {
         contentType ?: throw SundayError(NoSupportedContentTypes)
 
         val mediaTypeEncoder =
@@ -223,5 +236,24 @@ class JdkTransport(
 
   override fun close(cancelOutstandingRequests: Boolean) {
     // TODO track outstanding requests and implement appropriately
+  }
+
+  private fun StreamingBody.bodyPublisher(): HttpRequest.BodyPublisher {
+    val publisher = BodyPublishers.ofInputStream { openSource().asInputStream() }
+    return contentLength?.let { contentLength ->
+      ContentLengthBodyPublisher(publisher, contentLength)
+    } ?: publisher
+  }
+
+  private class ContentLengthBodyPublisher(
+    private val delegate: HttpRequest.BodyPublisher,
+    private val contentLength: Long,
+  ) : HttpRequest.BodyPublisher {
+
+    override fun contentLength(): Long = contentLength
+
+    override fun subscribe(subscriber: Flow.Subscriber<in ByteBuffer>) {
+      delegate.subscribe(subscriber)
+    }
   }
 }

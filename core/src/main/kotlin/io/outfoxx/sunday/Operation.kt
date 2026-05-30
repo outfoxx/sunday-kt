@@ -112,6 +112,11 @@ class Operation<B : Any, R : Any, Req : Request>(
 }
 
 /**
+ * A generated operation with a streaming request body.
+ */
+typealias StreamingOperation<R, Req> = Operation<StreamingBody, R, Req>
+
+/**
  * A generated operation that can execute select problems as null responses.
  */
 class NullableOperation<B : Any, R : Any, Req : Request>(

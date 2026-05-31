@@ -36,12 +36,14 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.lang.reflect.Proxy
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.util.concurrent.Flow
 
 class StreamingBufferMessageBodyReaderTest {
 
@@ -103,8 +105,52 @@ class StreamingBufferMessageBodyReaderTest {
     }
   }
 
+  @Test
+  fun `rejects second subscriber because request bodies are single use`() {
+    val publisher = streamingBufferPublisher()
+    val firstSubscriber = RecordingSubscriber()
+    val secondSubscriber = RecordingSubscriber()
+
+    publisher.subscribe(firstSubscriber)
+    publisher.subscribe(secondSubscriber)
+
+    assertTrue(firstSubscriber.subscribed)
+    assertTrue(secondSubscriber.subscribed)
+    assertTrue(secondSubscriber.error is IllegalStateException)
+  }
+
   @Suppress("UNCHECKED_CAST")
   private val multiBufferType = Multi::class.java as Class<Multi<Buffer>>
+
+  @Suppress("UNCHECKED_CAST")
+  private fun streamingBufferPublisher(): Flow.Publisher<Buffer> {
+    val publisherClass =
+      Class.forName("${StreamingBufferMessageBodyReader::class.java.name}\$StreamingBufferPublisher")
+    val constructor =
+      publisherClass
+        .getDeclaredConstructor(InputStream::class.java)
+        .apply { isAccessible = true }
+
+    return constructor.newInstance(ByteArrayInputStream("payload".toByteArray())) as Flow.Publisher<Buffer>
+  }
+
+  private class RecordingSubscriber : Flow.Subscriber<Buffer> {
+
+    var subscribed = false
+    var error: Throwable? = null
+
+    override fun onSubscribe(subscription: Flow.Subscription) {
+      subscribed = true
+    }
+
+    override fun onNext(item: Buffer) = Unit
+
+    override fun onError(throwable: Throwable) {
+      error = throwable
+    }
+
+    override fun onComplete() = Unit
+  }
 
   private object TypeHolder {
     val buffersType: Type = TypeHolderFields::class.java.getDeclaredField("buffers").genericType

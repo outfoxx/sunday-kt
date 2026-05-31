@@ -105,10 +105,35 @@ class StreamingBufferMessageBodyReader : ServerMessageBodyReader<Multi<Buffer>> 
     private val inputStream: InputStream,
   ) : Flow.Publisher<Buffer> {
 
+    private var subscribed = false
+
     override fun subscribe(subscriber: Flow.Subscriber<in Buffer>) {
+      val accepted =
+        synchronized(this) {
+          if (subscribed) {
+            false
+          } else {
+            subscribed = true
+            true
+          }
+        }
+
+      if (!accepted) {
+        subscriber.onSubscribe(RejectedSubscription)
+        subscriber.onError(IllegalStateException("Streaming request body can only be consumed once"))
+        return
+      }
+
       val subscription = StreamingBufferSubscription(inputStream, subscriber)
       subscriber.onSubscribe(subscription)
     }
+  }
+
+  private object RejectedSubscription : Flow.Subscription {
+
+    override fun request(n: Long) = Unit
+
+    override fun cancel() = Unit
   }
 
   private class StreamingBufferSubscription(

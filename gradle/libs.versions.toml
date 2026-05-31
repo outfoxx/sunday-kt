@@ -11,6 +11,8 @@ zalando-problem = "0.27.1"
 checker-qual = "3.53.0"
 qv-problem = "3.21.0"
 jakarta-rest-api = "3.1.0"
+quarkus = "3.25.2"
+mutiny-vertx = "3.16.0"
 
 slf4j = "2.0.17"
 kotlinCoroutines = "1.10.2"
@@ -51,6 +53,13 @@ zalando-problem-jackson = { module = "org.zalando:jackson-datatype-problem", ver
 checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checker-qual" }
 
 qv-problem = { module = "io.quarkiverse.resteasy-problem:quarkus-resteasy-problem", version.ref = "qv-problem" }
+quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+quarkus-rest = { module = "io.quarkus:quarkus-rest" }
+quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
+mutiny = { module = "io.smallrye.reactive:mutiny" }
+mutiny-vertx-core = { module = "io.smallrye.reactive:smallrye-mutiny-vertx-core", version.ref = "mutiny-vertx" }
+resteasy-reactive = { module = "io.quarkus.resteasy.reactive:resteasy-reactive" }
+resteasy-reactive-vertx = { module = "io.quarkus.resteasy.reactive:resteasy-reactive-vertx" }
 
 uri-template = { module = "com.github.hal4j:uritemplate", version.ref = "uriTemplate" }
 
@@ -80,3 +89,4 @@ dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 github-release = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+quarkus = { id = "io.quarkus", version.ref = "quarkus" }

@@ -24,6 +24,7 @@ Artifacts
 - `sunday-core`: Core types and client abstractions.
 - `sunday-okhttp`: OkHttp-based transport implementation.
 - `sunday-jdk`: JDK `HttpClient`-based transport implementation.
+- `sunday-jaxrs-quarkus`: Quarkus REST/JAX-RS support utilities.
 - `sunday-problem`: Default RFC7807 problem type (`SundayHttpProblem`) and adapters.
 - `sunday-problem-quarkus`: Quarkus `HttpProblem` integration.
 - `sunday-problem-zalando`: Zalando `problem` integration.
@@ -35,6 +36,7 @@ Artifacts
 ```kotlin
 implementation("io.outfoxx.sunday:sunday-core:$version")
 implementation("io.outfoxx.sunday:sunday-okhttp:$version") // or sunday-jdk
+implementation("io.outfoxx.sunday:sunday-jaxrs-quarkus:$version") // Quarkus REST/JAX-RS server support
 implementation("io.outfoxx.sunday:sunday-problem:$version") // or sunday-problem-quarkus / sunday-problem-zalando
 ```
 

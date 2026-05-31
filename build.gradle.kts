@@ -11,7 +11,7 @@ val releaseVersion: String by project
 group = "io.outfoxx.sunday"
 version = releaseVersion
 
-val moduleNames = listOf("core", "jdk", "okhttp", "problem", "problem-quarkus", "problem-zalando")
+val moduleNames = listOf("core", "jdk", "okhttp", "jaxrs-quarkus", "problem", "problem-quarkus", "problem-zalando")
 
 //
 // ANALYSIS

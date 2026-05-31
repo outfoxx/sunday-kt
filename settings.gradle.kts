@@ -24,6 +24,7 @@ include(
   "core",
   "okhttp",
   "jdk",
+  "jaxrs-quarkus",
   "problem",
   "problem-quarkus",
   "problem-zalando",
@@ -33,6 +34,7 @@ include(
 project(":core").name = "sunday-core"
 project(":okhttp").name = "sunday-okhttp"
 project(":jdk").name = "sunday-jdk"
+project(":jaxrs-quarkus").name = "sunday-jaxrs-quarkus"
 project(":problem").name = "sunday-problem"
 project(":problem-quarkus").name = "sunday-problem-quarkus"
 project(":problem-zalando").name = "sunday-problem-zalando"

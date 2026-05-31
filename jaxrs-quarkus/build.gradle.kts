@@ -23,5 +23,4 @@ dependencies {
   implementation(libs.resteasy.reactive.vertx)
 
   testImplementation(libs.quarkus.junit5)
-  testImplementation(libs.quarkus.rest)
 }

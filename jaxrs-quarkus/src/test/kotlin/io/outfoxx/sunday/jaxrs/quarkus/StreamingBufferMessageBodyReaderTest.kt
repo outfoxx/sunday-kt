@@ -22,15 +22,21 @@ import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.Uni
 import io.vertx.mutiny.core.buffer.Buffer
 import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.InternalServerErrorException
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.MultivaluedHashMap
+import org.jboss.resteasy.reactive.server.spi.ResteasyReactiveResourceInfo
+import org.jboss.resteasy.reactive.server.spi.ServerRequestContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
+import java.lang.reflect.Proxy
 import java.lang.reflect.Type
 import java.net.URI
 import java.net.http.HttpClient
@@ -44,9 +50,61 @@ class StreamingBufferMessageBodyReaderTest {
     val reader = StreamingBufferMessageBodyReader()
 
     assertTrue(reader.isReadable(Multi::class.java, TypeHolder.buffersType, emptyArray(), MediaType.WILDCARD_TYPE))
+    assertTrue(
+      reader.isReadable(
+        Multi::class.java,
+        TypeHolder.buffersType,
+        ResteasyReactiveResourceInfo("test", String::class.java, emptyArray(), false, "test"),
+        MediaType.WILDCARD_TYPE,
+      ),
+    )
+    assertFalse(reader.isReadable(Multi::class.java, Multi::class.java, emptyArray(), MediaType.WILDCARD_TYPE))
     assertFalse(reader.isReadable(Multi::class.java, TypeHolder.stringsType, emptyArray(), MediaType.WILDCARD_TYPE))
     assertFalse(reader.isReadable(String::class.java, String::class.java, emptyArray(), MediaType.WILDCARD_TYPE))
   }
+
+  @Test
+  fun `fails clearly for standard JAX-RS read path`() {
+    val reader = StreamingBufferMessageBodyReader()
+
+    assertThrows(UnsupportedOperationException::class.java) {
+      reader.readFrom(
+        multiBufferType,
+        TypeHolder.buffersType,
+        emptyArray(),
+        MediaType.WILDCARD_TYPE,
+        MultivaluedHashMap(),
+        ByteArrayInputStream(ByteArray(0)),
+      )
+    }
+  }
+
+  @Test
+  fun `fails clearly outside Vertx backed request context`() {
+    val reader = StreamingBufferMessageBodyReader()
+    val context =
+      Proxy.newProxyInstance(
+        ServerRequestContext::class.java.classLoader,
+        arrayOf(ServerRequestContext::class.java),
+      ) { _, method, _ ->
+        when (method.name) {
+          "toString" -> "TestServerRequestContext"
+          else -> error("Unexpected ServerRequestContext method: ${method.name}")
+        }
+      } as ServerRequestContext
+
+    assertThrows(InternalServerErrorException::class.java) {
+      reader.readFrom(
+        multiBufferType,
+        TypeHolder.buffersType,
+        MediaType.WILDCARD_TYPE,
+        context,
+      )
+    }
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  private val multiBufferType = Multi::class.java as Class<Multi<Buffer>>
 
   private object TypeHolder {
     val buffersType: Type = TypeHolderFields::class.java.getDeclaredField("buffers").genericType
@@ -68,6 +126,12 @@ class StreamingBufferMessageBodyReaderQuarkusTest {
 
   @Test
   fun `streams chunked request bodies into buffer multi`() {
+    val payload =
+      buildString {
+        repeat(20_000) { index ->
+          append('a' + (index % 26))
+        }
+      }
     val client = HttpClient.newHttpClient()
     val request =
       HttpRequest
@@ -75,14 +139,14 @@ class StreamingBufferMessageBodyReaderQuarkusTest {
         .header("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
         .POST(
           HttpRequest.BodyPublishers.ofInputStream {
-            ByteArrayInputStream("alpha-beta-gamma".toByteArray())
+            ByteArrayInputStream(payload.toByteArray())
           },
         ).build()
 
     val response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
     assertEquals(200, response.statusCode())
-    assertEquals("alpha-beta-gamma", response.body())
+    assertEquals(payload, response.body())
   }
 }
 

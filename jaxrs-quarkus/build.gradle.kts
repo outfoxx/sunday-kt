@@ -11,6 +11,10 @@ tasks.matching { it.name == "runKtlintCheckOverMainSourceSet" }.configureEach {
   dependsOn("compileQuarkusGeneratedSourcesJava")
 }
 
+tasks.matching { it.name == "sourcesJar" }.configureEach {
+  dependsOn("compileQuarkusGeneratedSourcesJava")
+}
+
 dependencies {
 
   implementation(enforcedPlatform(libs.quarkus.bom))

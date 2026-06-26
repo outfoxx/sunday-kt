@@ -90,3 +90,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 github-release = { id = "com.github.breadmoirai.github-release", version.ref = "githubRelease" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }

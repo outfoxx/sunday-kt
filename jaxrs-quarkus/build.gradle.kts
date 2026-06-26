@@ -15,9 +15,13 @@ tasks.matching { it.name == "sourcesJar" }.configureEach {
   dependsOn("compileQuarkusGeneratedSourcesJava")
 }
 
+tasks.matching { it.name.startsWith("dokkaGeneratePublication") }.configureEach {
+  dependsOn("compileQuarkusGeneratedSourcesJava")
+}
+
 dependencies {
 
-  implementation(enforcedPlatform(libs.quarkus.bom))
+  implementation(platform(libs.quarkus.bom))
 
   api(libs.mutiny)
   api(libs.mutiny.vertx.core)

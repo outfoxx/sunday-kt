@@ -3,6 +3,7 @@ plugins {
   alias(libs.plugins.sonarqube)
   alias(libs.plugins.dokka)
   alias(libs.plugins.github.release)
+  alias(libs.plugins.maven.publish) apply false
   alias(libs.plugins.kotlin.jvm) apply false // Required by dokka
 }
 

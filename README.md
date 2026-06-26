@@ -25,6 +25,7 @@ Artifacts
 - `sunday-okhttp`: OkHttp-based transport implementation.
 - `sunday-jdk`: JDK `HttpClient`-based transport implementation.
 - `sunday-jaxrs-quarkus`: Quarkus REST/JAX-RS support utilities.
+- `sunday-broker`: Protocol-neutral broker operation support for generated AsyncAPI clients.
 - `sunday-problem`: Default RFC7807 problem type (`SundayHttpProblem`) and adapters.
 - `sunday-problem-quarkus`: Quarkus `HttpProblem` integration.
 - `sunday-problem-zalando`: Zalando `problem` integration.

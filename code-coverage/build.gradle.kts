@@ -9,6 +9,7 @@ dependencies {
   kover(project(":sunday-jdk"))
   kover(project(":sunday-okhttp"))
   kover(project(":sunday-jaxrs-quarkus"))
+  kover(project(":sunday-broker"))
   kover(project(":sunday-problem"))
   kover(project(":sunday-problem-quarkus"))
   kover(project(":sunday-problem-zalando"))

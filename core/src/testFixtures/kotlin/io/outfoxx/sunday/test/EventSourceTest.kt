@@ -439,7 +439,7 @@ abstract class EventSourceTest {
         .setBody(
           """
           |retry: -1
-          |retry-max: -1
+          |retry-max: 0
           |keepalive: 0
           |data: some test data
           |
@@ -796,6 +796,11 @@ abstract class EventSourceTest {
           3,
         ),
     )
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(CONTENT_TYPE, EventStream),
+    )
     server.start()
     server.use {
       val connected = CountDownLatch(1)
@@ -804,20 +809,23 @@ abstract class EventSourceTest {
         EventSource(
           { headers ->
             createRequest(server.url("/test").toString(), headers, connected::countDown) {
-              println("### CANCELED")
               canceled.countDown()
             }
           },
           SundayHttpProblem.Factory,
+          retryTime = Duration.ofMillis(50),
         )
 
       eventSource.connect()
 
       expectThat(connected.await(12, SECONDS)).isTrue()
+      expectThat(server.takeRequest(3, SECONDS)).isNotNull()
 
       eventSource.close()
 
       expectThat(canceled.await(12, SECONDS)).isTrue()
+      expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
+      expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
     }
   }
 

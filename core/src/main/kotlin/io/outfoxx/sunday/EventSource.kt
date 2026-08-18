@@ -636,7 +636,7 @@ class EventSource(
     val retryMax = info.retryMax
     if (retryMax != null) {
       val retryTimeMax = retryMax.trim().toLongOrNull(radix = 10)
-      if (retryTimeMax != null && retryTimeMax >= 0) {
+      if (retryTimeMax != null && retryTimeMax > 0) {
         logger.debug("update maximum retry timeout: retryTimeMax=$retryTimeMax")
 
         this.retryTimeMaxValue = Duration.ofMillis(retryTimeMax)

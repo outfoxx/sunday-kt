@@ -67,7 +67,7 @@ class JdkTransport(
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
-  private val eventRequestTimeout: Duration = EventSource.eventTimeoutDefault,
+  private val eventRequestTimeout: Duration? = null,
 ) : Transport<JdkRequest>(),
   Closeable {
 
@@ -170,15 +170,17 @@ class JdkTransport(
       requestBodyPublisher = BodyPublishers.ofByteArray(byteArrayOf())
     }
 
+    val timeout =
+      when (purpose) {
+        RequestPurpose.Normal -> requestTimeout
+        RequestPurpose.Events -> eventRequestTimeout
+      }
+    timeout?.let(requestBuilder::timeout)
+
     val request =
       requestBuilder
         .method(method.name, requestBodyPublisher ?: BodyPublishers.noBody())
-        .timeout(
-          when (purpose) {
-            RequestPurpose.Normal -> requestTimeout
-            RequestPurpose.Events -> eventRequestTimeout
-          },
-        ).build()
+        .build()
 
     logger.debug("Built request: {}", request)
 

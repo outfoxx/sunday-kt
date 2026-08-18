@@ -33,15 +33,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.Buffer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.Closeable
-import java.lang.Double.max
-import java.lang.Double.min
 import java.net.SocketException
 import java.net.URI
 import java.time.Duration
@@ -54,7 +51,9 @@ import kotlin.concurrent.read
 import kotlin.concurrent.schedule
 import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.concurrent.write
+import kotlin.math.min
 import kotlin.math.pow
+import kotlin.random.Random
 
 /**
  * Server-Sent Events stream client.
@@ -66,7 +65,7 @@ class EventSource(
   private val requestSupplier: suspend (Headers) -> Request,
   private val problemFactory: ProblemFactory,
   retryTime: Duration = retryTimeDefault,
-  private val eventTimeout: Duration? = eventTimeoutDefault,
+  eventTimeout: Duration? = eventTimeoutDefault,
   private val eventTimeoutCheckInterval: Duration = eventTimeoutCheckIntervalDefault,
   private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java),
 ) : Closeable {
@@ -111,7 +110,7 @@ class EventSource(
      * Each [EventSource] can override this setting in its constructor using the `eventTimeout`
      * constructor parameter.
      */
-    var eventTimeoutDefault: Duration = Duration.of(75, ChronoUnit.SECONDS)
+    var eventTimeoutDefault: Duration? = null
 
     /**
      * Global default time interval for event timeout checks.
@@ -126,19 +125,61 @@ class EventSource(
     /**
      * Global default read timeout for [EventSource] http clients.
      *
-     * If data is not received without the read timeout, a cancellation error
+     * If data is not received within the read timeout, a cancellation error
      * will cause a reconnection attempt to be initiated.
+     * A zero duration disables the transport read timeout.
      *
      * Note: [EventSource]s can override the HTTP read timeout by customizing the `httpClient`
      * constructor parameters. This default applies to instances that use a system create
      * client.
      */
-    var httpReadTimeoutDefault: Duration = Duration.ofMinutes(10)
+    var httpReadTimeoutDefault: Duration = Duration.ZERO
 
     private fun createRequestEventScope(): CoroutineScope =
       CoroutineScope(CoroutineName("EventSource - Request Processor"))
 
-    private const val MAX_RETRY_TIME_MULTIPLE = 30.0
+    private const val DEFAULT_RETRY_TIME_MAX_MULTIPLE = 30L
+    private const val KEEPALIVE_TIMEOUT_MULTIPLE = 3L
+    private const val RETRY_JITTER_MIN = 0.9
+    private val keepaliveTimeoutFloor = Duration.ofSeconds(1)
+
+    internal fun calculateRetryDelay(
+      retryAttempt: Int,
+      retryTime: Duration,
+      retryTimeMax: Duration,
+      jitter: Double,
+    ): Duration {
+      val retryTimeMs = retryTime.toMillis().toDouble()
+      val retryTimeMaxMs = retryTimeMax.toMillis().toDouble()
+      val exponentialDelayMs = retryTimeMs * 2.0.pow(retryAttempt)
+      val cappedDelayMs = min(exponentialDelayMs, retryTimeMaxMs)
+
+      return Duration.ofMillis((cappedDelayMs * jitter).toLong())
+    }
+
+    internal fun calculateEventTimeout(keepaliveTime: Duration): Duration {
+      val keepaliveTimeMs = keepaliveTime.toMillis()
+      val advertisedTimeoutMs =
+        if (keepaliveTimeMs > Long.MAX_VALUE / KEEPALIVE_TIMEOUT_MULTIPLE) {
+          Long.MAX_VALUE
+        } else {
+          keepaliveTimeMs * KEEPALIVE_TIMEOUT_MULTIPLE
+        }
+
+      return Duration.ofMillis(maxOf(advertisedTimeoutMs, keepaliveTimeoutFloor.toMillis()))
+    }
+
+    private fun calculateDefaultRetryTimeMax(retryTime: Duration): Duration {
+      val retryTimeMs = retryTime.toMillis()
+      val retryTimeMaxMs =
+        if (retryTimeMs > Long.MAX_VALUE / DEFAULT_RETRY_TIME_MAX_MULTIPLE) {
+          Long.MAX_VALUE
+        } else {
+          retryTimeMs * DEFAULT_RETRY_TIME_MAX_MULTIPLE
+        }
+
+      return Duration.ofMillis(retryTimeMaxMs)
+    }
   }
 
   /**
@@ -181,6 +222,27 @@ class EventSource(
     get() = retryTimeValue
   private var retryTimeValue = retryTime
 
+  /**
+   * Current maximum retry time.
+   *
+   * The server can update this value using the `retry-max` SSE extension field.
+   */
+  val retryTimeMax: Duration
+    get() = retryTimeMaxValue ?: calculateDefaultRetryTimeMax(retryTime)
+  private var retryTimeMaxValue: Duration? = null
+
+  private val configuredEventTimeout = eventTimeout
+  private var serverEventTimeout: Duration? = null
+
+  /**
+   * Current event timeout.
+   *
+   * An explicit constructor value takes precedence over the timeout derived from a server's
+   * `keepalive` SSE extension field. Without either value, event timeouts are disabled.
+   */
+  val eventTimeout: Duration?
+    get() = configuredEventTimeout ?: serverEventTimeout
+
   private var openHandler: (() -> Unit)? = null
   private var errorHandler: ((error: Throwable?) -> Unit)? = null
   private var messageHandler: ((event: Event) -> Unit)? = null
@@ -188,7 +250,6 @@ class EventSource(
 
   private var retryAttempt = 0
   private var currentRequest: Job? = null
-  private var connectionAttemptTime: Instant? = null
   private var connectionOrigin: URI? = null
   private var reconnectTimerTask: TimerTask? = null
   private var lastEventId: String? = null
@@ -303,8 +364,6 @@ class EventSource(
       headers = headers.plus(LAST_EVENT_ID to it)
     }
 
-    connectionAttemptTime = Instant.now()
-
     val request = requestSupplier(headers)
 
     currentRequest =
@@ -312,13 +371,7 @@ class EventSource(
         try {
           request
             .start()
-            .onCompletion {
-              if (it != null) {
-                receivedError(it)
-              } else {
-                receivedComplete()
-              }
-            }.collect(::dispatchEvent)
+            .collect(::dispatchEvent)
 
         } catch (_: CancellationException) {
           // do nothing
@@ -335,8 +388,14 @@ class EventSource(
 
     when (event) {
       is Request.Event.Start -> {
+        if (event.value.statusCode == 204) {
+          close()
+          return
+        }
+
         if (!event.value.isSuccessful) {
-          receivedError(problemFactory.from(event.value).build())
+          receivedFatalError(problemFactory.from(event.value).build())
+          return
         }
 
         receivedResponse(event.value)
@@ -488,6 +547,18 @@ class EventSource(
     }
   }
 
+  private fun receivedFatalError(t: Throwable) {
+    if (readyStateValue.isClosed) {
+      return
+    }
+
+    logger.error("Received: fatal error", t)
+
+    stateLock.read { errorHandler }?.invoke(t)
+
+    close()
+  }
+
   private fun receivedComplete() {
     if (readyStateValue.isClosed) {
       return
@@ -515,14 +586,13 @@ class EventSource(
       return
     }
 
-    val lastConnectTime =
-      if (connectionAttemptTime != null) {
-        Duration.between(connectionAttemptTime, Instant.now())
+    val jitter =
+      if (retryAttempt == 0) {
+        1.0
       } else {
-        Duration.ZERO
+        Random.nextDouble(RETRY_JITTER_MIN, 1.0)
       }
-
-    val retryDelay = calculateRetryDelay(retryAttempt, retryTime, lastConnectTime)
+    val retryDelay = calculateRetryDelay(retryAttempt, retryTime, retryTimeMax, jitter)
 
     logger.debug("Scheduling reconnect in {}", retryDelay)
 
@@ -542,35 +612,6 @@ class EventSource(
     reconnectTimerTask = null
   }
 
-  private fun calculateRetryDelay(
-    retryAttempt: Int,
-    retryTime: Duration,
-    lastConnectTime: Duration,
-  ): Duration {
-    val retryTimeMs = retryTime.toMillis()
-
-    // calculate total delay
-    val backOffDelayMs = retryAttempt.toDouble().pow(2) * retryTimeMs
-    var retryDelayMs =
-      min(
-        retryTimeMs + backOffDelayMs,
-        retryTimeMs * MAX_RETRY_TIME_MULTIPLE,
-      )
-
-    // Adjust delay by the amount of time the last connection
-    // cycle took, except on the first attempt
-    if (retryAttempt > 0) {
-      retryDelayMs -= lastConnectTime.toMillis()
-
-      // Ensure the delay is at least as large as
-      // a minimum retry time interval
-      retryDelayMs = max(retryDelayMs, retryTimeMs.toDouble())
-    }
-
-    return Duration.ofMillis(retryDelayMs.toLong())
-  }
-
-
   /**
    * Event Dispatching
    */
@@ -583,12 +624,37 @@ class EventSource(
     val retry = info.retry
     if (retry != null) {
       val retryTime = retry.trim().toLongOrNull(radix = 10)
-      if (retryTime != null) {
+      if (retryTime != null && retryTime >= 0) {
         logger.debug("update retry timeout: retryTime=$retryTime")
 
         this.retryTimeValue = Duration.ofMillis(retryTime)
       } else {
         logger.warn("ignoring invalid retry timeout message: retry=$retry")
+      }
+    }
+
+    val retryMax = info.retryMax
+    if (retryMax != null) {
+      val retryTimeMax = retryMax.trim().toLongOrNull(radix = 10)
+      if (retryTimeMax != null && retryTimeMax > 0) {
+        logger.debug("update maximum retry timeout: retryTimeMax=$retryTimeMax")
+
+        this.retryTimeMaxValue = Duration.ofMillis(retryTimeMax)
+      } else {
+        logger.warn("ignoring invalid maximum retry timeout message: retryMax=$retryMax")
+      }
+    }
+
+    val keepalive = info.keepalive
+    if (keepalive != null) {
+      val keepaliveTime = keepalive.trim().toLongOrNull(radix = 10)
+      if (keepaliveTime != null && keepaliveTime > 0) {
+        logger.debug("update keepalive interval: keepaliveTime=$keepaliveTime")
+
+        serverEventTimeout = calculateEventTimeout(Duration.ofMillis(keepaliveTime))
+        startEventTimeoutCheck(lastEventReceivedTime)
+      } else {
+        logger.warn("ignoring invalid keepalive message: keepalive=$keepalive")
       }
     }
 

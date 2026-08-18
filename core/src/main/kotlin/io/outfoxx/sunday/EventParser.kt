@@ -47,6 +47,16 @@ class EventParser {
     var data: String? = null,
   ) {
 
+    /**
+     * SSE keepalive interval extension field.
+     */
+    var keepalive: String? = null
+
+    /**
+     * SSE maximum retry interval extension field.
+     */
+    var retryMax: String? = null
+
     fun toEvent(origin: String) = EventSource.Event(event, id, data, origin)
 
   }
@@ -191,6 +201,10 @@ class EventParser {
 
         when (key) {
           "retry" -> info.retry = trimEventField(string = value)
+
+          "retry-max" -> info.retryMax = trimEventField(string = value)
+
+          "keepalive" -> info.keepalive = trimEventField(string = value)
 
           "event" -> info.event = trimEventField(string = value)
 

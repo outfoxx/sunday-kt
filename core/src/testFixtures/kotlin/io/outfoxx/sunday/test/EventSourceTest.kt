@@ -35,9 +35,13 @@ import org.junit.jupiter.api.Timeout
 import strikt.api.expectThat
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
+import strikt.assertions.isLessThan
 import strikt.assertions.isNotNull
+import strikt.assertions.isNull
 import strikt.assertions.isTrue
 import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
@@ -346,6 +350,270 @@ abstract class EventSourceTest {
 
         expectThat(completed.await(3, SECONDS)).isTrue()
         expectThat(eventSource.retryTime).isEqualTo(Duration.ofMillis(500L))
+      }
+    }
+  }
+
+  @Test
+  fun `server controls retry maximum and event timeout`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(CONTENT_TYPE, EventStream)
+        .setBody(
+          """
+          |retry-max: 3000
+          |keepalive: 500
+          |data: some test data
+          |
+          |
+          """.trimMargin(),
+        ),
+    )
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
+
+      val completed = CountDownLatch(1)
+      eventSource.onMessage = { completed.countDown() }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(completed.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.retryTimeMax).isEqualTo(Duration.ofSeconds(3))
+        expectThat(eventSource.eventTimeout).isEqualTo(Duration.ofMillis(1500))
+      }
+    }
+  }
+
+  @Test
+  fun `explicit event timeout overrides server keepalive`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(CONTENT_TYPE, EventStream)
+        .setBody(
+          """
+          |keepalive: 5000
+          |data: some test data
+          |
+          |
+          """.trimMargin(),
+        ),
+    )
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+          eventTimeout = Duration.ofMillis(250),
+        )
+
+      val completed = CountDownLatch(1)
+      eventSource.onMessage = { completed.countDown() }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(completed.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.eventTimeout).isEqualTo(Duration.ofMillis(250))
+      }
+    }
+  }
+
+  @Test
+  fun `invalid reconnection controls are ignored`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(CONTENT_TYPE, EventStream)
+        .setBody(
+          """
+          |retry: -1
+          |retry-max: -1
+          |keepalive: 0
+          |data: some test data
+          |
+          |
+          """.trimMargin(),
+        ),
+    )
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+        )
+
+      val completed = CountDownLatch(1)
+      eventSource.onMessage = { completed.countDown() }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(completed.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.retryTime).isEqualTo(Duration.ofMillis(500))
+        expectThat(eventSource.retryTimeMax).isEqualTo(Duration.ofSeconds(15))
+        expectThat(eventSource.eventTimeout).isNull()
+      }
+    }
+  }
+
+  @Test
+  fun `comment-only blocks reset event timeout activity`() {
+    val keepaliveBlock = "keepalive: 100\n\n"
+    val commentBlock = ": 123456789012\n\n"
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .addHeader(CONTENT_TYPE, EventStream)
+        .setChunkedBody(keepaliveBlock + commentBlock.repeat(10), keepaliveBlock.length)
+        .throttleBody(keepaliveBlock.length.toLong(), 600, MILLISECONDS),
+    )
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+          eventTimeoutCheckInterval = Duration.ofMillis(50),
+        )
+
+      val opened = CountDownLatch(1)
+      val timedOut = CountDownLatch(1)
+      eventSource.onOpen = { opened.countDown() }
+      eventSource.onError = {
+        if (it is EventSourceError && it.reason == EventTimeout) {
+          timedOut.countDown()
+        }
+      }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(opened.await(3, SECONDS)).isTrue()
+        expectThat(timedOut.await(2500, MILLISECONDS)).isFalse()
+      }
+    }
+  }
+
+  @Test
+  fun `event timeout is disabled without an override or keepalive`() {
+    val eventSource =
+      EventSource(
+        { headers -> createRequest("http://example.com", headers) },
+        SundayHttpProblem.Factory,
+      )
+
+    expectThat(eventSource.eventTimeout).isNull()
+  }
+
+  @Test
+  fun `clean server close resets retry escalation`() {
+    val server = MockWebServer()
+    repeat(5) {
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(200)
+          .addHeader(CONTENT_TYPE, EventStream),
+      )
+    }
+    server.enqueue(MockResponse().setResponseCode(204))
+    server.start()
+    server.use {
+      val opened = CountDownLatch(6)
+      val openedAt = CopyOnWriteArrayList<Long>()
+      val eventSource =
+        EventSource(
+          { headers ->
+            createRequest(
+              server.url("/test").toString(),
+              headers,
+              onStart = {
+                openedAt += System.nanoTime()
+                opened.countDown()
+              },
+            )
+          },
+          SundayHttpProblem.Factory,
+          retryTime = Duration.ofMillis(100),
+        )
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(opened.await(4, SECONDS)).isTrue()
+        val finalReconnectDelay = Duration.ofNanos(openedAt[5] - openedAt[4])
+        expectThat(finalReconnectDelay).isLessThan(Duration.ofMillis(700))
+      }
+    }
+  }
+
+  @Test
+  fun `non-success response fails without reconnecting`() {
+    val server = MockWebServer()
+    server.enqueue(
+      MockResponse()
+        .setResponseCode(400)
+        .addHeader(CONTENT_TYPE, Problem),
+    )
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+          retryTime = Duration.ofMillis(50),
+        )
+
+      val errored = CountDownLatch(1)
+      eventSource.onError = { errored.countDown() }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(errored.await(3, SECONDS)).isTrue()
+        expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
+        expectThat(server.takeRequest(250, MILLISECONDS)).isNotNull()
+        expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
+      }
+    }
+  }
+
+  @Test
+  fun `no-content response closes without reconnecting`() {
+    val server = MockWebServer()
+    server.enqueue(MockResponse().setResponseCode(204))
+    server.start()
+    server.use {
+      val eventSource =
+        EventSource(
+          { headers -> createRequest(server.url("/test").toString(), headers) },
+          SundayHttpProblem.Factory,
+          retryTime = Duration.ofMillis(50),
+        )
+
+      val errored = CountDownLatch(1)
+      eventSource.onError = { errored.countDown() }
+
+      eventSource.use {
+        eventSource.connect()
+
+        expectThat(server.takeRequest(3, SECONDS)).isNotNull()
+        expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
+        expectThat(errored.await(250, MILLISECONDS)).isFalse()
+        expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
       }
     }
   }

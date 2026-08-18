@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.hasSize
+import strikt.assertions.isEqualTo
 import java.lang.Integer.min
 import kotlin.random.Random
 
@@ -143,6 +144,17 @@ class EventParserTest {
 
     expectThat(events).hasSize(1)
     expectThat(events).containsExactlyInAnyOrder(EventInfo("", "", "", ""))
+  }
+
+  @Test
+  fun `parses reconnection control fields`() {
+    val eventBuffer = source("keepalive: 5000\nretry-max: 30000\n\n")
+
+    val events = run(EventParser(), eventBuffer)
+
+    expectThat(events).hasSize(1)
+    expectThat(events[0].keepalive).isEqualTo("5000")
+    expectThat(events[0].retryMax).isEqualTo("30000")
   }
 
   @Test

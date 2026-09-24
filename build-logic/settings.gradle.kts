@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "build-logic"
+// Nested composite builds must not share a convention-build identity.
+rootProject.name = "sunday-runtime-build-logic"
 
 dependencyResolutionManagement {
   repositories {

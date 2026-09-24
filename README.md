@@ -89,6 +89,27 @@ val problemFactory = DefaultFactories.problemFactory(
 Problem providers are chosen by highest priority when multiple are present; if there is a
 tie, or if multiple transport providers are present, specify `providerId` explicitly.
 
+Broker Decode Recovery
+----------------------
+
+`sunday-broker` provides `Flow<BrokerRawDelivery>.decodeDeliveries` for consumers that
+need to handle an undecodable message and then continue consuming. It accepts a
+`BrokerDecodeFailureHandler` with the consume specification, original raw delivery,
+and decoding exception. Without a handler, it rethrows the decoding exception.
+
+The handler owns recovery and settlement. Returning skips the failed delivery and
+allows consumption to continue; throwing stops collection. The operator never
+acknowledges or negatively acknowledges a delivery itself. If recovery transfers
+the message to durable quarantine, the handler must wait for the required transfer
+confirmation before acknowledging the original delivery. A failed transfer must
+propagate, leaving reconnect/requeue policy to the application transport.
+
+Only decoding failures reach this handler. Transport errors and downstream processing
+errors propagate without invoking recovery. Cancellation and JVM errors also propagate,
+including when wrapped by a codec. Handlers should honor coroutine cancellation and
+must not swallow failed transfers. Retry policy, quarantine storage, and reconnection
+remain application responsibilities, not runtime defaults.
+
 Major Changes Since 1.0.0-beta.24
 ---------------------------------
 

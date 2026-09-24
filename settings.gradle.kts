@@ -3,6 +3,7 @@
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
+  includeBuild("build-logic")
   repositories {
     gradlePluginPortal()
     mavenCentral()
@@ -15,8 +16,6 @@ dependencyResolutionManagement {
     mavenCentral()
   }
 }
-
-includeBuild("build-logic")
 
 rootProject.name = "sunday"
 

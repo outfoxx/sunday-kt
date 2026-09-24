@@ -37,6 +37,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import strikt.api.expectThat
 import strikt.api.expectThrows
+import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
@@ -70,6 +71,32 @@ class BrokerDeliveryDecodingTest {
       expectThat(values.map { it.body }).isEqualTo(listOf(Payload("event-1")))
       expectThat(values.single().raw).isSameInstanceAs(valid)
       expectThat(malformed.actions.toList()).isEqualTo(listOf("ack"))
+      expectThat(valid.actions).isEmpty()
+    }
+
+  @Test
+  fun `handles missing decoder then continues with valid delivery without automatic settlement`() =
+    runTest {
+      val unsupported =
+        Delivery(BrokerMessage("""{"id":"event-unsupported"}""".encodeToByteArray(), "application/x-unregistered"))
+      val valid = Delivery(codec.encode(Payload("event-1"), "application/json"))
+      val failures = mutableListOf<Exception>()
+      val handler =
+        BrokerDecodeFailureHandler { actualSpec, raw, failure ->
+          expectThat(actualSpec).isSameInstanceAs(spec)
+          expectThat(raw).isSameInstanceAs(unsupported)
+          failures += failure
+        }
+
+      val values =
+        flowOf(unsupported, valid).decodeDeliveries<Payload>(spec, typeOf<Payload>(), codec, handler).toList()
+
+      expectThat(failures.single()).isA<BrokerCodecException>().and {
+        get { message }.isEqualTo("No broker decoder registered for media type 'application/x-unregistered'")
+      }
+      expectThat(values.map { it.body }).isEqualTo(listOf(Payload("event-1")))
+      expectThat(values.single().raw).isSameInstanceAs(valid)
+      expectThat(unsupported.actions).isEmpty()
       expectThat(valid.actions).isEmpty()
     }
 

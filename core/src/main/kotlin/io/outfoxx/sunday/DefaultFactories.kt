@@ -8,6 +8,7 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.TokenManager
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
 import io.outfoxx.sunday.spi.TransportProvider
 import java.util.ServiceLoader
@@ -34,6 +35,7 @@ object DefaultFactories {
     mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
+    tokenManager: TokenManager? = null,
   ): Transport<Request> {
     val provider =
       selectTransportProvider(
@@ -48,6 +50,7 @@ object DefaultFactories {
         mediaTypeEncoders = mediaTypeEncoders,
         mediaTypeDecoders = mediaTypeDecoders,
         pathEncoders = pathEncoders,
+        tokenManager = tokenManager,
       )
 
     return provider.create(config)

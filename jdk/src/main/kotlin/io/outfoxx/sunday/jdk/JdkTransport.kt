@@ -21,6 +21,7 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
+import io.outfoxx.sunday.PayloadValidator
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
@@ -42,6 +43,8 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.SecurityBinding
+import io.outfoxx.sunday.security.TokenManager
 import kotlinx.io.asInputStream
 import org.slf4j.LoggerFactory
 import java.io.Closeable
@@ -61,22 +64,28 @@ import kotlin.reflect.KClass
 class JdkTransport(
   private val baseURI: URITemplate,
   override val problemFactory: ProblemFactory,
-  private val httpClient: HttpClient = defaultHttpClient(),
+  httpClient: HttpClient? = null,
   private val adapter: suspend (HttpRequest) -> HttpRequest = { it },
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration? = null,
+  private val tokenManager: TokenManager? = null,
 ) : Transport<JdkRequest>(),
   Closeable {
 
+  private val httpClient = httpClient ?: defaultHttpClient(allowRedirects = tokenManager == null)
+
   companion object {
 
-    fun defaultHttpClient(authenticator: Authenticator? = null): HttpClient =
+    fun defaultHttpClient(
+      authenticator: Authenticator? = null,
+      allowRedirects: Boolean = true,
+    ): HttpClient =
       HttpClient
         .newBuilder()
-        .followRedirects(HttpClient.Redirect.NORMAL)
+        .followRedirects(if (allowRedirects) HttpClient.Redirect.NORMAL else HttpClient.Redirect.NEVER)
         .apply {
           authenticator?.let { authenticator(authenticator) }
         }.build()
@@ -115,6 +124,7 @@ class JdkTransport(
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
     purpose: RequestPurpose,
+    requestValidation: PayloadValidator<B>?,
   ): JdkRequest {
     logger.trace("Building request")
 
@@ -161,6 +171,7 @@ class JdkTransport(
           mediaTypeEncoders.find(contentType)
             ?: error("Cannot find encoder that was reported as supported")
 
+        requestValidation?.validate(body)
         val encodedBody = mediaTypeEncoder.encode(body)
 
         BodyPublishers.ofInputStream { encodedBody.asInputStream() }
@@ -222,6 +233,11 @@ class JdkTransport(
       return uri
     }
   }
+
+  override suspend fun authorize(
+    request: Request,
+    bindings: List<SecurityBinding>,
+  ): JdkRequest = (request as? JdkRequest ?: error("Expected a JDK request")).authenticated(bindings, tokenManager)
 
   override suspend fun transportResponse(request: Request): Response {
     logger.debug("Initiating request")

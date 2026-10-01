@@ -37,6 +37,7 @@ import io.outfoxx.sunday.mediatypes.codecs.decode
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.problems.ProblemFactory.Descriptor
+import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.utils.from
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
@@ -142,7 +143,17 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     purpose: RequestPurpose = RequestPurpose.Normal,
+    requestValidation: PayloadValidator<B>? = null,
   ): Req
+
+  /**
+   * Attaches selected credentials to a native request. Implementations must revalidate credentials
+   * on each execution and own any bounded authentication replay.
+   */
+  open suspend fun authorize(
+    request: Request,
+    bindings: List<SecurityBinding>,
+  ): Req = throw UnsupportedOperationException("This transport does not support managed security bindings")
 
   /**
    * Execute a [request][Request] and return the server's [response][Response].
@@ -192,6 +203,7 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
+    requestValidation: PayloadValidator<B>? = null,
   ): Response {
     val request =
       transportRequest(
@@ -203,6 +215,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         headers,
+        requestValidation = requestValidation,
       )
 
     return transportResponse(request)
@@ -279,6 +292,8 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     resultType: KType,
+    requestValidation: PayloadValidator<B>? = null,
+    responseValidation: PayloadValidator<R>? = null,
   ): R =
     response<B, R>(
       method,
@@ -290,6 +305,8 @@ abstract class Transport<out Req : Request> : Closeable {
       acceptTypes,
       headers,
       resultType,
+      requestValidation,
+      responseValidation,
     ).result
 
   /**
@@ -366,6 +383,8 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     resultType: KType,
+    requestValidation: PayloadValidator<B>? = null,
+    responseValidation: PayloadValidator<R>? = null,
   ): OperationResponse<R> {
     val response =
       transportResponse(
@@ -377,6 +396,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         headers,
+        requestValidation,
       )
 
     if (isFailureResponse(response)) {
@@ -391,6 +411,7 @@ abstract class Transport<out Req : Request> : Closeable {
       parseSuccess(
         response,
         resultType,
+        responseValidation,
       ),
       response,
     )
@@ -599,6 +620,7 @@ abstract class Transport<out Req : Request> : Closeable {
   private fun <T : Any> parseSuccess(
     response: Response,
     resultType: KType,
+    validation: PayloadValidator<T>? = null,
   ): T {
     val body = response.body
     if (emptyDataStatusCodes.contains(response.statusCode)) {
@@ -625,7 +647,7 @@ abstract class Transport<out Req : Request> : Closeable {
         ?: throw SundayError(NoDecoder, contentType.value)
 
     try {
-      return contentTypeDecoder.decode(body, resultType)
+      return contentTypeDecoder.decode<T>(body, resultType).also { validation?.validate(it) }
     } catch (x: Throwable) {
       throw SundayError(SundayError.Reason.ResponseDecodingFailed, cause = x)
     }

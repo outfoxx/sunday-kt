@@ -17,21 +17,57 @@
 package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.OperationSpec
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.getFirstOrNull
+import io.outfoxx.sunday.operation
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import kotlinx.io.write
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 class OkHttpRequestBodyTest {
+
+  @Test
+  fun `deferred requests validate current values immediately before every encoding`() =
+    runTest {
+      val factory = OkHttpTransport(URITemplate("http://example.com"), SundayHttpProblem.Factory)
+      val body = mutableMapOf("count" to 1)
+      var validations = 0
+      val operation =
+        factory.operation<Map<String, Int>, Unit, OkHttpRequest>(
+          OperationSpec(
+            Method.Put,
+            "/body",
+            body = body,
+            contentTypes = listOf(MediaType.JSON),
+            requestValidation = { value ->
+              validations += 1
+              require(value.getValue("count") > 0)
+            },
+          ),
+        )
+      assertEquals(0, validations)
+      operation.transportRequest()
+      assertEquals(1, validations)
+      body["count"] = 0
+      assertThrows<IllegalArgumentException> { operation.transportRequest() }
+      assertEquals(2, validations)
+      body["count"] = 2
+      val request = operation.transportRequest()
+      assertEquals(3, validations)
+      assertEquals("""{"count":2}""", request.body()!!.readByteArray().decodeToString())
+      factory.close()
+    }
 
   @Test
   fun `request bodies can be read`() =

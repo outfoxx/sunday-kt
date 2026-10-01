@@ -18,6 +18,7 @@ package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.security.RequestSecurity
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.okio.asKotlinxIoRawSource
@@ -57,6 +58,15 @@ class OkHttpResponse(
 
   override val request: OkHttpRequest by lazy {
     OkHttpRequest(response.request, httpClient)
+  }
+
+  /** Retains the native body while removing managed credentials from response request diagnostics. */
+  internal fun redacted(security: RequestSecurity): OkHttpResponse {
+    val credentials = security.redact(response.request.url.toUri(), response.request.headers)
+    return OkHttpResponse(
+      response.newBuilder().request(response.request.withCredentials(credentials)).build(),
+      httpClient,
+    )
   }
 
 }

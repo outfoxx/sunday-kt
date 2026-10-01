@@ -90,6 +90,7 @@ class OperationTest {
       acceptTypes: List<MediaType>?,
       headers: Parameters?,
       purpose: RequestPurpose,
+      requestValidation: PayloadValidator<B>?,
     ): Request = TestRequest(method, URI.create("http://example.com"), emptyList())
 
     override suspend fun transportResponse(request: Request): Response = throw CancellationException("cancelled")
@@ -126,6 +127,7 @@ class OperationTest {
       acceptTypes: List<MediaType>?,
       headers: Parameters?,
       purpose: RequestPurpose,
+      requestValidation: PayloadValidator<B>?,
     ): Request {
       purposes += purpose
       return TestRequest(method, URI.create("http://example.com"), emptyList())
@@ -173,6 +175,7 @@ class OperationTest {
       val eventSource = transport.eventSource(Method.Get, "/events")
 
       eventSource.connect()
+      transport.awaitPurpose()
       eventSource.close()
 
       expectThat(transport.purposes.toList()).isEqualTo(listOf(Transport.RequestPurpose.Events))
@@ -185,6 +188,7 @@ class OperationTest {
       val eventSource = transport.eventSource<Unit>(Method.Get, "/events", body = null)
 
       eventSource.connect()
+      transport.awaitPurpose()
       eventSource.close()
 
       expectThat(transport.purposes.toList()).isEqualTo(listOf(Transport.RequestPurpose.Events))

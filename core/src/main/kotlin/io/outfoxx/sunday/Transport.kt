@@ -646,11 +646,14 @@ abstract class Transport<out Req : Request> : Closeable {
       mediaTypeDecoders.find(contentType)
         ?: throw SundayError(NoDecoder, contentType.value)
 
-    try {
-      return contentTypeDecoder.decode<T>(body, resultType).also { validation?.validate(it) }
-    } catch (x: Throwable) {
-      throw SundayError(SundayError.Reason.ResponseDecodingFailed, cause = x)
-    }
+    val decoded =
+      try {
+        contentTypeDecoder.decode<T>(body, resultType)
+      } catch (x: Throwable) {
+        throw SundayError(SundayError.Reason.ResponseDecodingFailed, cause = x)
+      }
+    validation?.validate(decoded)
+    return decoded
   }
 
   private fun parseFailure(response: Response): Problem =

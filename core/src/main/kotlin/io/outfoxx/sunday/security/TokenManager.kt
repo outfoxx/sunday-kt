@@ -128,6 +128,7 @@ class TokenManager(
       val key =
         mapper.writeValueAsString(
           listOf(
+            selected.scheme,
             binding.provider,
             provider.identity,
             request.clientIdentity,
@@ -164,11 +165,19 @@ class TokenManager(
         }
         val tokens =
           if (stored?.refreshToken != null && provider is TokenProvider.Refreshing) {
-            provider.refresh(request, stored.refreshToken).let {
-              it.copy(
-                refreshToken =
-                  it.refreshToken ?: stored.refreshToken,
-              )
+            try {
+              provider.refresh(request, stored.refreshToken).let {
+                it.copy(refreshToken = it.refreshToken ?: stored.refreshToken)
+              }
+            } catch (error: TokenProviderException) {
+              if (error.reason != TokenProviderException.Reason.InvalidGrant ||
+                request.binding.flow != SecurityBinding.Flow.ClientCredentials
+              ) {
+                throw error
+              }
+              currentCoroutineContext().ensureActive()
+              store.remove(key)
+              provider.acquire(request)
             }
           } else if (request.binding.flow == SecurityBinding.Flow.AuthorizationCode &&
             (stored != null || key in authorizationAttempts)
@@ -182,7 +191,12 @@ class TokenManager(
           throw TokenProviderException()
         }
         val renewalJob = currentCoroutineContext()[Job]
-        synchronized(guard) { renewals[key]?.takeIf { it.task === renewalJob }?.committing = true }
+        currentCoroutineContext().ensureActive()
+        synchronized(guard) {
+          val renewal = renewals[key]
+          if (renewal == null || renewal.task !== renewalJob || renewal.waiters == 0) throw CancellationException()
+          renewal.committing = true
+        }
         withContext(NonCancellable) { store.save(key, tokens) }
         TokenLease(key, tokens)
       }
@@ -206,6 +220,8 @@ class TokenManager(
     } catch (error: CancellationException) {
       throw error
     } catch (error: AuthorizationRequiredException) {
+      throw error
+    } catch (error: TokenProviderException) {
       throw error
     } catch (_: Exception) {
       throw TokenProviderException()

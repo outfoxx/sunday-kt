@@ -361,6 +361,38 @@ abstract class ManagedSecurityTest {
       }
     }
 
+  @Test
+  fun `temporary credential outage reconnects events`() =
+    runTest {
+      var attempts = 0
+      val provider =
+        object : TokenProvider {
+          override val identity = "intermittent"
+
+          override fun configure(binding: SecurityBinding) = TokenConfiguration("client")
+
+          override suspend fun acquire(request: TokenRequest): TokenSet {
+            if (++attempts == 1) throw TokenProviderException(TokenProviderException.Reason.Temporary)
+            return TokenSet("recovered")
+          }
+        }
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody("data: recovered\n\n"))
+        TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
+          transport(URITemplate(server.url("/").toString()), manager).use { transport ->
+            transport.withSecurity(listOf(binding)).eventSource(Method.Get, "events").use { source ->
+              val message = CompletableDeferred<String?>()
+              source.onMessage = { message.complete(it.data) }
+              source.connect()
+              assertEquals("recovered", message.await())
+              source.close()
+              assertEquals(2, attempts)
+            }
+          }
+        }
+      }
+    }
+
   private suspend fun expectFailure(action: suspend () -> Unit) {
     try {
       action()

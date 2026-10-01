@@ -86,6 +86,60 @@ class TokenManagerTest {
   }
 
   @Test
+  fun `only rejected client refresh grants reacquire credentials`() =
+    runTest {
+      for (reason in TokenProviderException.Reason.entries) {
+        val provider =
+          object : Provider() {
+            override suspend fun refresh(
+              request: TokenRequest,
+              refreshToken: String,
+            ): TokenSet {
+              refreshed += refreshToken
+              throw TokenProviderException(reason)
+            }
+          }
+        TokenManager(mapOf("identity" to provider), clock = TestClock(), scope = this).use { manager ->
+          manager.invalidate(manager.credentials(binding))
+          provider.next = TokenSet("replacement", Instant.ofEpochSecond(200))
+          if (reason == TokenProviderException.Reason.InvalidGrant) {
+            assertEquals("replacement", manager.credentials(binding).tokens.accessToken)
+            assertEquals(2, provider.acquired.size)
+          } else {
+            assertEquals(reason, expectFailure<TokenProviderException> { manager.credentials(binding) }.reason)
+            assertEquals(1, provider.acquired.size)
+          }
+        }
+      }
+    }
+
+  @Test
+  fun `a provider ignoring last waiter cancellation cannot cache late acquisition`() =
+    runTest {
+      val finish = CompletableDeferred<Unit>()
+      val provider =
+        object : Provider() {
+          override suspend fun acquire(request: TokenRequest): TokenSet {
+            acquired += request
+            if (acquired.size == 1) {
+              kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { finish.await() }
+              return TokenSet("late")
+            }
+            return TokenSet("fresh")
+          }
+        }
+      TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
+        val caller = async { manager.credentials(binding) }
+        runCurrent()
+        caller.cancelAndJoin()
+        finish.complete(Unit)
+        runCurrent()
+        assertEquals("fresh", manager.credentials(binding).tokens.accessToken)
+        assertEquals(2, provider.acquired.size)
+      }
+    }
+
+  @Test
   fun `expiry skew rotation and conditional invalidation`() =
     runTest {
       val clock = TestClock()
@@ -158,6 +212,7 @@ class TokenManagerTest {
         val first = manager.credentials(binding)
         assertEquals(first, manager.credentials(binding.copy(scopes = linkedSetOf("write", "read"))))
         listOf(
+          binding.copy(scheme = "another-scheme"),
           binding.copy(profile = "internal"),
           binding.copy(scopes = setOf("read")),
           binding.copy(audience = "other"),
@@ -185,7 +240,7 @@ class TokenManagerTest {
         )
         provider.identity = "other-provider"
         assertNotEquals(first.key, manager.credentials(binding).key)
-        assertEquals(15, provider.acquired.size)
+        assertEquals(16, provider.acquired.size)
       }
     }
 

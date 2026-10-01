@@ -164,8 +164,10 @@ abstract class OAuthTokenProviderTest {
     runTest {
       MockWebServer().use { server ->
         val metadata = """{"issuer":"https://trusted.example","token_endpoint":"https://unused.example/token"}"""
-        server.enqueue(MockResponse().setBody(metadata))
-        repeat(2) { server.enqueue(MockResponse().setBody("""{"token_type":"bearer","access_token":"token"}""")) }
+        repeat(2) {
+          server.enqueue(MockResponse().setBody(metadata))
+          server.enqueue(MockResponse().setBody("""{"token_type":"bearer","access_token":"token"}"""))
+        }
         val configuration =
           OAuthTokenProvider.Configuration(
             "application",
@@ -183,7 +185,10 @@ abstract class OAuthTokenProviderTest {
           manager.credentials(binding)
           manager.credentials(binding.copy(scopes = setOf("read")))
         }
-        assertEquals(listOf("/discovery", "/override", "/override"), List(3) { server.takeRequest().path })
+        assertEquals(
+          listOf("/discovery", "/override", "/discovery", "/override"),
+          List(4) { server.takeRequest().path },
+        )
         server.enqueue(MockResponse().setBody(metadata))
         TokenManager(
           mapOf("identity" to provider(configuration.copy(issuer = "https://other.example"))),
@@ -191,7 +196,7 @@ abstract class OAuthTokenProviderTest {
         ).use {
           expectFailure<TokenProviderException> { it.credentials(binding) }
         }
-        assertEquals(4, server.requestCount)
+        assertEquals(5, server.requestCount)
       }
     }
 
@@ -242,6 +247,37 @@ abstract class OAuthTokenProviderTest {
           assertNotNull(withContext(Dispatchers.IO) { server.takeRequest(10, TimeUnit.SECONDS) })
           acquisition.cancelAndJoin()
           expectFailure<CancellationException> { acquisition.await() }
+        }
+      }
+    }
+
+
+  @Test
+  fun `token errors distinguish temporary outages from rejected refresh grants`() =
+    runTest {
+      MockWebServer().use { server ->
+        val provider =
+          provider(
+            OAuthTokenProvider.Configuration(
+              "application",
+              "client",
+              "secret",
+              OAuthTokenProvider.Authentication.ClientSecretPost,
+            ),
+          )
+        val responses =
+          listOf(
+            Triple(503, "upstream unavailable", TokenProviderException.Reason.Temporary),
+            Triple(429, "rate limited", TokenProviderException.Reason.Temporary),
+            Triple(400, """{"error":"temporarily_unavailable"}""", TokenProviderException.Reason.Temporary),
+            Triple(400, """{"error":"invalid_grant"}""", TokenProviderException.Reason.InvalidGrant),
+            Triple(400, """{"error":"invalid_client"}""", TokenProviderException.Reason.Unavailable),
+          )
+        for ((status, body, reason) in responses) {
+          server.enqueue(MockResponse().setResponseCode(status).setBody(body))
+          TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
+            assertEquals(reason, expectFailure<TokenProviderException> { manager.credentials(binding(server)) }.reason)
+          }
         }
       }
     }

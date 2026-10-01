@@ -16,9 +16,9 @@
 
 package io.outfoxx.sunday.security
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CancellationException
+import java.io.IOException
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets.UTF_8
@@ -81,7 +81,6 @@ class OAuthTokenProvider(
 
   override val identity: String get() = configuration.identity
   private val mapper = ObjectMapper()
-  private val discovery = ConcurrentHashMap<String, JsonNode>()
   private val consumedCodes = ConcurrentHashMap.newKeySet<String>()
 
   init {
@@ -107,6 +106,7 @@ class OAuthTokenProvider(
             mutableMapOf("grant_type" to "client_credentials")
           }
           SecurityBinding.Flow.AuthorizationCode -> {
+            if (consumedCodes.size >= 1024) throw AuthorizationRequiredException()
             val grant = configuration.authorization?.invoke(resolved) ?: throw AuthorizationRequiredException()
             if (grant.code.isEmpty() ||
               grant.redirectUri.isEmpty() ||
@@ -118,7 +118,9 @@ class OAuthTokenProvider(
               Base64.getEncoder().encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(grant.code.toByteArray(UTF_8)),
               )
-            if (!consumedCodes.add(fingerprint)) throw AuthorizationRequiredException()
+            synchronized(consumedCodes) {
+              if (consumedCodes.size >= 1024 || !consumedCodes.add(fingerprint)) throw AuthorizationRequiredException()
+            }
             mutableMapOf(
               "grant_type" to "authorization_code",
               "code" to grant.code,
@@ -148,28 +150,26 @@ class OAuthTokenProvider(
     val endpoints = request.binding.endpoints
     val discoveryUrl = endpoints.discoveryUrl ?: return request
     val issuer = configuration.issuer ?: throw TokenProviderException()
-    val document =
-      discovery[discoveryUrl] ?: run {
-        val response = exchange(ExchangeRequest(endpoint(discoveryUrl), mapOf("Accept" to "application/json"), null))
-        val data = mapper.readTree(response.body)
-        if (response.status != 200 ||
-          !data.isObject ||
-          data.path("issuer").textValue() != issuer
-        ) {
-          throw TokenProviderException()
-        }
-        val methods = data.get("token_endpoint_auth_methods_supported")
-        if ((methods == null && configuration.authentication != Authentication.ClientSecretBasic) ||
+    val response = exchange(ExchangeRequest(endpoint(discoveryUrl), mapOf("Accept" to "application/json"), null))
+    checkAvailability(response.status)
+    val document = mapper.readTree(response.body)
+    if (response.status != 200 || !document.isObject || document.path("issuer").textValue() != issuer) {
+      throw TokenProviderException()
+    }
+    val methods = document.get("token_endpoint_auth_methods_supported")
+    if ((methods == null && configuration.authentication != Authentication.ClientSecretBasic) ||
+      (
+        methods != null &&
           (
-            methods != null &&
-              (!methods.isArray || methods.none { it.textValue() == configuration.authentication.wireName })
+            !methods.isArray ||
+              methods.none {
+                it.textValue() == configuration.authentication.wireName
+              }
           )
-        ) {
-          throw TokenProviderException()
-        }
-        discovery[discoveryUrl] = data
-        data
-      }
+      )
+    ) {
+      throw TokenProviderException()
+    }
     val tokenUrl = endpoints.tokenUrl ?: document.path("token_endpoint").textValue() ?: throw TokenProviderException()
     val authorizationUrl = endpoints.authorizationUrl ?: document.path("authorization_endpoint").textValue()
     return request.copy(
@@ -204,13 +204,20 @@ class OAuthTokenProvider(
       }
     }
     val response = exchange(ExchangeRequest(endpoint(url), headers, form))
+    checkAvailability(response.status)
     val data = mapper.readTree(response.body)
     if (!data.isObject) throw TokenProviderException()
     if (response.status != 200) {
-      if (data.path("error").textValue() == "invalid_grant" && binding.flow == SecurityBinding.Flow.AuthorizationCode) {
-        throw AuthorizationRequiredException()
+      when (data.path("error").textValue()) {
+        "invalid_grant" -> {
+          if (binding.flow == SecurityBinding.Flow.AuthorizationCode) throw AuthorizationRequiredException()
+          throw TokenProviderException(TokenProviderException.Reason.InvalidGrant)
+        }
+        "temporarily_unavailable", "server_error" -> throw TokenProviderException(
+          TokenProviderException.Reason.Temporary,
+        )
+        else -> throw TokenProviderException()
       }
-      throw TokenProviderException()
     }
     val accessToken =
       data.path("access_token").textValue()?.takeIf { it.isNotEmpty() } ?: throw TokenProviderException()
@@ -250,6 +257,12 @@ class OAuthTokenProvider(
     return uri
   }
 
+  private fun checkAvailability(status: Int) {
+    if (status == 408 || status == 429 || status in 500..599) {
+      throw TokenProviderException(TokenProviderException.Reason.Temporary)
+    }
+  }
+
   private suspend fun <T> safe(action: suspend () -> T): T =
     try {
       action()
@@ -257,6 +270,10 @@ class OAuthTokenProvider(
       throw error
     } catch (error: AuthorizationRequiredException) {
       throw error
+    } catch (error: TokenProviderException) {
+      throw error
+    } catch (_: IOException) {
+      throw TokenProviderException(TokenProviderException.Reason.Temporary)
     } catch (_: Exception) {
       throw TokenProviderException()
     }

@@ -27,6 +27,7 @@ import io.outfoxx.sunday.MediaType.Companion.JSON
 import io.outfoxx.sunday.MediaType.Companion.Plain
 import io.outfoxx.sunday.MediaType.Companion.Problem
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.PayloadValidator
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedAcceptTypes
 import io.outfoxx.sunday.SundayError.Reason.NoSupportedContentTypes
@@ -616,6 +617,33 @@ abstract class TransportTest {
         }
     }
   }
+
+  @Test
+  fun `response validation failures retain native identity`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setHeader(CONTENT_TYPE, JSON).setBody("\"decoded\""))
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val failure = IllegalArgumentException("native schema failure")
+          try {
+            transport
+              .result<Unit, String>(
+                Method.Get,
+                "",
+                resultType = typeOf<String>(),
+                responseValidation =
+                  PayloadValidator {
+                    throw failure
+                  },
+              )
+            throw AssertionError("Expected validation failure")
+          } catch (observed: IllegalArgumentException) {
+            org.junit.jupiter.api.Assertions
+              .assertSame(failure, observed)
+          }
+        }
+      }
+    }
 
   /**
    * Problem Building/Handling

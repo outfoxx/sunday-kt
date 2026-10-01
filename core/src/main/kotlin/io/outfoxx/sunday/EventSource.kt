@@ -379,7 +379,13 @@ class EventSource(
             } catch (_: CancellationException) {
               // Closing a subscription also cancels credential acquisition.
             } catch (error: TokenProviderException) {
-              receivedFatalError(error)
+              if (error.reason ==
+                TokenProviderException.Reason.Temporary
+              ) {
+                receivedError(error)
+              } else {
+                receivedFatalError(error)
+              }
             } catch (error: AuthorizationRequiredException) {
               receivedFatalError(error)
             } catch (error: Throwable) {

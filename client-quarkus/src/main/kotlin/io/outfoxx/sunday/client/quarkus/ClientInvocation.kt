@@ -18,10 +18,13 @@ package io.outfoxx.sunday.client.quarkus
 
 import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.Uni
+import io.smallrye.mutiny.subscription.Cancellable
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Invocation-local authentication recovery shared with the native retry interceptor.
@@ -44,6 +47,9 @@ class ClientInvocation(
     val number: Int,
     internal val rejectedCredential: Any?,
   ) {
+    private val finished = AtomicBoolean()
+    private val acquisition = AtomicReference<Cancellable?>()
+    internal val isFinished: Boolean get() = finished.get()
     internal var credential: Any? = null
     internal var safe = false
     internal var status = 0
@@ -62,14 +68,32 @@ class ClientInvocation(
     ) = receive(this, status, invalidToken)
 
     internal fun acquired(credential: Any): Boolean = acquire(this, credential)
+
+    // Registration can race synchronous completion or cancellation of the transport.
+    internal fun acquiring(subscription: Cancellable) {
+      acquisition.getAndSet(subscription)?.cancel()
+      if (finished.get()) acquisition.getAndSet(null)?.cancel()
+    }
+
+    internal fun finish() {
+      finished.set(true)
+      acquisition.getAndSet(null)?.cancel()
+    }
   }
 
-  @Synchronized
   private fun nextAttempt(): Attempt {
-    stopped?.let { throw Stopped(it) }
-    val rejected = if (recoveryPending) current?.credential else null
-    recoveryPending = false
-    return Attempt((current?.number ?: 0) + 1, rejected).also { current = it }
+    val (previous, next) =
+      synchronized(this) {
+        stopped?.let { throw Stopped(it) }
+        val previous = current
+        val rejected = if (recoveryPending) previous?.credential else null
+        recoveryPending = false
+        val next = Attempt((previous?.number ?: 0) + 1, rejected)
+        current = next
+        previous to next
+      }
+    previous?.finish()
+    return next
   }
 
   @Synchronized
@@ -79,7 +103,7 @@ class ClientInvocation(
     hasEntity: Boolean,
   ) {
     stopped?.let { throw Stopped(it) }
-    if (current !== attempt) throw CancellationException("Transport attempt expired")
+    if (current !== attempt || attempt.isFinished) throw CancellationException("Transport attempt expired")
     attempt.safe = !hasEntity && method.uppercase() in setOf("GET", "HEAD", "OPTIONS")
   }
 
@@ -89,7 +113,7 @@ class ClientInvocation(
     status: Int,
     invalidToken: Boolean,
   ) {
-    if (current !== attempt) return
+    if (current !== attempt || attempt.isFinished) return
     attempt.status = status
     attempt.invalidToken = invalidToken
   }
@@ -99,13 +123,20 @@ class ClientInvocation(
     attempt: Attempt,
     credential: Any,
   ): Boolean {
-    if (current !== attempt || stopped != null) return false
+    if (current !== attempt || attempt.isFinished || stopped != null) return false
     attempt.credential = credential
     return true
   }
 
   /** Adapts a synchronous attempt to native retry without changing ordinary typed failures. */
-  fun <T> attempt(action: (Attempt) -> T): T = evaluate(nextAttempt(), action)
+  fun <T> attempt(action: (Attempt) -> T): T {
+    val attempt = nextAttempt()
+    return try {
+      evaluate(attempt, action)
+    } finally {
+      attempt.finish()
+    }
+  }
 
   private fun <T> evaluate(
     attempt: Attempt,
@@ -114,27 +145,39 @@ class ClientInvocation(
     try {
       action(attempt)
     } catch (error: Throwable) {
-      throw failure(attempt, error)
+      try {
+        throw failure(attempt, error)
+      } finally {
+        attempt.finish()
+      }
     }
 
   /** Adapts a lazy attempt; each subscription remains inside its owning invocation. */
   fun <T> attemptUni(action: (Attempt) -> Uni<T>): Uni<T> =
     Uni.createFrom().deferred {
       val attempt = nextAttempt()
-      evaluate(attempt, action).onFailure().transform { failure(attempt, it) }
+      evaluate(attempt, action)
+        .onFailure()
+        .transform { failure(attempt, it) }
+        .onTermination()
+        .invoke { attempt.finish() }
     }
 
   /** Validates one streamed attempt without replaying a subscription. */
   fun <T> attemptMulti(action: (Attempt) -> Multi<T>): Multi<T> =
     Multi.createFrom().deferred {
       val attempt = nextAttempt()
-      evaluate(attempt, action).onFailure().transform { failure(attempt, it) }
+      evaluate(attempt, action)
+        .onFailure()
+        .transform { failure(attempt, it) }
+        .onTermination()
+        .invoke { attempt.finish() }
     }
 
   /** Adapts completion-stage failures while preserving their original causes at the public boundary. */
   fun <T> attemptStage(action: (Attempt) -> CompletionStage<T>): CompletionStage<T> {
     val attempt = nextAttempt()
-    return mapFailure(evaluate(attempt, action)) { failure(attempt, it) }
+    return mapFailure(evaluate(attempt, action), { failure(attempt, it) }, attempt::finish)
   }
 
   /** Retains the same budget across coroutine suspension without thread-local state. */
@@ -144,6 +187,8 @@ class ClientInvocation(
       action(attempt)
     } catch (error: Throwable) {
       throw failure(attempt, error)
+    } finally {
+      attempt.finish()
     }
   }
 
@@ -230,18 +275,26 @@ class ClientInvocation(
     private fun <T> mapFailure(
       stage: CompletionStage<T>,
       transform: (Throwable) -> Throwable,
+      completed: () -> Unit = {},
     ): CompletionStage<T> {
       val upstream = stage.toCompletableFuture()
       val result =
         object : CompletableFuture<T>() {
           override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
             val cancelled = super.cancel(mayInterruptIfRunning)
-            if (cancelled) upstream.cancel(mayInterruptIfRunning)
+            if (cancelled) {
+              completed()
+              upstream.cancel(mayInterruptIfRunning)
+            }
             return cancelled
           }
         }
       stage.whenComplete { value, error ->
-        if (error == null) result.complete(value) else result.completeExceptionally(transform(error))
+        try {
+          if (error == null) result.complete(value) else result.completeExceptionally(transform(error))
+        } finally {
+          completed()
+        }
       }
       return result
     }

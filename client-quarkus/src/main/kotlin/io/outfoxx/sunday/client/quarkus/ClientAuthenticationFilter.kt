@@ -45,14 +45,16 @@ class ClientAuthenticationFilter :
     }
     val rejected = invocation.rejectedCredential as? Tokens
     context.suspend()
-    tokens.acquire(binding.value, rejected).subscribe().with({ lease ->
-      if (!invocation.acquired(lease)) {
-        context.resume(java.util.concurrent.CancellationException("Transport attempt expired"))
-        return@with
-      }
-      context.headers.putSingle("Authorization", "Bearer " + lease.accessToken)
-      context.resume()
-    }, { error -> context.resume(error) })
+    val acquisition =
+      tokens.acquire(binding.value, rejected).subscribe().with({ lease ->
+        if (!invocation.acquired(lease)) {
+          context.resume(java.util.concurrent.CancellationException("Transport attempt expired"))
+          return@with
+        }
+        context.headers.putSingle("Authorization", "Bearer " + lease.accessToken)
+        context.resume()
+      }, { error -> context.resume(error) })
+    invocation.acquiring(acquisition)
   }
 
   override fun filter(

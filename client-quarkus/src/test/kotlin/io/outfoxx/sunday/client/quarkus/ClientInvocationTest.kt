@@ -16,7 +16,13 @@
 
 package io.outfoxx.sunday.client.quarkus
 
+import io.smallrye.mutiny.Multi
 import io.smallrye.mutiny.Uni
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -101,7 +107,11 @@ class ClientInvocationTest {
         .onCancellation()
         .invoke { cancelled.set(true) }
     val operation = ClientInvocation.executeUni { invocation -> invocation.attemptUni { transport } }
-    val subscription = operation.subscribe().with({ error("Unexpected value") }, { error("Unexpected failure") })
+    val subscription =
+      operation.subscribe().with(
+        { _: String -> error("Unexpected value") },
+        { _: Throwable -> error("Unexpected failure") },
+      )
     subscription.cancel()
     assertTrue(cancelled.get())
   }
@@ -141,4 +151,87 @@ class ClientInvocationTest {
     assertThrows(ClientInvocation.Stopped::class.java) { invocation.attempt { attempts++ } }
     assertEquals(1, attempts)
   }
+
+  @Test
+  fun `reactive cancellation cancels credential acquisition and rejects late credentials`() {
+    val cancelled = AtomicBoolean()
+    lateinit var attempt: ClientInvocation.Attempt
+    val subscription =
+      ClientInvocation()
+        .attemptUni<String> {
+          attempt = it
+          it.acquiring { cancelled.set(true) }
+          Uni.createFrom().nothing()
+        }.subscribe()
+        .with({ _: String -> error("Unexpected value") }, { _: Throwable -> error("Unexpected failure") })
+    subscription.cancel()
+    assertTrue(cancelled.get())
+    assertEquals(false, attempt.acquired("late"))
+    val lateSubscription = AtomicBoolean()
+    attempt.acquiring { lateSubscription.set(true) }
+    assertTrue(lateSubscription.get())
+  }
+
+  @Test
+  fun `stage cancellation and replacement cancel credential acquisition`() {
+    val invocation = ClientInvocation()
+    val cancelled = AtomicBoolean()
+    val stage =
+      invocation
+        .attemptStage<String> {
+          it.acquiring { cancelled.set(true) }
+          CompletableFuture()
+        }.toCompletableFuture()
+    stage.cancel(true)
+    assertTrue(cancelled.get())
+    cancelled.set(false)
+    invocation.attemptStage<String> {
+      it.acquiring { cancelled.set(true) }
+      CompletableFuture()
+    }
+    invocation.attempt { "replacement" }
+    assertTrue(cancelled.get())
+  }
+
+  @Test
+  fun `stream and coroutine cancellation cancel credential acquisition`() =
+    runBlocking {
+      val streamCancelled = AtomicBoolean()
+      val subscription =
+        ClientInvocation()
+          .attemptMulti<String> {
+            it.acquiring { streamCancelled.set(true) }
+            Multi.createFrom().nothing()
+          }.subscribe()
+          .with({ _: String -> error("Unexpected value") }, { _: Throwable -> error("Unexpected failure") })
+      subscription.cancel()
+      assertTrue(streamCancelled.get())
+      val coroutineCancelled = AtomicBoolean()
+      val job =
+        launch {
+          ClientInvocation().attemptSuspend {
+            it.acquiring { coroutineCancelled.set(true) }
+            awaitCancellation()
+          }
+        }
+      yield()
+      job.cancelAndJoin()
+      assertTrue(coroutineCancelled.get())
+    }
+
+  @Test
+  fun `transport timeouts cancel credential acquisition without replacing the failure`() {
+    val cancelled = AtomicBoolean()
+    val timeout = java.util.concurrent.TimeoutException()
+    val operation =
+      ClientInvocation().attemptUni<String> {
+        it.acquiring { cancelled.set(true) }
+        Uni.createFrom().failure(timeout)
+      }
+    val observed =
+      assertThrows(java.util.concurrent.CompletionException::class.java) { operation.await().indefinitely() }
+    assertSame(timeout, observed.cause)
+    assertTrue(cancelled.get())
+  }
+
 }

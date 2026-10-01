@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.security
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
@@ -272,6 +273,8 @@ class OAuthTokenProvider(
       throw error
     } catch (error: TokenProviderException) {
       throw error
+    } catch (_: JsonProcessingException) {
+      throw TokenProviderException()
     } catch (_: IOException) {
       throw TokenProviderException(TokenProviderException.Reason.Temporary)
     } catch (_: Exception) {

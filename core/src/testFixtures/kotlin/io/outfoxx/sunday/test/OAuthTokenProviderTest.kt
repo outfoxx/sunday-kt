@@ -272,6 +272,8 @@ abstract class OAuthTokenProviderTest {
             Triple(400, """{"error":"temporarily_unavailable"}""", TokenProviderException.Reason.Temporary),
             Triple(400, """{"error":"invalid_grant"}""", TokenProviderException.Reason.InvalidGrant),
             Triple(400, """{"error":"invalid_client"}""", TokenProviderException.Reason.Unavailable),
+            Triple(200, "{malformed", TokenProviderException.Reason.Unavailable),
+            Triple(400, "{malformed", TokenProviderException.Reason.Unavailable),
           )
         for ((status, body, reason) in responses) {
           server.enqueue(MockResponse().setResponseCode(status).setBody(body))
@@ -279,6 +281,31 @@ abstract class OAuthTokenProviderTest {
             assertEquals(reason, expectFailure<TokenProviderException> { manager.credentials(binding(server)) }.reason)
           }
         }
+      }
+    }
+
+  @Test
+  fun `malformed discovery metadata is a terminal provider failure`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setBody("{malformed"))
+        val configuration =
+          OAuthTokenProvider.Configuration(
+            "application",
+            "client",
+            "secret",
+            OAuthTokenProvider.Authentication.ClientSecretBasic,
+            issuer = "https://trusted.example",
+          )
+        val binding =
+          binding(server).copy(endpoints = SecurityEndpoints(discoveryUrl = server.url("/discovery").toString()))
+        TokenManager(mapOf("identity" to provider(configuration)), scope = this).use { manager ->
+          assertEquals(
+            TokenProviderException.Reason.Unavailable,
+            expectFailure<TokenProviderException> { manager.credentials(binding) }.reason,
+          )
+        }
+        assertEquals(1, server.requestCount)
       }
     }
 

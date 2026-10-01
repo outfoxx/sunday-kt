@@ -29,12 +29,15 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.isSuccessful
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
+import io.outfoxx.sunday.security.AuthorizationRequiredException
+import io.outfoxx.sunday.security.TokenProviderException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.io.Buffer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -203,6 +206,7 @@ class EventSource(
     Closed,
   }
 
+  private val recoveryBudget = AuthenticationRecoveryBudget()
   private val stateLock = ReentrantReadWriteLock()
 
   /**
@@ -338,12 +342,10 @@ class EventSource(
 
     readyStateValue.resetReadyState(Connecting)
 
-    runBlocking {
-      internalConnect()
-    }
+    internalConnect()
   }
 
-  private suspend fun internalConnect() {
+  private fun internalConnect() {
     if (readyStateValue.isClosed) {
       logger.debug("Skipping connect due to close")
       return
@@ -364,21 +366,34 @@ class EventSource(
       headers = headers.plus(LAST_EVENT_ID to it)
     }
 
-    val request = requestSupplier(headers)
-
-    currentRequest =
-      createRequestEventScope().launch {
-        try {
-          request
-            .start()
-            .collect(::dispatchEvent)
-
-        } catch (_: CancellationException) {
-          // do nothing
-        } catch (error: Throwable) {
-          receivedError(error)
-        }
+    // Acquisition can require an application dispatcher. Never block connect's caller while waiting for it.
+    val connection =
+      stateLock.write {
+        if (readyStateValue.isClosed) return
+        createRequestEventScope()
+          .launch(start = CoroutineStart.LAZY) {
+            try {
+              requestSupplier(headers)
+                .start(recoveryBudget)
+                .collect(::dispatchEvent)
+            } catch (_: CancellationException) {
+              // Closing a subscription also cancels credential acquisition.
+            } catch (error: TokenProviderException) {
+              if (error.reason ==
+                TokenProviderException.Reason.Temporary
+              ) {
+                receivedError(error)
+              } else {
+                receivedFatalError(error)
+              }
+            } catch (error: AuthorizationRequiredException) {
+              receivedFatalError(error)
+            } catch (error: Throwable) {
+              receivedError(error)
+            }
+          }.also { currentRequest = it }
       }
+    connection.start()
   }
 
   private fun dispatchEvent(event: Request.Event) {
@@ -412,17 +427,18 @@ class EventSource(
   /**
    * Close and disconnect the [EventSource].
    */
-  override fun close() {
-    if (readyStateValue.isClosed) {
-      return
+  override fun close() =
+    stateLock.write {
+      if (readyStateValue.isClosed) {
+        return@write
+      }
+
+      logger.debug("Closed")
+
+      readyStateValue.resetReadyState(Closed)
+
+      internalClose()
     }
-
-    logger.debug("Closed")
-
-    readyStateValue.resetReadyState(Closed)
-
-    internalClose()
-  }
 
   private fun internalClose() {
     currentRequest?.cancel(null)
@@ -554,9 +570,9 @@ class EventSource(
 
     logger.error("Received: fatal error", t)
 
-    stateLock.read { errorHandler }?.invoke(t)
-
     close()
+
+    stateLock.read { errorHandler }?.invoke(t)
   }
 
   private fun receivedComplete() {
@@ -601,9 +617,7 @@ class EventSource(
     reconnectTimerTask =
       Timer("Reconnect", false)
         .schedule(retryDelay.toMillis()) {
-          runBlocking {
-            internalConnect()
-          }
+          internalConnect()
         }
   }
 

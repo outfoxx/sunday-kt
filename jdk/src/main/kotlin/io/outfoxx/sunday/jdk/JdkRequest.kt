@@ -20,12 +20,21 @@ import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
+import io.outfoxx.sunday.security.RequestSecurity
+import io.outfoxx.sunday.security.SecurityBinding
+import io.outfoxx.sunday.security.TokenManager
+import io.outfoxx.sunday.security.TokenProviderException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.onSuccess
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.jdk9.collect
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -52,6 +61,8 @@ import kotlin.coroutines.resumeWithException
 open class JdkRequest(
   private val request: HttpRequest,
   private val httpClient: HttpClient,
+  private val security: RequestSecurity? = null,
+  private val authorization: RequestSecurity.Credentials? = null,
 ) : Request {
 
   companion object {
@@ -78,36 +89,121 @@ open class JdkRequest(
     return requestBody
   }
 
+  /** Attaches selected credentials while refusing native redirect/authentication replay. */
+  internal suspend fun authenticated(
+    bindings: List<SecurityBinding>,
+    manager: TokenManager?,
+  ): JdkRequest {
+    if (manager == null && bindings.isNotEmpty()) throw TokenProviderException()
+    require(
+      httpClient.followRedirects() == HttpClient.Redirect.NEVER &&
+        httpClient.authenticator().isEmpty &&
+        httpClient.cookieHandler().isEmpty,
+    ) {
+      "Managed security requires a JDK client without redirects, ambient authentication, or cookies"
+    }
+    val security = RequestSecurity(bindings, manager)
+    val credentials = security.authorize(uri, headers)
+    return JdkRequest(request.withCredentials(credentials), httpClient, security, credentials)
+  }
+
   override suspend fun execute(): Response {
+    val security = security ?: return executeNative(request)
+    var credentials = security.authorize(uri, headers, authorization)
+    var response = executeNative(request.withCredentials(credentials))
+    if (security.recover(
+        method,
+        request
+          .bodyPublisher()
+          .map {
+            it.contentLength() != 0L
+          }.orElse(false),
+        credentials,
+        response,
+      )
+    ) {
+      response.body?.close()
+      credentials = security.authorize(uri, headers, authorization)
+      response = executeNative(request.withCredentials(credentials))
+    }
+    return response.redacted(security)
+  }
+
+  private fun Response.redacted(security: RequestSecurity): Response {
+    val source = request as JdkRequest
+    val credentials = security.redact(source.uri, source.headers)
+    return object : Response by this {
+      override val request = JdkRequest(source.request.withCredentials(credentials), httpClient)
+    }
+  }
+
+  private suspend fun executeNative(request: HttpRequest): Response {
     logger.debug("Executing")
 
     val handler = BufferedSourceBodyHandler()
 
     val response =
       suspendCancellableCoroutine { continuation ->
-        httpClient
-          .sendAsync(request, handler)
-          .whenComplete { response, error ->
-            if (error != null) {
-              continuation.resumeWithException(error)
-            } else {
-              continuation.resume(response)
-            }
+        val future = httpClient.sendAsync(request, handler)
+        future.whenComplete { response, error ->
+          if (!continuation.isActive) {
+            response?.body()?.close()
+          } else if (error != null) {
+            continuation.resumeWithException(error)
+          } else {
+            continuation.resume(response) { _, value, _ -> value.body().close() }
           }
-
-        continuation.invokeOnCancellation { handler.cancel() }
+        }
+        continuation.invokeOnCancellation {
+          handler.cancel()
+          future.cancel(true)
+        }
       }
 
     return JdkResponse(response, httpClient)
   }
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override fun start(): Flow<Request.Event> =
+    flow {
+      val recoveryBudget = currentCoroutineContext()[AuthenticationRecoveryBudget] ?: AuthenticationRecoveryBudget()
+      val security = security
+      if (security == null) {
+        startNative(request).collect { emit(it) }
+        return@flow
+      }
+      do {
+        var replay = false
+        val credentials = security.authorize(uri, headers, authorization)
+        startNative(request.withCredentials(credentials))
+          .transformWhile { event ->
+            if (event is Request.Event.Start &&
+              security.recover(
+                method,
+                request.bodyPublisher().map { it.contentLength() != 0L }.orElse(false),
+                credentials,
+                event.value,
+                recoveryBudget,
+              )
+            ) {
+              replay = true
+              false
+            } else {
+              emit(if (event is Request.Event.Start) Request.Event.Start(event.value.redacted(security)) else event)
+              true
+            }
+          }.collect { emit(it) }
+      } while (replay)
+    }
+
+  private fun startNative(request: HttpRequest): Flow<Request.Event> =
     callbackFlow {
       logger.debug("Starting")
 
       val handler = RequestEventBodyHandler(JdkRequest(request, httpClient), channel)
 
       val future = httpClient.sendAsync(request, handler)
+      future.whenComplete { _, error -> channel.close(error) }
 
       awaitClose {
         logger.debug("Canceling request")
@@ -244,3 +340,7 @@ open class JdkRequest(
   }
 
 }
+
+/** Rebuilds native wire fields while retaining the original body publisher and request settings. */
+internal fun HttpRequest.withCredentials(credentials: RequestSecurity.Credentials): HttpRequest =
+  copyToBuilder(includeHeaders = false).uri(credentials.uri).headers(credentials.headers).build()

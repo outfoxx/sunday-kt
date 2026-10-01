@@ -16,6 +16,7 @@ class OkHttpTransportProvider : TransportProvider {
       mediaTypeEncoders = config.mediaTypeEncoders,
       mediaTypeDecoders = config.mediaTypeDecoders,
       pathEncoders = config.pathEncoders,
+      tokenManager = config.tokenManager,
     )
 
 }

@@ -16,7 +16,9 @@
 
 package io.outfoxx.sunday.http
 
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.io.Buffer
 import kotlinx.io.Source
 import java.net.URI
@@ -91,5 +93,8 @@ interface Request {
    * Starts the HTTP request and returns a [Flow] of [events][Request.Event].
    */
   fun start(): Flow<Event>
+
+  /** Starts an event connection using the subscription's shared authentication recovery budget. */
+  fun start(recoveryBudget: AuthenticationRecoveryBudget): Flow<Event> = start().flowOn(recoveryBudget)
 
 }

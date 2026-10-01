@@ -21,6 +21,7 @@ import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
+import io.outfoxx.sunday.PayloadValidator
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
@@ -42,6 +43,8 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.SecurityBinding
+import io.outfoxx.sunday.security.TokenManager
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import kotlinx.io.readByteString
@@ -63,6 +66,7 @@ class OkHttpTransport(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
+  private val tokenManager: TokenManager? = null,
 ) : Transport<OkHttpRequest>(),
   Closeable {
 
@@ -94,6 +98,7 @@ class OkHttpTransport(
     acceptTypes: List<MediaType>?,
     headers: Parameters?,
     purpose: RequestPurpose,
+    requestValidation: PayloadValidator<B>?,
   ): OkHttpRequest {
     logger.trace("Building request")
 
@@ -162,6 +167,7 @@ class OkHttpTransport(
           mediaTypeEncoders.find(contentType)
             ?: error("Cannot find encoder that was reported as supported")
 
+        requestValidation?.validate(body)
         val encodedBody = mediaTypeEncoder.encode(body).readByteString().toByteArray()
 
         encodedBody.toRequestBody(contentType.value.toMediaType())
@@ -186,6 +192,12 @@ class OkHttpTransport(
 
     return OkHttpRequest(request, httpClient)
   }
+
+  override suspend fun authorize(
+    request: Request,
+    bindings: List<SecurityBinding>,
+  ): OkHttpRequest =
+    (request as? OkHttpRequest ?: error("Expected an OkHttp request")).authenticated(bindings, tokenManager)
 
   override suspend fun transportResponse(request: Request): Response {
     logger.debug("Initiating request")

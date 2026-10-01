@@ -48,6 +48,7 @@ kotlin {
     javaParameters.set(true)
     freeCompilerArgs.add("-jvm-default=no-compatibility")
     freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    freeCompilerArgs.add("-Xemit-jvm-type-annotations")
   }
 }
 

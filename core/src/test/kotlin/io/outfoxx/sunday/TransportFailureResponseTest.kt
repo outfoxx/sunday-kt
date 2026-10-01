@@ -71,6 +71,7 @@ class TransportFailureResponseTest {
       acceptTypes: List<MediaType>?,
       headers: io.outfoxx.sunday.http.Parameters?,
       purpose: RequestPurpose,
+      requestValidation: PayloadValidator<B>?,
     ): Request = TestRequest(method, URI.create("http://example.com$pathTemplate"), emptyList())
 
     override suspend fun transportResponse(request: Request): Response = response

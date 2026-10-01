@@ -38,6 +38,8 @@ data class OperationSpec<B : Any>(
   val contentTypes: List<MediaType>? = null,
   val acceptTypes: List<MediaType>? = null,
   val headers: Parameters? = null,
+  val requestValidation: PayloadValidator<B>? = null,
+  val responseValidation: PayloadValidator<Any>? = null,
 )
 
 /**
@@ -70,6 +72,7 @@ class Operation<B : Any, R : Any, Req : Request>(
       spec.contentTypes,
       spec.acceptTypes,
       spec.headers,
+      requestValidation = spec.requestValidation,
     )
 
   /**
@@ -91,6 +94,8 @@ class Operation<B : Any, R : Any, Req : Request>(
       spec.acceptTypes,
       spec.headers,
       resultType,
+      spec.requestValidation,
+      spec.responseValidation,
     )
 
   /**
@@ -107,6 +112,8 @@ class Operation<B : Any, R : Any, Req : Request>(
       spec.acceptTypes,
       spec.headers,
       resultType,
+      spec.requestValidation,
+      spec.responseValidation,
     )
 
 }

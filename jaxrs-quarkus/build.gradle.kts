@@ -7,9 +7,12 @@ tasks.named("compileKotlin") {
   dependsOn("compileQuarkusGeneratedSourcesJava")
 }
 
-tasks.matching { it.name == "runKtlintCheckOverMainSourceSet" }.configureEach {
-  dependsOn("compileQuarkusGeneratedSourcesJava")
-}
+tasks
+  .matching {
+    it.name in setOf("runKtlintCheckOverMainSourceSet", "runKtlintFormatOverMainSourceSet")
+  }.configureEach {
+    dependsOn("compileQuarkusGeneratedSourcesJava")
+  }
 
 tasks.matching { it.name == "sourcesJar" }.configureEach {
   dependsOn("compileQuarkusGeneratedSourcesJava")
@@ -23,6 +26,9 @@ dependencies {
 
   implementation(platform(libs.quarkus.bom))
 
+  api(project(":sunday-validation-jakarta"))
+  implementation("io.quarkus:quarkus-hibernate-validator")
+
   api(libs.mutiny)
   api(libs.mutiny.vertx.core)
 
@@ -31,4 +37,6 @@ dependencies {
   implementation(libs.resteasy.reactive.vertx)
 
   testImplementation(libs.quarkus.junit5)
+  testImplementation("io.quarkus:quarkus-rest-jackson")
+  testImplementation("io.quarkus:quarkus-rest-client-jackson")
 }

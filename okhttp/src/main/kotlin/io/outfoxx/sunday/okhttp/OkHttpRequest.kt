@@ -19,14 +19,22 @@ package io.outfoxx.sunday.okhttp
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
+import io.outfoxx.sunday.security.RequestSecurity
+import io.outfoxx.sunday.security.SecurityBinding
+import io.outfoxx.sunday.security.TokenManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -34,8 +42,10 @@ import kotlinx.io.Buffer
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.okio.asKotlinxIoRawSource
+import okhttp3.Authenticator
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.internal.connection.RealCall
 import org.slf4j.LoggerFactory
@@ -51,6 +61,8 @@ open class OkHttpRequest(
   private val request: okhttp3.Request,
   private val httpClient: OkHttpClient,
   private val requestDispatcher: CoroutineDispatcher = Dispatchers.IO,
+  private val security: RequestSecurity? = null,
+  private val authorization: RequestSecurity.Credentials? = null,
 ) : Request {
 
   companion object {
@@ -78,7 +90,38 @@ open class OkHttpRequest(
       buffer.asKotlinxIoRawSource().buffered()
     }
 
+  /** Applies complete selected credentials and prevents native redirects or authentication replay. */
+  internal suspend fun authenticated(
+    bindings: List<SecurityBinding>,
+    manager: TokenManager?,
+  ): OkHttpRequest {
+    val security = RequestSecurity(bindings, manager)
+    val credentials = security.authorize(uri, headers)
+    val client =
+      httpClient
+        .newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .retryOnConnectionFailure(false)
+        .authenticator(Authenticator.NONE)
+        .cookieJar(CookieJar.NO_COOKIES)
+        .build()
+    return OkHttpRequest(request.withCredentials(credentials), client, requestDispatcher, security, credentials)
+  }
+
   override suspend fun execute(): OkHttpResponse {
+    val security = security ?: return executeNative(request)
+    var credentials = security.authorize(uri, headers, authorization)
+    var response = executeNative(request.withCredentials(credentials))
+    if (security.recover(method, request.body != null, credentials, response)) {
+      response.body?.close()
+      credentials = security.authorize(uri, headers, authorization)
+      response = executeNative(request.withCredentials(credentials))
+    }
+    return response.redacted(security)
+  }
+
+  private suspend fun executeNative(request: okhttp3.Request): OkHttpResponse {
     logger.debug("Executing")
 
     val call = httpClient.newCall(request)
@@ -96,9 +139,12 @@ open class OkHttpRequest(
             logger.debug("Received response")
 
             // Don't bother with resuming the continuation if it is already cancelled.
-            if (continuation.isCancelled) return
+            if (continuation.isCancelled) {
+              response.close()
+              return
+            }
 
-            continuation.resume(OkHttpResponse(response, httpClient))
+            continuation.resume(OkHttpResponse(response, httpClient)) { _, _, _ -> response.close() }
           }
 
           override fun onFailure(
@@ -117,7 +163,42 @@ open class OkHttpRequest(
     }
   }
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override fun start(): Flow<Request.Event> =
+    flow {
+      val recoveryBudget = currentCoroutineContext()[AuthenticationRecoveryBudget] ?: AuthenticationRecoveryBudget()
+      val security = security
+      if (security == null) {
+        startNative(request).collect { emit(it) }
+        return@flow
+      }
+      do {
+        var replay = false
+        val credentials = security.authorize(uri, headers, authorization)
+        startNative(request.withCredentials(credentials))
+          .transformWhile { event ->
+            if (event is Request.Event.Start &&
+              security.recover(method, request.body != null, credentials, event.value, recoveryBudget)
+            ) {
+              replay = true
+              false
+            } else {
+              emit(
+                if (event is Request.Event.Start) {
+                  Request.Event.Start(
+                    (event.value as OkHttpResponse).redacted(security),
+                  )
+                } else {
+                  event
+                },
+              )
+              true
+            }
+          }.collect { emit(it) }
+      } while (replay)
+    }
+
+  private fun startNative(request: okhttp3.Request): Flow<Request.Event> =
     callbackFlow {
       logger.debug("Starting")
 
@@ -204,3 +285,15 @@ open class OkHttpRequest(
     }
   }
 }
+
+/** Rebuilds native wire fields without consuming or copying the request body. */
+internal fun okhttp3.Request.withCredentials(credentials: RequestSecurity.Credentials): okhttp3.Request =
+  newBuilder()
+    .url(credentials.uri.toURL())
+    .headers(
+      okhttp3.Headers
+        .Builder()
+        .apply {
+          credentials.headers.forEach { (name, value) -> add(name, value) }
+        }.build(),
+    ).build()

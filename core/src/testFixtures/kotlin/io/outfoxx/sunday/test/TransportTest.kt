@@ -619,6 +619,48 @@ abstract class TransportTest {
   }
 
   @Test
+  fun `deferred bodyless requests revalidate parameters before transmission`() =
+    runTest {
+      MockWebServer().use { server ->
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val values = mutableListOf("known")
+          var validations = 0
+          val failure = IllegalArgumentException("unknown parameter")
+          val operation =
+            io.outfoxx.sunday.Operation<Unit, Unit, io.outfoxx.sunday.http.Request>(
+              transport,
+              io.outfoxx.sunday.OperationSpec(
+                Method.Get,
+                "/parameters",
+                queryParameters = mapOf("state" to values),
+                parameterValidation =
+                  io.outfoxx.sunday.ParameterValidator {
+                    validations++
+                    if (values.any { it != "known" }) throw failure
+                  },
+              ),
+              typeOf<Unit>(),
+            )
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, validations)
+          operation.transportRequest()
+          values += "unknown"
+          try {
+            operation.transportRequest()
+            throw AssertionError("Expected parameter validation failure")
+          } catch (observed: IllegalArgumentException) {
+            org.junit.jupiter.api.Assertions
+              .assertSame(failure, observed)
+          }
+          org.junit.jupiter.api.Assertions
+            .assertEquals(2, validations)
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, server.requestCount)
+        }
+      }
+    }
+
+  @Test
   fun `response validation failures retain native identity`() =
     runTest {
       MockWebServer().use { server ->

@@ -228,3 +228,15 @@ for the client-credentials flow. Interactive sessions require fresh application 
 Built-in OAuth providers retain at most 1,024 consumed authorization-code hashes per provider instance.
 After this limit, create a provider for a newly authorized application session; old hashes are never
 evicted to allow code reuse. Refresh exchanges do not consume this history.
+
+### Typed request parameters
+
+`OperationSpec.parameterValidation` and the transport overloads accept a `ParameterValidator` for
+captured typed parameters. JDK and OkHttp transports invoke it before encoding on every request build,
+including bodyless requests and event streams. Custom transports must invoke the callback at that same
+boundary. Generated callbacks delegate to native Bean Validation in request mode.
+
+The JAX-RS `ClientModelValidation` provider validates generated tolerant scalar parameters, including
+Kotlin covariant collection elements, during wire conversion. Register it on non-MicroProfile clients;
+generated MicroProfile clients register it automatically. Server parameter constraints use the native
+validator before application invocation.

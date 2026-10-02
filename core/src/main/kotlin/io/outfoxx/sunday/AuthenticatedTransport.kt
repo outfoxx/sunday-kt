@@ -54,6 +54,7 @@ private class AuthenticatedTransport<Req : Request>(
     headers: Parameters?,
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
+    parameterValidation: ParameterValidator?,
   ): Req =
     transport.authorize(
       transport.transportRequest(
@@ -67,6 +68,7 @@ private class AuthenticatedTransport<Req : Request>(
         headers,
         purpose,
         requestValidation,
+        parameterValidation,
       ),
       bindings,
     )

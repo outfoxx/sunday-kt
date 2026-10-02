@@ -22,12 +22,18 @@ import jakarta.ws.rs.client.ClientRequestContext
 import jakarta.ws.rs.client.ClientResponseContext
 import jakarta.ws.rs.client.ClientResponseFilter
 import jakarta.ws.rs.ext.InterceptorContext
+import jakarta.ws.rs.ext.ParamConverter
+import jakarta.ws.rs.ext.ParamConverterProvider
 import jakarta.ws.rs.ext.Provider
 import jakarta.ws.rs.ext.ReaderInterceptor
 import jakarta.ws.rs.ext.ReaderInterceptorContext
 import jakarta.ws.rs.ext.WriterInterceptor
 import jakarta.ws.rs.ext.WriterInterceptorContext
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 
 /** Validates each client entity at the codec boundary using the application's native validator. */
 @Provider
@@ -35,7 +41,46 @@ import java.lang.reflect.Method
 class ClientModelValidation :
   WriterInterceptor,
   ReaderInterceptor,
-  ClientResponseFilter {
+  ClientResponseFilter,
+  ParamConverterProvider {
+
+  /** Validates generated scalar parameters at their native wire conversion boundary. */
+  override fun <T : Any?> getConverter(
+    rawType: Class<T>,
+    genericType: Type,
+    annotations: Array<out Annotation>,
+  ): ParamConverter<T>? {
+    if (annotations.filterIsInstance<CascadedValues>().none { it.mode == ModelMode.Request::class }) return null
+    // Quarkus erases Kotlin covariant collection elements to Object while retaining the
+    // enclosing generic type. Resolve that element without replacing collection encoding.
+    val element =
+      (genericType as? ParameterizedType)
+        ?.takeIf {
+          (it.rawType as? Class<*>)?.let(Iterable::class.java::isAssignableFrom) == true
+        }?.actualTypeArguments
+        ?.singleOrNull()
+    val valueType =
+      if (rawType == Any::class.java) {
+        (if (element is WildcardType) element.upperBounds.singleOrNull() else element) as? Class<*> ?: return null
+      } else {
+        rawType
+      }
+    val factory =
+      valueType.methods.singleOrNull {
+        it.name == "fromValue" &&
+          Modifier.isStatic(it.modifiers) &&
+          it.parameterTypes.contentEquals(arrayOf(String::class.java)) &&
+          rawType.isAssignableFrom(it.returnType)
+      } ?: return null
+    return object : ParamConverter<T> {
+      override fun fromString(value: String): T = rawType.cast(factory.invoke(null, value))
+
+      override fun toString(value: T): String {
+        if (value != null) ModelValidation.request(value)
+        return value.toString()
+      }
+    }
+  }
 
   override fun filter(
     request: ClientRequestContext,

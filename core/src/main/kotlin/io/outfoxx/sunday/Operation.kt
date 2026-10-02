@@ -40,6 +40,7 @@ data class OperationSpec<B : Any>(
   val headers: Parameters? = null,
   val requestValidation: PayloadValidator<B>? = null,
   val responseValidation: PayloadValidator<Any>? = null,
+  val parameterValidation: ParameterValidator? = null,
 )
 
 /**
@@ -73,6 +74,7 @@ class Operation<B : Any, R : Any, Req : Request>(
       spec.acceptTypes,
       spec.headers,
       requestValidation = spec.requestValidation,
+      parameterValidation = spec.parameterValidation,
     )
 
   /**
@@ -96,6 +98,7 @@ class Operation<B : Any, R : Any, Req : Request>(
       resultType,
       spec.requestValidation,
       spec.responseValidation,
+      spec.parameterValidation,
     )
 
   /**
@@ -114,6 +117,7 @@ class Operation<B : Any, R : Any, Req : Request>(
       resultType,
       spec.requestValidation,
       spec.responseValidation,
+      spec.parameterValidation,
     )
 
 }

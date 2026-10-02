@@ -91,6 +91,7 @@ class OperationTest {
       headers: Parameters?,
       purpose: RequestPurpose,
       requestValidation: PayloadValidator<B>?,
+      parameterValidation: ParameterValidator?,
     ): Request = TestRequest(method, URI.create("http://example.com"), emptyList())
 
     override suspend fun transportResponse(request: Request): Response = throw CancellationException("cancelled")
@@ -128,6 +129,7 @@ class OperationTest {
       headers: Parameters?,
       purpose: RequestPurpose,
       requestValidation: PayloadValidator<B>?,
+      parameterValidation: ParameterValidator?,
     ): Request {
       purposes += purpose
       return TestRequest(method, URI.create("http://example.com"), emptyList())

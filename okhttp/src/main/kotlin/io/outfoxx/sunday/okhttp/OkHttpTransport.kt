@@ -19,6 +19,7 @@ package io.outfoxx.sunday.okhttp
 import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.ParameterValidator
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.PayloadValidator
@@ -99,7 +100,9 @@ class OkHttpTransport(
     headers: Parameters?,
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
+    parameterValidation: ParameterValidator?,
   ): OkHttpRequest {
+    parameterValidation?.validate()
     logger.trace("Building request")
 
     val urlBuilder =

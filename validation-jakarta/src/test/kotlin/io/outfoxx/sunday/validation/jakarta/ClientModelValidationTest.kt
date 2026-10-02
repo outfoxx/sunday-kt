@@ -81,6 +81,12 @@ class ClientModelValidationTest {
     fun parameters(
       @CascadedValues(mode = ModelMode.Request::class) states: List<State>,
     )
+
+    fun repeated(
+      @CascadedValues(mode = ModelMode.Response::class)
+      @CascadedValues(mode = ModelMode.Request::class)
+      states: List<State>,
+    )
   }
 
   @Test
@@ -109,6 +115,15 @@ class ClientModelValidationTest {
             assertThrows(ConstraintViolationException::class.java) { scalar.toString(State.Unknown(raw)) }
             assertThrows(ConstraintViolationException::class.java) { element.toString(State.Unknown(raw)) }
           }
+          val repeated =
+            ParameterClient::class.java
+              .getMethod(
+                "repeated",
+                List::class.java,
+              ).parameterAnnotations
+              .single()
+          val repeatedConverter = provider.getConverter(State::class.java, State::class.java, repeated)!!
+          assertThrows(ConstraintViolationException::class.java) { repeatedConverter.toString(State.Unknown("future")) }
           assertNull(provider.getConverter(State::class.java, State::class.java, emptyArray()))
           assertNull(provider.getConverter(String::class.java, String::class.java, annotations))
         } finally {

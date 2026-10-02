@@ -511,7 +511,32 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    parameterValidation: ParameterValidator? = null,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> =
+    eventStream(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      contentTypes,
+      acceptTypes,
+      headers,
+      null,
+      decoder,
+    )
+
+  /** Creates an event stream with validation before each connection request is encoded. */
+  fun <B : Any, D : Any> eventStream(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    parameterValidation: ParameterValidator?,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
     eventStream(decoder) { eventSourceHeaders ->
@@ -544,7 +569,30 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    parameterValidation: ParameterValidator? = null,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> =
+    eventStream(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      contentTypes,
+      acceptTypes,
+      headers,
+      null,
+      decoder,
+    )
+
+  /** Creates an event stream with validation before each connection request is encoded. */
+  fun <D : Any> eventStream(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    parameterValidation: ParameterValidator?,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
     eventStream(decoder) { eventSourceHeaders ->
@@ -612,6 +660,9 @@ abstract class Transport<out Req : Request> : Closeable {
 
       eventSource.onError = { error ->
         logger.warn("EventSource error encountered", error)
+        if (eventSource.readyState == EventSource.ReadyState.Closed) {
+          close(error)
+        }
       }
 
       eventSource.connect()

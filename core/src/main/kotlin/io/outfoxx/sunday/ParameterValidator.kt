@@ -16,10 +16,28 @@
 
 package io.outfoxx.sunday
 
+import kotlinx.coroutines.CancellationException
+
 /** Validates the captured typed parameters before a request is encoded, including bodyless requests. */
 fun interface ParameterValidator {
 
   /** Throws the native validation error if any participating parameter is invalid. */
   fun validate()
+
+  /** Runs validation with a terminal request-failure wrapper while preserving cancellation. */
+  fun validateRequest() {
+    try {
+      validate()
+    } catch (error: CancellationException) {
+      throw error
+    } catch (error: Exception) {
+      throw Failure(error)
+    }
+  }
+
+  /** A parameter cannot be encoded; event sources must not reconnect without a new operation. */
+  class Failure(
+    cause: Throwable,
+  ) : IllegalArgumentException("Request parameter validation failed", cause)
 
 }

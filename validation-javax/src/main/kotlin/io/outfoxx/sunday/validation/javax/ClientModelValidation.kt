@@ -48,7 +48,15 @@ class ClientModelValidation :
     genericType: Type,
     annotations: Array<out Annotation>,
   ): ParamConverter<T>? {
-    if (annotations.filterIsInstance<CascadedValues>().none { it.mode == ModelMode.Request::class }) return null
+    val modes =
+      annotations.flatMap {
+        when (it) {
+          is CascadedValues -> listOf(it.mode)
+          is CascadedValues.List -> it.value.map { value -> value.mode }
+          else -> emptyList()
+        }
+      }
+    if (ModelMode.Request::class !in modes) return null
     val factory = ParameterConversion.stringFactory(rawType, genericType) ?: return null
     return object : ParamConverter<T> {
       override fun fromString(value: String): T = factory(value)

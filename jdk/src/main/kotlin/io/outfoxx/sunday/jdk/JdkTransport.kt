@@ -128,7 +128,7 @@ class JdkTransport(
     requestValidation: PayloadValidator<B>?,
     parameterValidation: ParameterValidator?,
   ): JdkRequest {
-    parameterValidation?.validate()
+    parameterValidation?.validateRequest()
     logger.trace("Building request")
 
     val uri = uri(pathTemplate, pathParameters, queryParameters)

@@ -648,12 +648,53 @@ abstract class TransportTest {
           try {
             operation.transportRequest()
             throw AssertionError("Expected parameter validation failure")
-          } catch (observed: IllegalArgumentException) {
+          } catch (observed: io.outfoxx.sunday.ParameterValidator.Failure) {
             org.junit.jupiter.api.Assertions
-              .assertSame(failure, observed)
+              .assertSame(failure, observed.cause)
           }
           org.junit.jupiter.api.Assertions
             .assertEquals(2, validations)
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, server.requestCount)
+        }
+      }
+    }
+
+  @Test
+  fun `event parameters fail once and preserve existing decoder call styles`() =
+    runTest {
+      MockWebServer().use { server ->
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val decoder: (
+            io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder,
+            String?,
+            String?,
+            String,
+            org.slf4j.Logger,
+          ) -> String? =
+            { _, _, _, data, _ -> data }
+          transport.eventStream<Unit, String>(Method.Get, "/", null, null, null, null, null, null, decoder)
+          transport.eventStream<String>(Method.Get, "/", null, null, null, null, null, decoder)
+          transport.eventStream<Unit, String>(Method.Get, "/") { _, _, _, data, _ -> data }
+          transport.eventStream<String>(Method.Get, "/") { _, _, _, data, _ -> data }
+          var validations = 0
+          val nativeFailure = IllegalArgumentException("Unknown parameter")
+          val stream =
+            transport.eventStream<String>(Method.Get, "/events", parameterValidation = {
+              validations++
+              throw nativeFailure
+            }, decoder = decoder)
+          try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+              kotlinx.coroutines.withTimeout(3000) { stream.collect { error("Unexpected event") } }
+            }
+            throw AssertionError("Expected terminal validation failure")
+          } catch (failure: io.outfoxx.sunday.ParameterValidator.Failure) {
+            org.junit.jupiter.api.Assertions
+              .assertTrue(generateSequence<Throwable>(failure) { it.cause }.any { it === nativeFailure })
+          }
+          org.junit.jupiter.api.Assertions
+            .assertEquals(1, validations)
           org.junit.jupiter.api.Assertions
             .assertEquals(0, server.requestCount)
         }

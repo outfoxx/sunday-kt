@@ -240,3 +240,7 @@ The JAX-RS `ClientModelValidation` provider validates generated tolerant scalar 
 Kotlin covariant collection elements, during wire conversion. Register it on non-MicroProfile clients;
 generated MicroProfile clients register it automatically. Server parameter constraints use the native
 validator before application invocation.
+
+Parameter validation failures throw `ParameterValidator.Failure` with the native error as the cause.
+Event sources close on this failure, and event flows fail instead of reconnecting. Custom transports
+should invoke `ParameterValidator.validateRequest()` before encoding typed parameters.

@@ -102,7 +102,7 @@ class OkHttpTransport(
     requestValidation: PayloadValidator<B>?,
     parameterValidation: ParameterValidator?,
   ): OkHttpRequest {
-    parameterValidation?.validate()
+    parameterValidation?.validateRequest()
     logger.trace("Building request")
 
     val urlBuilder =

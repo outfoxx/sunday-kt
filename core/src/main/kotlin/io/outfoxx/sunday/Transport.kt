@@ -144,6 +144,7 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     purpose: RequestPurpose = RequestPurpose.Normal,
     requestValidation: PayloadValidator<B>? = null,
+    parameterValidation: ParameterValidator? = null,
   ): Req
 
   /**
@@ -204,6 +205,7 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     requestValidation: PayloadValidator<B>? = null,
+    parameterValidation: ParameterValidator? = null,
   ): Response {
     val request =
       transportRequest(
@@ -216,6 +218,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         headers,
         requestValidation = requestValidation,
+        parameterValidation = parameterValidation,
       )
 
     return transportResponse(request)
@@ -294,6 +297,7 @@ abstract class Transport<out Req : Request> : Closeable {
     resultType: KType,
     requestValidation: PayloadValidator<B>? = null,
     responseValidation: PayloadValidator<R>? = null,
+    parameterValidation: ParameterValidator? = null,
   ): R =
     response<B, R>(
       method,
@@ -307,6 +311,7 @@ abstract class Transport<out Req : Request> : Closeable {
       resultType,
       requestValidation,
       responseValidation,
+      parameterValidation,
     ).result
 
   /**
@@ -385,6 +390,7 @@ abstract class Transport<out Req : Request> : Closeable {
     resultType: KType,
     requestValidation: PayloadValidator<B>? = null,
     responseValidation: PayloadValidator<R>? = null,
+    parameterValidation: ParameterValidator? = null,
   ): OperationResponse<R> {
     val response =
       transportResponse(
@@ -397,6 +403,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         headers,
         requestValidation,
+        parameterValidation,
       )
 
     if (isFailureResponse(response)) {
@@ -432,6 +439,7 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
+    parameterValidation: ParameterValidator? = null,
   ): EventSource =
     eventSource { eventSourceHeaders ->
       transportRequest(
@@ -444,6 +452,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
         RequestPurpose.Events,
+        parameterValidation = parameterValidation,
       )
     }
 
@@ -461,6 +470,7 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
+    parameterValidation: ParameterValidator? = null,
   ): EventSource =
     eventSource { eventSourceHeaders ->
       transportRequest(
@@ -473,6 +483,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
         RequestPurpose.Events,
+        parameterValidation = parameterValidation,
       )
     }
 
@@ -502,6 +513,32 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
+    eventStream(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      body,
+      contentTypes,
+      acceptTypes,
+      headers,
+      null,
+      decoder,
+    )
+
+  /** Creates an event stream with validation before each connection request is encoded. */
+  fun <B : Any, D : Any> eventStream(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    body: B? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    parameterValidation: ParameterValidator?,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> =
     eventStream(decoder) { eventSourceHeaders ->
       transportRequest(
         method,
@@ -513,6 +550,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
         RequestPurpose.Events,
+        parameterValidation = parameterValidation,
       )
     }
 
@@ -533,6 +571,30 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
   ): Flow<D> =
+    eventStream(
+      method,
+      pathTemplate,
+      pathParameters,
+      queryParameters,
+      contentTypes,
+      acceptTypes,
+      headers,
+      null,
+      decoder,
+    )
+
+  /** Creates an event stream with validation before each connection request is encoded. */
+  fun <D : Any> eventStream(
+    method: Method,
+    pathTemplate: String,
+    pathParameters: Parameters? = null,
+    queryParameters: Parameters? = null,
+    contentTypes: List<MediaType>? = null,
+    acceptTypes: List<MediaType>? = null,
+    headers: Parameters? = null,
+    parameterValidation: ParameterValidator?,
+    decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
+  ): Flow<D> =
     eventStream(decoder) { eventSourceHeaders ->
       transportRequest(
         method,
@@ -544,6 +606,7 @@ abstract class Transport<out Req : Request> : Closeable {
         acceptTypes,
         mergeEventSourceHeaders(headers, eventSourceHeaders),
         RequestPurpose.Events,
+        parameterValidation = parameterValidation,
       )
     }
 
@@ -597,6 +660,9 @@ abstract class Transport<out Req : Request> : Closeable {
 
       eventSource.onError = { error ->
         logger.warn("EventSource error encountered", error)
+        if (eventSource.readyState == EventSource.ReadyState.Closed) {
+          close(error)
+        }
       }
 
       eventSource.connect()

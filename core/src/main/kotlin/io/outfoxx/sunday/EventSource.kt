@@ -386,6 +386,8 @@ class EventSource(
               } else {
                 receivedFatalError(error)
               }
+            } catch (error: ParameterValidator.Failure) {
+              receivedFatalError(error)
             } catch (error: AuthorizationRequiredException) {
               receivedFatalError(error)
             } catch (error: Throwable) {

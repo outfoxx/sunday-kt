@@ -16,18 +16,22 @@
 
 package io.outfoxx.sunday.validation.jakarta
 
+import io.outfoxx.sunday.validation.ParameterConversion
 import jakarta.ws.rs.ConstrainedTo
 import jakarta.ws.rs.RuntimeType
 import jakarta.ws.rs.client.ClientRequestContext
 import jakarta.ws.rs.client.ClientResponseContext
 import jakarta.ws.rs.client.ClientResponseFilter
 import jakarta.ws.rs.ext.InterceptorContext
+import jakarta.ws.rs.ext.ParamConverter
+import jakarta.ws.rs.ext.ParamConverterProvider
 import jakarta.ws.rs.ext.Provider
 import jakarta.ws.rs.ext.ReaderInterceptor
 import jakarta.ws.rs.ext.ReaderInterceptorContext
 import jakarta.ws.rs.ext.WriterInterceptor
 import jakarta.ws.rs.ext.WriterInterceptorContext
 import java.lang.reflect.Method
+import java.lang.reflect.Type
 
 /** Validates each client entity at the codec boundary using the application's native validator. */
 @Provider
@@ -35,7 +39,34 @@ import java.lang.reflect.Method
 class ClientModelValidation :
   WriterInterceptor,
   ReaderInterceptor,
-  ClientResponseFilter {
+  ClientResponseFilter,
+  ParamConverterProvider {
+
+  /** Validates generated scalar parameters at their native wire conversion boundary. */
+  override fun <T : Any?> getConverter(
+    rawType: Class<T>,
+    genericType: Type,
+    annotations: Array<out Annotation>,
+  ): ParamConverter<T>? {
+    val modes =
+      annotations.flatMap {
+        when (it) {
+          is CascadedValues -> listOf(it.mode)
+          is CascadedValues.List -> it.value.map { value -> value.mode }
+          else -> emptyList()
+        }
+      }
+    if (ModelMode.Request::class !in modes) return null
+    val factory = ParameterConversion.stringFactory(rawType, genericType) ?: return null
+    return object : ParamConverter<T> {
+      override fun fromString(value: String): T = factory(value)
+
+      override fun toString(value: T): String {
+        if (value != null) ModelValidation.request(value)
+        return value.toString()
+      }
+    }
+  }
 
   override fun filter(
     request: ClientRequestContext,

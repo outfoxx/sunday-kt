@@ -18,6 +18,7 @@ package io.outfoxx.sunday.validation.javax
 
 import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -56,6 +57,79 @@ class ClientModelValidationTest {
     fun exchange(
       @EntitySchema(Codes::class) body: List<String>,
     ): List<String>
+  }
+
+  sealed class State(
+    val wireValue: String,
+  ) {
+    final override fun toString(): String = wireValue
+
+    data object Ready : State("ready")
+
+    @KnownVariant(groups = [ModelMode.Request::class])
+    class Unknown(
+      raw: String,
+    ) : State(raw)
+
+    companion object {
+      @JvmStatic
+      fun fromValue(raw: String): State = if (raw == "ready") Ready else Unknown(raw)
+    }
+  }
+
+  interface ParameterClient {
+    fun parameters(
+      @CascadedValues(mode = ModelMode.Request::class) states: List<State>,
+    )
+
+    fun repeated(
+      @CascadedValues(mode = ModelMode.Response::class)
+      @CascadedValues(mode = ModelMode.Request::class)
+      states: List<State>,
+    )
+  }
+
+  @Test
+  fun `client parameter conversion validates scalars and erased covariant elements`() {
+    Validation
+      .byDefaultProvider()
+      .configure()
+      .messageInterpolator(ParameterMessageInterpolator())
+      .buildValidatorFactory()
+      .use { factory ->
+        val previous = ModelValidation.validatorProvider
+        ModelValidation.validatorProvider = { factory.validator }
+        try {
+          val provider = ClientModelValidation()
+          val method = ParameterClient::class.java.getMethod("parameters", List::class.java)
+          val annotations = method.parameterAnnotations.single()
+          val scalar = provider.getConverter(State::class.java, State::class.java, annotations)!!
+          val element = provider.getConverter(Any::class.java, method.genericParameterTypes.single(), annotations)!!
+          for (converter in listOf(scalar, element)) {
+            assertSame(State.Ready, converter.fromString("ready"))
+          }
+          assertEquals("ready", scalar.toString(State.Ready))
+          assertEquals("ready", element.toString(State.Ready))
+          // A manually constructed fallback remains invalid even when its raw value is recognized.
+          for (raw in listOf("future", "ready")) {
+            assertThrows(ConstraintViolationException::class.java) { scalar.toString(State.Unknown(raw)) }
+            assertThrows(ConstraintViolationException::class.java) { element.toString(State.Unknown(raw)) }
+          }
+          val repeated =
+            ParameterClient::class.java
+              .getMethod(
+                "repeated",
+                List::class.java,
+              ).parameterAnnotations
+              .single()
+          val repeatedConverter = provider.getConverter(State::class.java, State::class.java, repeated)!!
+          assertThrows(ConstraintViolationException::class.java) { repeatedConverter.toString(State.Unknown("future")) }
+          assertNull(provider.getConverter(State::class.java, State::class.java, emptyArray()))
+          assertNull(provider.getConverter(String::class.java, String::class.java, annotations))
+        } finally {
+          ModelValidation.validatorProvider = previous
+        }
+      }
   }
 
   @Test

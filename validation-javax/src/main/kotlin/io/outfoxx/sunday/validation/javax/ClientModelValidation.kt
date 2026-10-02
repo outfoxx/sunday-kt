@@ -16,13 +16,17 @@
 
 package io.outfoxx.sunday.validation.javax
 
+import io.outfoxx.sunday.validation.ParameterConversion
 import java.lang.reflect.Method
+import java.lang.reflect.Type
 import javax.ws.rs.ConstrainedTo
 import javax.ws.rs.RuntimeType
 import javax.ws.rs.client.ClientRequestContext
 import javax.ws.rs.client.ClientResponseContext
 import javax.ws.rs.client.ClientResponseFilter
 import javax.ws.rs.ext.InterceptorContext
+import javax.ws.rs.ext.ParamConverter
+import javax.ws.rs.ext.ParamConverterProvider
 import javax.ws.rs.ext.Provider
 import javax.ws.rs.ext.ReaderInterceptor
 import javax.ws.rs.ext.ReaderInterceptorContext
@@ -35,7 +39,34 @@ import javax.ws.rs.ext.WriterInterceptorContext
 class ClientModelValidation :
   WriterInterceptor,
   ReaderInterceptor,
-  ClientResponseFilter {
+  ClientResponseFilter,
+  ParamConverterProvider {
+
+  /** Validates generated scalar parameters at their native wire conversion boundary. */
+  override fun <T : Any?> getConverter(
+    rawType: Class<T>,
+    genericType: Type,
+    annotations: Array<out Annotation>,
+  ): ParamConverter<T>? {
+    val modes =
+      annotations.flatMap {
+        when (it) {
+          is CascadedValues -> listOf(it.mode)
+          is CascadedValues.List -> it.value.map { value -> value.mode }
+          else -> emptyList()
+        }
+      }
+    if (ModelMode.Request::class !in modes) return null
+    val factory = ParameterConversion.stringFactory(rawType, genericType) ?: return null
+    return object : ParamConverter<T> {
+      override fun fromString(value: String): T = factory(value)
+
+      override fun toString(value: T): String {
+        if (value != null) ModelValidation.request(value)
+        return value.toString()
+      }
+    }
+  }
 
   override fun filter(
     request: ClientRequestContext,

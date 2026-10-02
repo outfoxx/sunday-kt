@@ -19,6 +19,7 @@ package io.outfoxx.sunday.jdk
 import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
+import io.outfoxx.sunday.ParameterValidator
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.PayloadValidator
@@ -125,7 +126,9 @@ class JdkTransport(
     headers: Parameters?,
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
+    parameterValidation: ParameterValidator?,
   ): JdkRequest {
+    parameterValidation?.validateRequest()
     logger.trace("Building request")
 
     val uri = uri(pathTemplate, pathParameters, queryParameters)

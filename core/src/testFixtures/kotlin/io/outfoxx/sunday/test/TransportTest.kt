@@ -619,6 +619,89 @@ abstract class TransportTest {
   }
 
   @Test
+  fun `deferred bodyless requests revalidate parameters before transmission`() =
+    runTest {
+      MockWebServer().use { server ->
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val values = mutableListOf("known")
+          var validations = 0
+          val failure = IllegalArgumentException("unknown parameter")
+          val operation =
+            io.outfoxx.sunday.Operation<Unit, Unit, io.outfoxx.sunday.http.Request>(
+              transport,
+              io.outfoxx.sunday.OperationSpec(
+                Method.Get,
+                "/parameters",
+                queryParameters = mapOf("state" to values),
+                parameterValidation =
+                  io.outfoxx.sunday.ParameterValidator {
+                    validations++
+                    if (values.any { it != "known" }) throw failure
+                  },
+              ),
+              typeOf<Unit>(),
+            )
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, validations)
+          operation.transportRequest()
+          values += "unknown"
+          try {
+            operation.transportRequest()
+            throw AssertionError("Expected parameter validation failure")
+          } catch (observed: io.outfoxx.sunday.ParameterValidator.Failure) {
+            org.junit.jupiter.api.Assertions
+              .assertSame(failure, observed.cause)
+          }
+          org.junit.jupiter.api.Assertions
+            .assertEquals(2, validations)
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, server.requestCount)
+        }
+      }
+    }
+
+  @Test
+  fun `event parameters fail once and preserve existing decoder call styles`() =
+    runTest {
+      MockWebServer().use { server ->
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val decoder: (
+            io.outfoxx.sunday.mediatypes.codecs.TextMediaTypeDecoder,
+            String?,
+            String?,
+            String,
+            org.slf4j.Logger,
+          ) -> String? =
+            { _, _, _, data, _ -> data }
+          transport.eventStream<Unit, String>(Method.Get, "/", null, null, null, null, null, null, decoder)
+          transport.eventStream<String>(Method.Get, "/", null, null, null, null, null, decoder)
+          transport.eventStream<Unit, String>(Method.Get, "/") { _, _, _, data, _ -> data }
+          transport.eventStream<String>(Method.Get, "/") { _, _, _, data, _ -> data }
+          var validations = 0
+          val nativeFailure = IllegalArgumentException("Unknown parameter")
+          val stream =
+            transport.eventStream<String>(Method.Get, "/events", parameterValidation = {
+              validations++
+              throw nativeFailure
+            }, decoder = decoder)
+          try {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+              kotlinx.coroutines.withTimeout(3000) { stream.collect { error("Unexpected event") } }
+            }
+            throw AssertionError("Expected terminal validation failure")
+          } catch (failure: io.outfoxx.sunday.ParameterValidator.Failure) {
+            org.junit.jupiter.api.Assertions
+              .assertTrue(generateSequence<Throwable>(failure) { it.cause }.any { it === nativeFailure })
+          }
+          org.junit.jupiter.api.Assertions
+            .assertEquals(1, validations)
+          org.junit.jupiter.api.Assertions
+            .assertEquals(0, server.requestCount)
+        }
+      }
+    }
+
+  @Test
   fun `response validation failures retain native identity`() =
     runTest {
       MockWebServer().use { server ->

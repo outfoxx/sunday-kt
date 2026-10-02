@@ -153,23 +153,31 @@ sealed class PatchOp<T : Any> {
    */
   object Deserializer : JsonDeserializer<PatchOp<Any>>(), ContextualDeserializer {
 
+    /** Retains both the operation and value type at property, root, and collection positions. */
     class TypedDeserializer<T : Any>(
-      private val type: JavaType,
+      private val operationType: JavaType,
     ) : JsonDeserializer<PatchOp<T>>() {
 
-      override fun getNullValue(ctxt: DeserializationContext): PatchOp<T> = delete()
+      override fun getNullValue(ctxt: DeserializationContext): PatchOp<T> =
+        if (operationType.hasRawClass(UpdateOp::class.java)) {
+          ctxt.reportInputMismatch(operationType, "UpdateOp does not support deletion (JSON null)")
+        } else {
+          delete()
+        }
+
+      override fun getAbsentValue(ctxt: DeserializationContext): PatchOp<T> = none()
 
       override fun deserialize(
         p: JsonParser,
         ctxt: DeserializationContext,
-      ): PatchOp<T> = Set(ctxt.readValue(p, type))
+      ): PatchOp<T> = Set(ctxt.readValue(p, operationType.containedTypeOrUnknown(0)))
 
     }
 
     override fun createContextual(
       ctxt: DeserializationContext,
-      property: BeanProperty,
-    ): JsonDeserializer<*> = TypedDeserializer<Any>(property.type.containedType(0))
+      property: BeanProperty?,
+    ): JsonDeserializer<*> = TypedDeserializer<Any>(ctxt.contextualType ?: requireNotNull(property).type)
 
     override fun deserialize(
       p: JsonParser?,

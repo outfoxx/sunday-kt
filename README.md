@@ -244,3 +244,12 @@ validator before application invocation.
 Parameter validation failures throw `ParameterValidator.Failure` with the native error as the cause.
 Event sources close on this failure, and event flows fail instead of reconnecting. Custom transports
 should invoke `ParameterValidator.validateRequest()` before encoding typed parameters.
+
+## Partial updates
+
+Use `UpdateOp<T>` for fields that can be set but not deleted, and `PatchOp<T>` for fields that can
+also be deleted. `PatchOp.none()` leaves a field unchanged, `PatchOp.set(value)` supplies an update,
+and `PatchOp.delete()` writes JSON null to delete a member. Choose the operation type according to
+whether the member may be removed, independently of whether its value may be null. Annotate patch models with Jackson's
+`@JsonInclude(NON_EMPTY)` to omit unchanged fields. Jackson rejects JSON null for `UpdateOp` with a
+mapping error and preserves it as deletion for `PatchOp`, including root and collection positions.

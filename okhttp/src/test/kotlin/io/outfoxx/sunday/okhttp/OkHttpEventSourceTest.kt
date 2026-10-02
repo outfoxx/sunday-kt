@@ -22,11 +22,10 @@ import io.outfoxx.sunday.test.EventSourceTest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
-import kotlin.coroutines.cancellation.CancellationException
+import java.time.Duration
 
 class OkHttpEventSourceTest : EventSourceTest() {
 
@@ -35,7 +34,6 @@ class OkHttpEventSourceTest : EventSourceTest() {
     httpClient: OkHttpClient,
     requestDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val onStart: () -> Unit,
-    private val onCancel: () -> Unit,
   ) : OkHttpRequest(
       request,
       httpClient,
@@ -49,10 +47,6 @@ class OkHttpEventSourceTest : EventSourceTest() {
           if (it is Request.Event.Start) {
             onStart()
           }
-        }.onCompletion {
-          if (it is CancellationException) {
-            onCancel()
-          }
         }
   }
 
@@ -60,7 +54,6 @@ class OkHttpEventSourceTest : EventSourceTest() {
     url: String,
     headers: Headers,
     onStart: () -> Unit,
-    onCancel: () -> Unit,
   ): Request =
     OkHttpTrackingRequest(
       okhttp3.Request
@@ -69,9 +62,9 @@ class OkHttpEventSourceTest : EventSourceTest() {
         .url(url)
         .headers(headers.toMap().toHeaders())
         .build(),
-      OkHttpClient.Builder().build(),
+      // EventSource owns timeout behavior; a native read timeout must not hide failed cancellation.
+      OkHttpClient.Builder().readTimeout(Duration.ZERO).build(),
       onStart = onStart,
-      onCancel = onCancel,
     )
 
 }

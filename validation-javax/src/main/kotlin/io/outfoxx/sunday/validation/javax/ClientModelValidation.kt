@@ -16,11 +16,9 @@
 
 package io.outfoxx.sunday.validation.javax
 
+import io.outfoxx.sunday.validation.ParameterConversion
 import java.lang.reflect.Method
-import java.lang.reflect.Modifier
-import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.lang.reflect.WildcardType
 import javax.ws.rs.ConstrainedTo
 import javax.ws.rs.RuntimeType
 import javax.ws.rs.client.ClientRequestContext
@@ -51,29 +49,9 @@ class ClientModelValidation :
     annotations: Array<out Annotation>,
   ): ParamConverter<T>? {
     if (annotations.filterIsInstance<CascadedValues>().none { it.mode == ModelMode.Request::class }) return null
-    // Quarkus erases Kotlin covariant collection elements to Object while retaining the
-    // enclosing generic type. Resolve that element without replacing collection encoding.
-    val element =
-      (genericType as? ParameterizedType)
-        ?.takeIf {
-          (it.rawType as? Class<*>)?.let(Iterable::class.java::isAssignableFrom) == true
-        }?.actualTypeArguments
-        ?.singleOrNull()
-    val valueType =
-      if (rawType == Any::class.java) {
-        (if (element is WildcardType) element.upperBounds.singleOrNull() else element) as? Class<*> ?: return null
-      } else {
-        rawType
-      }
-    val factory =
-      valueType.methods.singleOrNull {
-        it.name == "fromValue" &&
-          Modifier.isStatic(it.modifiers) &&
-          it.parameterTypes.contentEquals(arrayOf(String::class.java)) &&
-          rawType.isAssignableFrom(it.returnType)
-      } ?: return null
+    val factory = ParameterConversion.stringFactory(rawType, genericType) ?: return null
     return object : ParamConverter<T> {
-      override fun fromString(value: String): T = rawType.cast(factory.invoke(null, value))
+      override fun fromString(value: String): T = factory(value)
 
       override fun toString(value: T): String {
         if (value != null) ModelValidation.request(value)

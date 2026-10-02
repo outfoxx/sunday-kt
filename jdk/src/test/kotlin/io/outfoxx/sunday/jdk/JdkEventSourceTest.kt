@@ -20,12 +20,10 @@ import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.test.EventSourceTest
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
-import kotlin.coroutines.cancellation.CancellationException
 
 class JdkEventSourceTest : EventSourceTest() {
 
@@ -33,7 +31,6 @@ class JdkEventSourceTest : EventSourceTest() {
     request: HttpRequest,
     httpClient: HttpClient,
     private val onStart: () -> Unit,
-    private val onCancel: () -> Unit,
   ) : JdkRequest(
       request,
       httpClient,
@@ -46,10 +43,6 @@ class JdkEventSourceTest : EventSourceTest() {
           if (it is Request.Event.Start) {
             onStart()
           }
-        }.onCompletion {
-          if (it is CancellationException) {
-            onCancel()
-          }
         }
   }
 
@@ -57,7 +50,6 @@ class JdkEventSourceTest : EventSourceTest() {
     url: String,
     headers: Headers,
     onStart: () -> Unit,
-    onCancel: () -> Unit,
   ): Request =
     JdkTrackingRequest(
       HttpRequest
@@ -66,7 +58,6 @@ class JdkEventSourceTest : EventSourceTest() {
         .build(),
       HttpClient.newHttpClient(),
       onStart,
-      onCancel,
     )
 
 }

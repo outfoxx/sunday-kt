@@ -33,6 +33,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import strikt.api.expectThat
+import strikt.api.expectThrows
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
@@ -40,9 +41,13 @@ import strikt.assertions.isLessThan
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isTrue
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -53,7 +58,6 @@ abstract class EventSourceTest {
     url: String,
     headers: Headers,
     onStart: () -> Unit = {},
-    onCancel: () -> Unit = {},
   ): Request
 
   @Test
@@ -771,61 +775,54 @@ abstract class EventSourceTest {
 
   @Test
   fun `cancellation closes connection`() {
-    val canceled = CountDownLatch(1)
+    ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
+      server.soTimeout = 12000
+      Executors.newSingleThreadExecutor().use { executor ->
+        val disconnected =
+          executor.submit<Int> {
+            server.accept().use { socket ->
+              socket.soTimeout = 12000
+              val input = socket.getInputStream().bufferedReader(Charsets.US_ASCII)
+              while (checkNotNull(input.readLine()).isNotEmpty()) {
+                // Consume the complete request before observing the peer's end of stream.
+              }
 
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(CONTENT_TYPE, EventStream)
-        .setChunkedBody(
-          """
-          |data: ${"x".repeat(100000)}
-          |
-          |
-          |data: ${"x".repeat(100000)}
-          |
-          |
-          |data: ${"x".repeat(100000)}
-          |
-          |
-          |data: ${"x".repeat(100000)}
-          |
-          |
-          """.trimMargin(),
-          3,
-        ),
-    )
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(200)
-        .addHeader(CONTENT_TYPE, EventStream),
-    )
-    server.start()
-    server.use {
-      val connected = CountDownLatch(1)
-
-      val eventSource =
-        EventSource(
-          { headers ->
-            createRequest(server.url("/test").toString(), headers, connected::countDown) {
-              canceled.countDown()
+              // Omit the terminal chunk so only client cancellation can finish this response.
+              val event = "data: connected\n\n"
+              socket.getOutputStream().writer(Charsets.US_ASCII).apply {
+                write("HTTP/1.1 200 OK\r\n")
+                write("Content-Type: text/event-stream\r\n")
+                write("Transfer-Encoding: chunked\r\n\r\n")
+                write("${event.length.toString(16)}\r\n$event\r\n")
+                flush()
+              }
+              input.read()
             }
-          },
-          SundayHttpProblem.Factory,
-          retryTime = Duration.ofMillis(50),
-        )
+          }
 
-      eventSource.connect()
+        val received = CountDownLatch(1)
+        val eventSource =
+          EventSource(
+            { headers -> createRequest("http://127.0.0.1:${server.localPort}/test", headers) },
+            SundayHttpProblem.Factory,
+            retryTime = Duration.ofMillis(50),
+          )
+        eventSource.onMessage = { received.countDown() }
 
-      expectThat(connected.await(12, SECONDS)).isTrue()
-      expectThat(server.takeRequest(3, SECONDS)).isNotNull()
+        eventSource.use {
+          eventSource.connect()
+          expectThat(received.await(12, SECONDS)).isTrue()
+          expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Open)
+          expectThat(disconnected.isDone).isFalse()
 
-      eventSource.close()
+          eventSource.close()
 
-      expectThat(canceled.await(12, SECONDS)).isTrue()
-      expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
-      expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
+          expectThat(disconnected.get(12, SECONDS)).isEqualTo(-1)
+          expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
+          server.soTimeout = 250
+          expectThrows<SocketTimeoutException> { server.accept().use {} }
+        }
+      }
     }
   }
 

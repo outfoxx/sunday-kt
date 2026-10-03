@@ -81,16 +81,22 @@ class MergePatchQuarkusTest {
     for (json in listOf(
       "{}",
       """{"optional":null,"optionalNullable":null}""",
-      """{"required":"value","requiredNullable":"value"}""",
+      """{"required":"value","requiredNullable":"value","validatedRequired":"value"}""",
     )) {
       val response = send(json)
       assertEquals(200, response.statusCode(), response.body())
       assertEquals(mapper.readTree(json), mapper.readTree(response.body()))
     }
     assertEquals(before + 3, count())
+    val requiredDeletion = """{"validatedRequired":null}"""
+    assertEquals(
+      PatchOp.delete<String>(),
+      mapper.readValue(requiredDeletion, MergePatchEntity::class.java).validatedRequired,
+    )
     for (json in listOf(
       """{"required":null}""",
       """{"requiredNullable":null}""",
+      requiredDeletion,
       """{"required":"x"}""",
       """{"optional":"x"}""",
     )) {
@@ -117,6 +123,9 @@ class MergePatchQuarkusTest {
         assertEquals(PatchOp.delete<String>(), client.send(patch).optional)
         patch.optional = PatchOp.none()
         assertEquals(PatchOp.none<String>(), client.send(patch).optional)
+        patch.validatedRequired = PatchOp.delete()
+        val deletionError = assertThrows(RuntimeException::class.java) { client.send(patch) }
+        assertTrue(generateSequence<Throwable>(deletionError) { it.cause }.any { it is ConstraintViolationException })
       }
   }
 }
@@ -129,6 +138,10 @@ class MergePatchEntity {
 
   @get:Schema(requiredValue = true, minLength = 2)
   var requiredNullable: UpdateOp<String> = PatchOp.none()
+
+  /** Allows decoding deletion so Hibernate, rather than Jackson, must enforce requiredness. */
+  @get:Schema(requiredValue = true, minLength = 2)
+  var validatedRequired: PatchOp<String> = PatchOp.none()
 
   @get:Schema(minLength = 2)
   var optional: PatchOp<String> = PatchOp.none()

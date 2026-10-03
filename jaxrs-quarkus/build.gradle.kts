@@ -36,6 +36,7 @@ dependencies {
   implementation(libs.resteasy.reactive)
   implementation(libs.resteasy.reactive.vertx)
 
+  testImplementation(project(":sunday-core"))
   testImplementation(libs.quarkus.junit5)
   testImplementation("io.quarkus:quarkus-rest-jackson")
   testImplementation("io.quarkus:quarkus-rest-client-jackson")

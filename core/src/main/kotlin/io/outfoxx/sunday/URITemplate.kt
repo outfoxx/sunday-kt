@@ -39,6 +39,8 @@ class URITemplate(
    * Produces a full URI by resolving the given relative URI (if provided) and then
    * replacing parameters in the template with a combination of the
    * [io.outfoxx.sunday.URITemplate.parameters] overridden by the given [parameters].
+   * Missing and null variables are omitted according to RFC 6570. Empty strings remain
+   * defined values, and explicit nulls override stored parameters.
    *
    * @param relative Optional relative URI to resolve against the template
    * before parameter replacement.
@@ -73,7 +75,13 @@ class URITemplate(
             ?: value.toString()
         }
 
-    return template.expand(allStringParameters).toBuilder()
+    val expanded = template.expand(allStringParameters).toURI()
+    return URIBuilder.basedOn(expanded).apply {
+      // URIBuilder drops an empty fragment unless it is explicitly appended.
+      if (expanded.rawFragment == "") {
+        fragment().append("")
+      }
+    }
   }
 
   private fun join(

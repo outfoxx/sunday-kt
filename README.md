@@ -253,3 +253,12 @@ and `PatchOp.delete()` writes JSON null to delete a member. Choose the operation
 whether the member may be removed, independently of whether its value may be null. Annotate patch models with Jackson's
 `@JsonInclude(NON_EMPTY)` to omit unchanged fields. Jackson rejects JSON null for `UpdateOp` with a
 mapping error and preserves it as deletion for `PatchOp`, including root and collection positions.
+
+## URI template variables
+
+`URITemplate.resolve` expands missing and `null` variables as undefined under RFC 6570.
+For an undefined `id`, `/items{/id}` becomes `/items`, while `/items/{id}` becomes
+`/items/` because the literal slash remains. Empty strings remain defined: an empty
+`id` in `/items{/id}` produces `/items/`. Explicit `null` overrides a parameter
+stored on the template; omitting the override keeps the stored value. This applies
+to template expressions in both the base URI and the operation path.

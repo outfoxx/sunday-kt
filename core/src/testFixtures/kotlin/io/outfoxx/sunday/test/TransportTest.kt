@@ -128,6 +128,22 @@ abstract class TransportTest {
     }
 
   @Test
+  fun `omits undefined template variables when building requests`() =
+    runTest {
+      val template = URITemplate("https://example.com{/version}", mapOf("version" to "v1", "id" to "123"))
+      createTransport(template).use { transport ->
+        val request =
+          transport.transportRequest(
+            Method.Get,
+            "/items{/id,missing}",
+            pathParameters = mapOf("version" to null, "id" to null),
+          )
+
+        expectThat(request.uri).isEqualTo(URI("https://example.com/items"))
+      }
+    }
+
+  @Test
   fun `encodes query parameters`() =
     runTest {
       createTransport(URITemplate("http://example.com"))

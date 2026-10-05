@@ -17,7 +17,6 @@
 package io.outfoxx.sunday.security
 
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import java.net.URI
@@ -81,7 +80,6 @@ class OAuthTokenProvider(
   }
 
   override val identity: String get() = configuration.identity
-  private val mapper = ObjectMapper()
   private val consumedCodes = ConcurrentHashMap.newKeySet<String>()
 
   init {
@@ -153,32 +151,21 @@ class OAuthTokenProvider(
     val issuer = configuration.issuer ?: throw TokenProviderException()
     val response = exchange(ExchangeRequest(endpoint(discoveryUrl), mapOf("Accept" to "application/json"), null))
     checkAvailability(response.status)
-    val document = mapper.readTree(response.body)
-    if (response.status != 200 || !document.isObject || document.path("issuer").textValue() != issuer) {
-      throw TokenProviderException()
-    }
-    val methods = document.get("token_endpoint_auth_methods_supported")
-    if (methods != null && (!methods.isArray || methods.any { !it.isTextual })) {
-      throw TokenProviderException()
-    }
-    // Keycloak advertises authenticators but omits public clients. Client registration,
-    // not this server-wide list, decides whether a public PKCE session is permitted.
+    if (response.status != 200) throw TokenProviderException()
+    val document = OAuthWire.discovery(response.body)
+    if (document.issuer != issuer) throw TokenProviderException()
     val publicAuthorizationCode =
       configuration.authentication == Authentication.None &&
         request.binding.flow == SecurityBinding.Flow.AuthorizationCode
-    if (!publicAuthorizationCode &&
-      (
-        if (methods == null) {
-          configuration.authentication != Authentication.ClientSecretBasic
-        } else {
-          methods.none { it.textValue() == configuration.authentication.wireName }
-        }
-      )
-    ) {
+    val methods = document.methods ?: listOf(Authentication.ClientSecretBasic.wireName)
+    if (!publicAuthorizationCode && configuration.authentication.wireName !in methods) throw TokenProviderException()
+    val tokenUrl = endpoints.tokenUrl ?: document.tokenUrl ?: throw TokenProviderException()
+    val authorizationUrl = endpoints.authorizationUrl ?: document.authorizationUrl
+    endpoint(tokenUrl)
+    authorizationUrl?.let { endpoint(it) }
+    if (request.binding.flow == SecurityBinding.Flow.AuthorizationCode && authorizationUrl == null) {
       throw TokenProviderException()
     }
-    val tokenUrl = endpoints.tokenUrl ?: document.path("token_endpoint").textValue() ?: throw TokenProviderException()
-    val authorizationUrl = endpoints.authorizationUrl ?: document.path("authorization_endpoint").textValue()
     return request.copy(
       binding =
         request.binding.copy(
@@ -193,29 +180,10 @@ class OAuthTokenProvider(
     form: MutableMap<String, String>,
   ): TokenSet {
     val binding = request.binding
-    if (binding.scopes.isNotEmpty()) form["scope"] = binding.scopes.joinToString(" ")
-    binding.audience?.let { form["audience"] = it }
-    binding.resource?.let { form["resource"] = it }
-    val headers = mutableMapOf("Accept" to "application/json", "Content-Type" to "application/x-www-form-urlencoded")
-    if (configuration.authentication == Authentication.ClientSecretBasic) {
-      val value =
-        URLEncoder.encode(configuration.clientId, UTF_8.name()) + ":" +
-          URLEncoder.encode(configuration.clientSecret!!, UTF_8.name())
-      headers["Authorization"] = "Basic " + Base64.getEncoder().encodeToString(value.toByteArray(UTF_8))
-    } else {
-      form["client_id"] = configuration.clientId
-      if (configuration.authentication ==
-        Authentication.ClientSecretPost
-      ) {
-        form["client_secret"] = configuration.clientSecret!!
-      }
-    }
-    val response = exchange(ExchangeRequest(endpoint(url), headers, form))
+    val response = exchange(OAuthRequests.build(configuration, binding, endpoint(url), form))
     checkAvailability(response.status)
-    val data = mapper.readTree(response.body)
-    if (!data.isObject) throw TokenProviderException()
     if (response.status != 200) {
-      when (data.path("error").textValue()) {
+      when (OAuthWire.error(response.body).code) {
         "invalid_grant" -> {
           if (binding.flow == SecurityBinding.Flow.AuthorizationCode) throw AuthorizationRequiredException()
           throw TokenProviderException(TokenProviderException.Reason.InvalidGrant)
@@ -226,43 +194,10 @@ class OAuthTokenProvider(
         else -> throw TokenProviderException()
       }
     }
-    val accessToken =
-      data.path("access_token").textValue()?.takeIf { it.isNotEmpty() } ?: throw TokenProviderException()
-    if (!data.path("token_type").textValue().equals("bearer", true)) throw TokenProviderException()
-    val expiresAt =
-      data.get("expires_in")?.let {
-        if (!it.isNumber || it.decimalValue().signum() <= 0) throw TokenProviderException()
-        configuration.clock.instant().plusNanos(
-          it
-            .decimalValue()
-            .movePointRight(9)
-            .toBigInteger()
-            .longValueExact(),
-        )
-      }
-    val refreshToken =
-      data.get("refresh_token")?.let {
-        it.textValue()?.takeIf(String::isNotEmpty) ?: throw TokenProviderException()
-      }
-    data.get("scope")?.let {
-      val scopes = it.textValue()?.split(" ") ?: throw TokenProviderException()
-      if (!scopes.containsAll(binding.scopes)) throw TokenProviderException()
-    }
-    return TokenSet(accessToken, expiresAt, refreshToken)
+    return OAuthWire.success(response.body).tokens(binding.scopes, configuration.clock)
   }
 
-  private fun endpoint(value: String?): URI {
-    val uri = URI(value ?: throw TokenProviderException())
-    if (!uri.isAbsolute ||
-      uri.host == null ||
-      uri.userInfo != null ||
-      uri.fragment != null ||
-      (uri.scheme != "https" && !(uri.scheme == "http" && uri.host in setOf("localhost", "127.0.0.1", "[::1]")))
-    ) {
-      throw TokenProviderException()
-    }
-    return uri
-  }
+  private fun endpoint(value: String?): URI = OAuthWire.endpoint(value)
 
   private fun checkAvailability(status: Int) {
     if (status == 408 || status == 429 || status in 500..599) {

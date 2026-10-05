@@ -1,5 +1,5 @@
 plugins {
-  id("library.conventions")
+  id("oauth-tests.conventions")
 }
 
 dependencies {

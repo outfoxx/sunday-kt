@@ -160,7 +160,12 @@ last waiting caller cancels. Close it when the owning application/session ends. 
 `TokenStore` for application-managed persistence; tokens must not appear in generated code.
 
 Endpoint overrides change acquisition only; discovery verifies the independently configured
-issuer. Managed requests disable native redirects and ambient authentication. An explicit
+issuer on acquisition and renewal. Public authorization-code/PKCE sessions configured with
+`Authentication.None` accept discovery that omits `none` (as Keycloak does), including an
+absent authentication-method list. Any supplied list must still contain only strings.
+Confidential clients require their configured method to be advertised; an absent list
+defaults to `client_secret_basic`. Endpoint overrides never bypass issuer validation.
+Managed requests disable native redirects and ambient authentication. An explicit
 Bearer `invalid_token` challenge can recover once for a bodyless GET, HEAD, or OPTIONS.
 403 responses and unsafe/body-carrying requests do not replay. An event subscription shares
 that single recovery across reconnects; closing it cancels pending acquisition.

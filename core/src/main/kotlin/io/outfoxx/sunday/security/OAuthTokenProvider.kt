@@ -158,15 +158,21 @@ class OAuthTokenProvider(
       throw TokenProviderException()
     }
     val methods = document.get("token_endpoint_auth_methods_supported")
-    if ((methods == null && configuration.authentication != Authentication.ClientSecretBasic) ||
+    if (methods != null && (!methods.isArray || methods.any { !it.isTextual })) {
+      throw TokenProviderException()
+    }
+    // Keycloak advertises authenticators but omits public clients. Client registration,
+    // not this server-wide list, decides whether a public PKCE session is permitted.
+    val publicAuthorizationCode =
+      configuration.authentication == Authentication.None &&
+        request.binding.flow == SecurityBinding.Flow.AuthorizationCode
+    if (!publicAuthorizationCode &&
       (
-        methods != null &&
-          (
-            !methods.isArray ||
-              methods.none {
-                it.textValue() == configuration.authentication.wireName
-              }
-          )
+        if (methods == null) {
+          configuration.authentication != Authentication.ClientSecretBasic
+        } else {
+          methods.none { it.textValue() == configuration.authentication.wireName }
+        }
       )
     ) {
       throw TokenProviderException()

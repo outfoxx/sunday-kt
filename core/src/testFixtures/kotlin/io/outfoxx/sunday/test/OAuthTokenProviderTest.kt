@@ -78,6 +78,7 @@ abstract class OAuthTokenProviderTest {
       )) {
         MockWebServer().use { server ->
           repeat(3) { index ->
+            server.enqueue(MockResponse().setBody(discoveryMetadata(server, "[\"${authentication.wireName}\"]")))
             server.enqueue(
               MockResponse().setBody(
                 """{"access_token":"token-${index + 1}","token_type":"Bearer",
@@ -91,13 +92,16 @@ abstract class OAuthTokenProviderTest {
               "client:name",
               "s e:c",
               authentication,
+              issuer = "https://trusted.example",
               clock = clock,
             )
           TokenManager(mapOf("identity" to provider(configuration)), clock = clock, scope = this).use { manager ->
             repeat(3) { index ->
-              val lease = manager.credentials(binding(server))
+              val binding = discoveryBinding(server).copy(flow = SecurityBinding.Flow.ClientCredentials)
+              val lease = manager.credentials(binding)
               assertEquals(Instant.ofEpochSecond(60), lease.tokens.expiresAt)
               manager.invalidate(lease)
+              assertEquals("/discovery", server.takeRequest().path)
               val request = server.takeRequest()
               val form = parseForm(request.body.readUtf8())
               assertEquals("POST", request.method)
@@ -197,6 +201,162 @@ abstract class OAuthTokenProviderTest {
           expectFailure<TokenProviderException> { it.credentials(binding) }
         }
         assertEquals(5, server.requestCount)
+      }
+    }
+
+  @Test
+  fun `public PKCE discovery permits omitted none and revalidates rotating refresh`() =
+    runTest {
+      for (methods in listOf(
+        """["private_key_jwt","client_secret_basic","client_secret_post","tls_client_auth","client_secret_jwt"]""",
+        null,
+        """["none"]""",
+        "[]",
+      )) {
+        MockWebServer().use { server ->
+          val metadata = discoveryMetadata(server, methods)
+          repeat(3) { index ->
+            server.enqueue(MockResponse().setBody(metadata))
+            server.enqueue(
+              MockResponse().setBody(
+                """{"access_token":"token-${index + 1}","token_type":"Bearer",
+                "refresh_token":"refresh-${index + 1}","expires_in":60}""",
+              ),
+            )
+          }
+          var authorizations = 0
+          val configuration =
+            OAuthTokenProvider.Configuration(
+              "application",
+              "public-client",
+              grantIdentity = "session",
+              issuer = "https://trusted.example",
+              authorization = { request ->
+                authorizations++
+                assertEquals(server.url("/authorize").toString(), request.binding.endpoints.authorizationUrl)
+                AuthorizationGrant("fresh-code", "https://app.example/callback", "v".repeat(43))
+              },
+              clock = clock,
+            )
+          val binding = discoveryBinding(server)
+          TokenManager(mapOf("identity" to provider(configuration)), clock = clock, scope = this).use { manager ->
+            repeat(3) { index ->
+              val lease = manager.credentials(binding)
+              assertEquals("token-${index + 1}", lease.tokens.accessToken)
+              assertEquals("refresh-${index + 1}", lease.tokens.refreshToken)
+              manager.invalidate(lease)
+              assertEquals("/discovery", server.takeRequest().path)
+              val request = server.takeRequest()
+              assertEquals("/token", request.path)
+              assertEquals("POST", request.method)
+              assertEquals(null, request.getHeader("Authorization"))
+              val form = parseForm(request.body.readUtf8())
+              assertEquals("public-client", form["client_id"])
+              assertFalse(form.containsKey("client_secret"))
+              assertEquals(if (index == 0) "authorization_code" else "refresh_token", form["grant_type"])
+              if (index == 0) {
+                assertEquals("fresh-code", form["code"])
+                assertEquals("v".repeat(43), form["code_verifier"])
+                assertEquals("https://app.example/callback", form["redirect_uri"])
+              } else {
+                assertEquals("refresh-$index", form["refresh_token"])
+                assertFalse(form.containsKey("code"))
+              }
+            }
+            // Overrides must not let either acquisition or renewal bypass discovery trust.
+            repeat(2) {
+              server.enqueue(MockResponse().setBody(metadata.replace("trusted.example", "untrusted.example")))
+            }
+            expectFailure<TokenProviderException> { manager.credentials(binding) }
+            expectFailure<TokenProviderException> {
+              manager.credentials(
+                binding.copy(endpoints = binding.endpoints.copy(tokenUrl = server.url("/override").toString())),
+              )
+            }
+          }
+          assertEquals(1, authorizations)
+          assertEquals(8, server.requestCount)
+        }
+      }
+    }
+
+  @Test
+  fun `invalid discovery methods fail before authorization or token exchange`() =
+    runTest {
+      for (authentication in OAuthTokenProvider.Authentication.entries) {
+        val malformed =
+          listOf("null", "{}", "42", "\"none\"", "[null]", "[42]", "[\"none\",{}]", "[\"client_secret_basic\",42]")
+        val unsupported =
+          when (authentication) {
+            OAuthTokenProvider.Authentication.None -> emptyList()
+            OAuthTokenProvider.Authentication.ClientSecretBasic ->
+              listOf(
+                "[]",
+                "[\"none\"]",
+                "[\"client_secret_post\"]",
+              )
+            OAuthTokenProvider.Authentication.ClientSecretPost ->
+              listOf(
+                null,
+                "[]",
+                "[\"none\"]",
+                "[\"client_secret_basic\"]",
+              )
+          }
+        for (methods in malformed + unsupported) {
+          MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody(discoveryMetadata(server, methods)))
+            var authorizations = 0
+            val configuration =
+              OAuthTokenProvider.Configuration(
+                "application",
+                "client",
+                clientSecret = if (authentication == OAuthTokenProvider.Authentication.None) null else "SECRET",
+                authentication = authentication,
+                grantIdentity = "session",
+                issuer = "https://trusted.example",
+                authorization = {
+                  authorizations++
+                  AuthorizationGrant("SECRET", "https://app.example/callback", "v".repeat(43))
+                },
+              )
+            TokenManager(mapOf("identity" to provider(configuration)), scope = this).use { manager ->
+              val error = expectFailure<TokenProviderException> { manager.credentials(discoveryBinding(server)) }
+              assertEquals(TokenProviderException.Reason.Unavailable, error.reason)
+              assertFalse(error.stackTraceToString().contains("SECRET"))
+            }
+            assertEquals(0, authorizations)
+            assertEquals(1, server.requestCount)
+          }
+        }
+      }
+    }
+
+  @Test
+  fun `public discovery requires independently trusted issuer before authorization`() =
+    runTest {
+      for (issuer in listOf(null, "https://other.example")) {
+        MockWebServer().use { server ->
+          server.enqueue(MockResponse().setBody(discoveryMetadata(server, null)))
+          var authorizations = 0
+          val configuration =
+            OAuthTokenProvider.Configuration(
+              "application",
+              "public-client",
+              grantIdentity = "session",
+              issuer = issuer,
+              endpoints = SecurityEndpoints(tokenUrl = server.url("/override").toString()),
+              authorization = {
+                authorizations++
+                AuthorizationGrant("SECRET", "https://app.example/callback", "v".repeat(43))
+              },
+            )
+          TokenManager(mapOf("identity" to provider(configuration)), scope = this).use { manager ->
+            expectFailure<TokenProviderException> { manager.credentials(discoveryBinding(server)) }
+          }
+          assertEquals(0, authorizations)
+          assertEquals(if (issuer == null) 0 else 1, server.requestCount)
+        }
       }
     }
 
@@ -308,6 +468,21 @@ abstract class OAuthTokenProviderTest {
         assertEquals(1, server.requestCount)
       }
     }
+
+  private fun discoveryBinding(server: MockWebServer) =
+    binding(server).copy(
+      flow = SecurityBinding.Flow.AuthorizationCode,
+      endpoints = SecurityEndpoints(discoveryUrl = server.url("/discovery").toString()),
+    )
+
+  private fun discoveryMetadata(
+    server: MockWebServer,
+    methods: String?,
+  ): String {
+    val authentication = methods?.let { ",\"token_endpoint_auth_methods_supported\":$it" } ?: ""
+    return """{"issuer":"https://trusted.example","token_endpoint":"${server.url("/token")}",
+      "authorization_endpoint":"${server.url("/authorize")}"$authentication}"""
+  }
 
   private fun parseForm(value: String): Map<String, String> =
     value.split("&").associate {

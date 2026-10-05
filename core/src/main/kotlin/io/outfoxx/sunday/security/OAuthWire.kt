@@ -76,6 +76,9 @@ internal object OAuthWire {
     val issuer = string(data, "issuer", true)!!
     val token = string(data, "token_endpoint")?.also { endpoint(it) }
     val authorization = string(data, "authorization_endpoint")?.also { endpoint(it) }
+    for (name in listOf("jwks_uri", "registration_endpoint", "revocation_endpoint", "introspection_endpoint")) {
+      string(data, name)?.also { endpoint(it) }
+    }
     val methods =
       data.get("token_endpoint_auth_methods_supported")?.let { value ->
         if (!value.isArray || value.any { !it.isTextual }) fail()

@@ -26,8 +26,10 @@ import okhttp3.CookieJar
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okio.BufferedSink
 import java.io.IOException
 import kotlin.coroutines.resumeWithException
 
@@ -43,9 +45,28 @@ class OkHttpOAuthTokenProvider(
 ) : TokenProvider.Refreshing by OAuthTokenProvider(configuration, { request ->
     val builder = Request.Builder().url(request.uri.toURL())
     request.headers.forEach { (name, value) -> builder.header(name, value) }
-    request.encodedForm()?.let { builder.post(it.toRequestBody("application/x-www-form-urlencoded".toMediaType())) }
+    request.encodedForm()?.let {
+      val body = it.toRequestBody("application/x-www-form-urlencoded".toMediaType())
+      builder.post(
+        object : RequestBody() {
+          override fun contentType() = body.contentType()
+
+          override fun contentLength() = body.contentLength()
+
+          override fun isOneShot() = true
+
+          override fun writeTo(sink: BufferedSink) = body.writeTo(sink)
+        },
+      )
+    }
     suspendCancellableCoroutine { continuation ->
-      val call = httpClient.newCall(builder.build())
+      // Authorization codes and rotating refresh tokens must never be replayed by HTTP recovery.
+      val call =
+        httpClient
+          .newBuilder()
+          .retryOnConnectionFailure(false)
+          .build()
+          .newCall(builder.build())
       continuation.invokeOnCancellation { call.cancel() }
       call.enqueue(
         object : Callback {

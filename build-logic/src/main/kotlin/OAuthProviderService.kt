@@ -28,6 +28,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
   private var container: String? = null
   private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10))
     .followRedirects(HttpClient.Redirect.NORMAL).build()
+  internal var startupTimeoutSeconds = 120L
   private var started = false
   lateinit var issuer: String
     private set
@@ -44,18 +45,14 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     val selected = backend
     val root = Files.createTempDirectory("sunday-oauth-")
     directory = root
-    val port = ServerSocket(0).use { it.localPort }
-    base = "http://127.0.0.1:$port"
-    issuer = "$base/realms/$realm"
     try {
-      val command = when (selected) {
-        "wiremock-java" -> listOf("java", "-jar", artifact(WIREMOCK_URL, WIREMOCK_SHA).toString(),
-          "--bind-address", "127.0.0.1", "--port", port.toString())
-        else -> keycloak(root, port, selected)
-      }
+      val port = ServerSocket(0).use { it.localPort }
+      base = "http://127.0.0.1:$port"
+      issuer = "$base/realms/$realm"
+      val command = command(root, port, selected)
       process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(root.resolve("provider.log").toFile()).start()
       val ready = if (mode == "replay") "$base/__admin/mappings" else "$issuer/.well-known/openid-configuration"
-      val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(120)
+      val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(startupTimeoutSeconds)
       while (System.nanoTime() < deadline) {
         check(process?.isAlive == true)
         val status = runCatching {
@@ -75,6 +72,12 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     }
   }
 
+  protected open fun command(root: Path, port: Int, selected: String): List<String> = when (selected) {
+    "wiremock-java" -> listOf("java", "-jar", artifact(WIREMOCK_URL, WIREMOCK_SHA).toString(),
+      "--bind-address", "127.0.0.1", "--port", port.toString())
+    else -> keycloak(root, port, selected)
+  }
+
   private fun keycloak(root: Path, port: Int, selected: String): List<String> {
     val imports = Files.createDirectory(root.resolve("import"))
     Files.writeString(imports.resolve("$realm-realm.json"), JsonOutput.toJson(realmConfiguration()))
@@ -83,7 +86,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
       val archive = artifact(KEYCLOAK_URL, KEYCLOAK_SHA)
       val extraction = ProcessBuilder("tar", "-xzf", archive.toString(), "-C", root.toString())
         .redirectErrorStream(true).redirectOutput(root.resolve("extract.log").toFile()).start()
-      check(extraction.waitFor(60, TimeUnit.SECONDS) && extraction.exitValue() == 0)
+      OAuthProcess.waitFor(extraction, 60)
       val distribution = root.resolve("keycloak-26.2.5")
       Files.createDirectories(distribution.resolve("data/import"))
       Files.copy(imports.resolve("$realm-realm.json"), distribution.resolve("data/import/$realm-realm.json"))
@@ -110,7 +113,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
       "credentials" to listOf(mapOf("type" to "password", "value" to "synthetic-password", "temporary" to false)))),
   )
 
-  private fun artifact(url: String, checksum: String): Path {
+  internal fun artifact(url: String, checksum: String): Path {
     val cache = parameters.cache.get().asFile.toPath()
     Files.createDirectories(cache)
     val target = cache.resolve(url.substringAfterLast('/'))
@@ -148,7 +151,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     container?.let { name -> runCatching {
       val removal = ProcessBuilder("docker", "rm", "-f", name).redirectOutput(ProcessBuilder.Redirect.DISCARD)
         .redirectError(ProcessBuilder.Redirect.DISCARD).start()
-      if (!removal.waitFor(20, TimeUnit.SECONDS)) removal.destroyForcibly()
+      OAuthProcess.waitFor(removal, 20)
     } }
     container = null
     process?.let { owned ->

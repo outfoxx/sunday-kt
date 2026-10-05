@@ -48,6 +48,16 @@ class OAuthWireTest {
             else -> error("Unknown fixture kind")
           }
         }
+      if (result.isSuccess && case.has("tokens")) {
+        val tokens = result.getOrThrow() as TokenSet
+        val expected = case.path("tokens")
+        assertEquals(expected.path("accessToken").textValue(), tokens.accessToken)
+        assertEquals(expected.path("refreshToken").textValue(), tokens.refreshToken)
+        assertEquals(
+          expected.path("expiresAtMillis").takeUnless { it.isNull }?.longValue(),
+          tokens.expiresAt?.toEpochMilli(),
+        )
+      }
       assertEquals(case.path("expected").textValue() == "accept", result.isSuccess, case.path("id").textValue())
     }
   }

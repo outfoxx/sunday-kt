@@ -201,4 +201,149 @@ class ClientSettingsTest {
     }
   }
 
+  @Test
+  fun `static credential families encode their wire values without exposing secrets`() =
+    runTest {
+      val basic = binding.copy(transport = binding.transport.copy(prefix = "Basic"))
+      val key = binding.copy(transport = binding.transport.copy(prefix = null, name = "X-Key"))
+      for ((selected, credential, expected) in listOf(
+        Triple(basic, BasicCredentials("alice", "secret"), "YWxpY2U6c2VjcmV0"),
+        Triple(key, ApiKeyCredentials("secret"), "secret"),
+      )) {
+        val settings =
+          ClientSettings(
+            URI("https://api.example"),
+            mapOf("list" to listOf(selected)),
+            mapOf("identity" to credential),
+          )
+        assertEquals(
+          expected,
+          settings.tokenManager!!
+            .credentials(selected)
+            .tokens.accessToken,
+        )
+        assertFalse(credential.toString().contains("secret"))
+      }
+      assertEquals(null, ClientSettings(URI("https://api.example")).tokenManager)
+    }
+
+  @Test
+  fun `custom providers retain acquisition ownership and enforce selected flow`() =
+    runTest {
+      var acquisitions = 0
+      val provider =
+        object : TokenProvider {
+          override val identity = "custom"
+
+          override fun configure(binding: SecurityBinding) = TokenConfiguration(identity)
+
+          override suspend fun acquire(request: TokenRequest): TokenSet {
+            acquisitions++
+            return TokenSet("custom-token")
+          }
+        }
+      for (flow in listOf(null, SecurityBinding.Flow.Static)) {
+        val credentials = ProviderCredentials(provider, flow)
+        val settings =
+          ClientSettings(
+            URI("https://api.example"),
+            mapOf("list" to listOf(binding)),
+            mapOf("identity" to credentials),
+          )
+        assertFalse(credentials.toString().contains("custom-token"))
+        assertEquals(
+          "custom-token",
+          settings.tokenManager!!
+            .credentials(binding)
+            .tokens.accessToken,
+        )
+      }
+      assertEquals(2, acquisitions)
+      assertThrows(IllegalArgumentException::class.java) {
+        ClientSettings(
+          URI("https://api.example"),
+          mapOf("list" to listOf(binding)),
+          mapOf("identity" to ProviderCredentials(provider, SecurityBinding.Flow.AuthorizationCode)),
+        )
+      }
+      assertThrows(IllegalArgumentException::class.java) {
+        ClientSettings(
+          URI("https://api.example"),
+          mapOf("list" to listOf(binding, binding.copy(scheme = "other"))),
+          mapOf("identity" to ProviderCredentials(provider), "other" to ProviderCredentials(provider)),
+        )
+      }
+      assertEquals(2, acquisitions)
+    }
+
+  @Test
+  fun `OAuth grant validation precedes provider construction and resolves credential endpoints`() {
+    val codeBinding = binding.copy(flow = SecurityBinding.Flow.AuthorizationCode)
+    var calls = 0
+    val providerFactory: (OAuthTokenProvider.Configuration) -> TokenProvider = { configuration ->
+      calls++
+      assertEquals("https://api.example/oauth/token", configuration.endpoints.tokenUrl)
+      object : TokenProvider {
+        override val identity = "application"
+
+        override fun configure(binding: SecurityBinding): TokenConfiguration = error("Unexpected configuration")
+
+        override suspend fun acquire(request: TokenRequest): TokenSet = error("Unexpected acquisition")
+      }
+    }
+    val configuration =
+      OAuthTokenProvider.Configuration(
+        "application",
+        "client",
+        grantIdentity = "session",
+        authorization = { error("Unexpected authorization") },
+        endpoints = SecurityEndpoints(tokenUrl = "oauth/token"),
+      )
+    val credential = OAuthCredentials.AuthorizationCode(configuration, providerFactory)
+    val settings =
+      ClientSettings.resolve(
+        URI("https://api.example/v1"),
+        mapOf("list" to listOf(listOf(codeBinding))),
+        mapOf("identity" to credential),
+      )
+    assertNotNull(settings.tokenManager)
+    assertEquals(1, calls)
+    assertFalse(credential.toString().contains("session"))
+    for (invalid in listOf(
+      configuration.copy(identity = ""),
+      configuration.copy(clientId = ""),
+      configuration.copy(grantIdentity = null),
+      configuration.copy(authorization = null),
+      configuration.copy(clientSecret = "secret"),
+      configuration.copy(clientSecret = "", authentication = OAuthTokenProvider.Authentication.ClientSecretBasic),
+    )) {
+      assertThrows(IllegalArgumentException::class.java) {
+        ClientSettings(
+          URI("https://api.example"),
+          mapOf("list" to listOf(codeBinding)),
+          mapOf("identity" to OAuthCredentials.AuthorizationCode(invalid, providerFactory)),
+        )
+      }
+    }
+    val clientCredentials = OAuthCredentials.ClientCredentials(configuration, providerFactory)
+    assertFalse(clientCredentials.toString().contains("session"))
+    assertThrows(IllegalArgumentException::class.java) {
+      ClientSettings(
+        URI("https://api.example"),
+        mapOf(
+          "list" to listOf(codeBinding.copy(flow = SecurityBinding.Flow.ClientCredentials)),
+        ),
+        mapOf("identity" to clientCredentials),
+      )
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      ClientSettings(
+        URI("https://api.example"),
+        mapOf("list" to listOf(codeBinding)),
+        mapOf("identity" to BearerCredentials("token")),
+      )
+    }
+    assertEquals(1, calls)
+  }
+
 }

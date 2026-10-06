@@ -8,6 +8,7 @@ repositories {
 }
 
 dependencies {
+  testImplementation(kotlin("test-junit"))
   implementation(libs.kotlin.gradle.plugin)
   implementation(libs.dokka.gradle.plugin)
   implementation(libs.dokka.javadoc.gradle.plugin)

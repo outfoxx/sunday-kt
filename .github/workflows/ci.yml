@@ -7,6 +7,9 @@ on:
     types: [ opened, synchronize, reopened ]
     branches: [ main ]
 
+env:
+  SUNDAY_OAUTH_TEST_MODE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'live' || 'replay' }}
+
 jobs:
 
   build-test:

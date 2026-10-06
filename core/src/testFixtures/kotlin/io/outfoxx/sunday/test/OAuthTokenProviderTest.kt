@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.test
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.outfoxx.sunday.security.AuthorizationGrant
 import io.outfoxx.sunday.security.AuthorizationRequiredException
 import io.outfoxx.sunday.security.OAuthTokenProvider
@@ -24,6 +25,7 @@ import io.outfoxx.sunday.security.SecurityEndpoints
 import io.outfoxx.sunday.security.TokenManager
 import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.security.TokenProviderException
+import io.outfoxx.sunday.security.TokenRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
+import java.io.File
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Clock
@@ -144,7 +147,7 @@ abstract class OAuthTokenProviderTest {
           MockResponse().setBody("""{"token_type":"Bearer","access_token":"first","refresh_token":"rotating"}"""),
         )
         server.enqueue(
-          MockResponse().setResponseCode(400).setBody("""{"error":"invalid_grant","error_description":"SECRET"}"""),
+          MockResponse().setResponseCode(400).setBody("""{"error":"invalid_grant","error_description":""}"""),
         )
         val configuration =
           OAuthTokenProvider.Configuration(
@@ -449,6 +452,58 @@ abstract class OAuthTokenProviderTest {
           server.enqueue(MockResponse().setResponseCode(status).setBody(body))
           TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
             assertEquals(reason, expectFailure<TokenProviderException> { manager.credentials(binding(server)) }.reason)
+          }
+        }
+      }
+    }
+
+  @Test
+  fun `shared HTTP fixtures preserve error categories across acquire and refresh`() =
+    runTest {
+      val corpus = ObjectMapper().readTree(File("../test-fixtures/oauth/http-cases.json"))
+      assertEquals(1, corpus.path("formatVersion").intValue())
+      for (case in corpus.path("cases")) {
+        for (refresh in listOf(false, true)) {
+          MockWebServer().use { server ->
+            server.enqueue(
+              MockResponse()
+                .setResponseCode(
+                  case.path("status").intValue(),
+                ).setBody(case.path("body").textValue())
+                .apply {
+                  case.path("headers").properties().forEach { (name, value) -> setHeader(name, value.textValue()) }
+                },
+            )
+            val provider =
+              provider(
+                OAuthTokenProvider.Configuration(
+                  "application",
+                  "client",
+                  "secret",
+                  OAuthTokenProvider.Authentication.ClientSecretPost,
+                  issuer = "https://trusted.example",
+                ),
+              )
+            val binding =
+              if (case.path("target").textValue() == "discovery") {
+                binding(server).copy(endpoints = SecurityEndpoints(discoveryUrl = server.url("/discovery").toString()))
+              } else {
+                binding(server)
+              }
+            val request = TokenRequest(binding, "client")
+            val failure =
+              expectFailure<TokenProviderException> {
+                if (refresh) provider.refresh(request, "refresh-secret") else provider.acquire(request)
+              }
+            val expected =
+              when (case.path("expected").textValue()) {
+                "temporary" -> TokenProviderException.Reason.Temporary
+                "invalid_grant" -> TokenProviderException.Reason.InvalidGrant
+                else -> TokenProviderException.Reason.Unavailable
+              }
+            assertEquals(expected, failure.reason, case.path("id").textValue())
+            assertFalse(failure.toString().contains("SECRET"))
+            assertEquals(1, server.requestCount, case.path("id").textValue())
           }
         }
       }

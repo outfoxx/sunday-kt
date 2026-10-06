@@ -50,7 +50,14 @@ class ClientSettings(
   private val credentials = credentials.toMap()
 
   init {
-    require(baseURL.isAbsolute && baseURL.scheme.lowercase() in setOf("http", "https") && baseURL.host != null) {
+    require(
+      baseURL.isAbsolute &&
+        baseURL.scheme.lowercase() in setOf("http", "https") &&
+        baseURL.host != null &&
+        baseURL.userInfo == null &&
+        baseURL.query == null &&
+        baseURL.fragment == null,
+    ) {
       "Client endpoint must be an absolute HTTP or HTTPS URL"
     }
     this.bindings.values.flatten().forEach { binding ->
@@ -143,18 +150,24 @@ class ClientSettings(
       return url
     }
 
-    /** Selects complete operation alternatives, rejecting missing or ambiguous credentials before transport creation. */
+    /**
+     * Selects complete operation alternatives before transport creation.
+     * [alternativeSelection] chooses a zero-based candidate index, including its scopes and endpoint metadata.
+     */
     fun resolve(
       baseURL: URI,
       alternatives: Map<String, List<List<SecurityBinding>>>,
       credentials: Map<String, Credentials>,
       selection: Map<String, Set<String>> = emptyMap(),
+      alternativeSelection: Map<String, Int> = emptyMap(),
     ): ClientSettings {
+      require((selection.keys + alternativeSelection.keys).all { it in alternatives }) { "Unknown operation selection" }
       val bindings =
         alternatives.mapValues { (operation, candidates) ->
           val usable =
-            candidates.filter { candidate ->
-              (selection[operation] == null || selection[operation] == candidate.map { it.scheme }.toSet()) &&
+            candidates.filterIndexed { index, candidate ->
+              (alternativeSelection[operation] == null || alternativeSelection[operation] == index) &&
+                (selection[operation] == null || selection[operation] == candidate.map { it.scheme }.toSet()) &&
                 runCatching {
                   candidate.forEach { binding -> validate(requireNotNull(credentials[binding.scheme]), binding) }
                 }.isSuccess

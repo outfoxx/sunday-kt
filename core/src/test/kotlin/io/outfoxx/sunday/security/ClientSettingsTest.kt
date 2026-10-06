@@ -39,6 +39,37 @@ class ClientSettingsTest {
     )
 
   @Test
+  fun `direct settings reject endpoint components that corrupt operation paths`() {
+    listOf("https://user:secret@api.example/v1", "https://api.example/v1?x=1", "https://api.example/v1#part").forEach {
+      assertThrows(IllegalArgumentException::class.java) { ClientSettings(URI(it)) }
+    }
+  }
+
+  @Test
+  fun `complete selection distinguishes same-scheme scopes`() {
+    val read = binding.copy(scopes = setOf("read"))
+    val write = binding.copy(scopes = setOf("write"))
+    val alternatives = mapOf("list" to listOf(listOf(read), listOf(write)))
+    val credentials = mapOf("identity" to BearerCredentials("token"))
+    val base = URI("https://api.example")
+    assertThrows(IllegalArgumentException::class.java) { ClientSettings.resolve(base, alternatives, credentials) }
+    val settings = ClientSettings.resolve(base, alternatives, credentials, alternativeSelection = mapOf("list" to 1))
+    assertEquals(
+      setOf("write"),
+      settings.bindings
+        .getValue("list")
+        .single()
+        .scopes,
+    )
+    assertThrows(IllegalArgumentException::class.java) {
+      ClientSettings.resolve(base, alternatives, credentials, alternativeSelection = mapOf("list" to 2))
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      ClientSettings.resolve(base, alternatives, credentials, alternativeSelection = mapOf("typo" to 0))
+    }
+  }
+
+  @Test
   fun `settings snapshot metadata and keep credentials private`() =
     runTest {
       val scopes = mutableSetOf("read")

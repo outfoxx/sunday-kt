@@ -11,7 +11,7 @@ dependencies {
   api(libs.kotlinx.coroutines.core.jvm)
   api(libs.bundles.jackson)
 
-  implementation("com.nimbusds:oauth2-oidc-sdk:11.38.2")
+  implementation(libs.nimbus.oauth)
 
   testFixturesImplementation("com.microsoft.playwright:playwright:1.58.0")
 
@@ -21,4 +21,10 @@ dependencies {
   testFixturesApi(libs.kotlinx.coroutines.core.jvm)
   testFixturesApi(libs.kotlinx.coroutines.test)
   testFixturesApi(libs.okhttp.mockwebserver)
+}
+
+tasks.withType<Test>().configureEach {
+  inputs
+    .file(rootProject.layout.projectDirectory.file("test-fixtures/oauth/cases.json"))
+    .withPathSensitivity(PathSensitivity.RELATIVE)
 }

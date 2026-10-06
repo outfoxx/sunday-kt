@@ -147,7 +147,7 @@ abstract class OAuthTokenProviderTest {
           MockResponse().setBody("""{"token_type":"Bearer","access_token":"first","refresh_token":"rotating"}"""),
         )
         server.enqueue(
-          MockResponse().setResponseCode(400).setBody("""{"error":"invalid_grant","error_description":"SECRET"}"""),
+          MockResponse().setResponseCode(400).setBody("""{"error":"invalid_grant","error_description":""}"""),
         )
         val configuration =
           OAuthTokenProvider.Configuration(
@@ -471,7 +471,7 @@ abstract class OAuthTokenProviderTest {
                   case.path("status").intValue(),
                 ).setBody(case.path("body").textValue())
                 .apply {
-                  case.path("headers").fields().forEach { (name, value) -> setHeader(name, value.textValue()) }
+                  case.path("headers").properties().forEach { (name, value) -> setHeader(name, value.textValue()) }
                 },
             )
             val provider =

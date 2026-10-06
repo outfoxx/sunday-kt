@@ -177,7 +177,7 @@ class OAuthTokenProvider(
   private suspend fun exchangeTokens(
     request: TokenRequest,
     url: String?,
-    form: MutableMap<String, String>,
+    form: Map<String, String>,
   ): TokenSet {
     val binding = request.binding
     val response = exchange(OAuthRequests.build(configuration, binding, endpoint(url), form))

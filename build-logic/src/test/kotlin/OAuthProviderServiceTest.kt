@@ -45,7 +45,8 @@ class OAuthProviderServiceTest {
         service.failCommand = failCommand
         service.startupTimeoutSeconds = 0
         val failure = assertFailsWith<IllegalStateException> { service.start() }
-        assertEquals("OAuth infrastructure startup failed (wiremock-java)", failure.message)
+        assertEquals("OAuth infrastructure startup failed (wiremock-java): " +
+          if (failCommand) "provider preparation failed; diagnostics=Address already in use" else "Provider readiness timeout", failure.message)
         assertFalse(Files.exists(service.ownedDirectory))
         service.close()
       }
@@ -90,7 +91,10 @@ class OAuthProviderServiceTest {
     lateinit var ownedDirectory: Path
     override fun command(root: Path, port: Int, selected: String): List<String> {
       ownedDirectory = root
-      if (failCommand) error("synthetic-secret")
+      if (failCommand) {
+        Files.writeString(root.resolve("provider.log"), "synthetic-secret Address already in use password=private")
+        error("synthetic-secret")
+      }
       return listOf("sleep", "60")
     }
   }

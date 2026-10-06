@@ -30,6 +30,7 @@ internal object OAuthWire {
   private val mapper =
     ObjectMapper()
       .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+      .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
       .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
   private val scopePattern = Regex("[\\x21\\x23-\\x5B\\x5D-\\x7E]+( [\\x21\\x23-\\x5B\\x5D-\\x7E]+)*")
   private val maxMillis = BigDecimal("9007199254740991")
@@ -106,7 +107,7 @@ internal object OAuthWire {
 
   fun error(body: String): Error {
     val data = document(body)
-    string(data, "error_description")
+    string(data, "error_description", allowEmpty = true)
     string(data, "error_uri")
     return Error(string(data, "error", true)!!)
   }
@@ -130,9 +131,10 @@ internal object OAuthWire {
     data: JsonNode,
     name: String,
     required: Boolean = false,
+    allowEmpty: Boolean = false,
   ): String? {
     val value = data.get(name) ?: return if (required) fail() else null
-    if (!value.isTextual || value.textValue().isEmpty()) fail()
+    if (!value.isTextual || (!allowEmpty && value.textValue().isEmpty())) fail()
     return value.textValue()
   }
 

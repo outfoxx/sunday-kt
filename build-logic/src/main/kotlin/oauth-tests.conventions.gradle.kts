@@ -19,6 +19,8 @@ val oauthProvider = gradle.sharedServices.registerIfAbsent("oauthProvider", OAut
 tasks.withType<Test>().configureEach {
   usesService(oauthProvider)
   inputs.property("oauthTestMode", oauthMode)
+  inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/oauth/http-cases.json"))
+    .withPathSensitivity(PathSensitivity.RELATIVE)
   if (oauthMode.get() == "live") outputs.upToDateWhen { false }
   doFirst(ConfigureOAuthTest(oauthProvider))
 }

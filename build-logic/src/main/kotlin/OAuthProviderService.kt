@@ -30,6 +30,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     .followRedirects(HttpClient.Redirect.NORMAL).build()
   internal var startupTimeoutSeconds = 120L
   private var started = false
+  private var stage = "provider preparation"
   lateinit var issuer: String
     private set
   lateinit var base: String
@@ -45,12 +46,16 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     val selected = backend
     val root = Files.createTempDirectory("sunday-oauth-")
     directory = root
+    stage = "port allocation"
     try {
       val port = ServerSocket(0).use { it.localPort }
       base = "http://127.0.0.1:$port"
       issuer = "$base/realms/$realm"
+      stage = "provider preparation"
       val command = command(root, port, selected)
+      stage = "process launch"
       process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(root.resolve("provider.log").toFile()).start()
+      stage = "readiness"
       val ready = if (mode == "replay") "$base/__admin/mappings" else "$issuer/.well-known/openid-configuration"
       val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(startupTimeoutSeconds)
       while (System.nanoTime() < deadline) {
@@ -67,8 +72,16 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
       }
       error("Provider readiness timeout")
     } catch (failure: Exception) {
+      // Only allowlisted reasons and numeric exit status survive; exception messages and logs may contain secrets.
+      val reason = when (failure.message) {
+        "OAuth artifact cache integrity failure", "OAuth artifact download integrity failure",
+        "Provider readiness timeout" -> failure.message
+        else -> "$stage failed"
+      }
+      val exit = process?.takeUnless { it.isAlive }?.exitValue()?.let { "; exit=$it" }.orEmpty()
+      val diagnostics = diagnostics(root)
       close()
-      throw IllegalStateException("OAuth infrastructure startup failed ($selected)")
+      throw IllegalStateException("OAuth infrastructure startup failed ($selected): $reason$exit$diagnostics")
     }
   }
 
@@ -84,6 +97,7 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     val options = listOf("start-dev", "--import-realm", "--http-port", port.toString(), "--hostname", base)
     if (selected == "keycloak-java") {
       val archive = artifact(KEYCLOAK_URL, KEYCLOAK_SHA)
+      stage = "archive extraction"
       val extraction = ProcessBuilder("tar", "-xzf", archive.toString(), "-C", root.toString())
         .redirectErrorStream(true).redirectOutput(root.resolve("extract.log").toFile()).start()
       OAuthProcess.waitFor(extraction, 60)
@@ -118,9 +132,11 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     Files.createDirectories(cache)
     val target = cache.resolve(url.substringAfterLast('/'))
     if (Files.exists(target)) {
+      stage = "cache verification"
       check(digest(target) == checksum) { "OAuth artifact cache integrity failure" }
       return target
     }
+    stage = "artifact download"
     val temporary = Files.createTempFile(cache, "download-", ".part")
     try {
       val response = client.send(HttpRequest.newBuilder(URI(url)).timeout(Duration.ofMinutes(3)).GET().build(),
@@ -131,6 +147,19 @@ abstract class OAuthProviderService : BuildService<OAuthProviderService.Paramete
     } finally {
       Files.deleteIfExists(temporary)
     }
+  }
+
+  // Emit only recognized diagnostic phrases, never whole log lines or exception causes.
+  private fun diagnostics(root: Path): String {
+    val phrases = listOf("Address already in use", "UnsupportedClassVersionError", "Unable to access jarfile",
+      "Could not find or load main class", "Permission denied", "No such file or directory")
+    val recognized = listOf("provider.log", "extract.log").flatMap { name ->
+      val text = runCatching {
+        Files.newInputStream(root.resolve(name)).use { String(it.readNBytes(8192), Charsets.UTF_8) }
+      }.getOrDefault("")
+      phrases.filter { text.contains(it, ignoreCase = true) }
+    }.distinct()
+    return if (recognized.isEmpty()) "" else "; diagnostics=" + recognized.joinToString(", ")
   }
 
   private fun digest(path: Path): String {

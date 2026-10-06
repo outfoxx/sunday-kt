@@ -267,3 +267,35 @@ For an undefined `id`, `/items{/id}` becomes `/items`, while `/items/{id}` becom
 `id` in `/items{/id}` produces `/items/`. Explicit `null` overrides a parameter
 stored on the template; omitting the override keeps the stored value. This applies
 to template expressions in both the base URI and the operation path.
+
+## Application-owned token persistence
+
+```kotlin
+val settings = ClientSettings.resolve(
+  baseURL, alternatives, credentials,
+  tokenManagerFactory = { providers ->
+    TokenManager(providers, store = applicationStore, expirySkew = Duration.ofSeconds(30),
+      clock = applicationClock, scope = applicationScope)
+  },
+)
+```
+
+The same optional `tokenManagerFactory: TokenManagerFactory?` is available on the settings constructor.
+The application closes `settings.tokenManager` when all clients sharing it are done. Closing a transport
+does not close the shared manager or erase its store. `TokenManager.close()` cancels its own jobs without
+canceling the application parent scope; let pending operations/commits settle before erasing storage.
+
+The hook is invoked once with the resolved provider map, after security validation, and is skipped
+when no providers are selected. It must only construct a manager: do not acquire tokens or read
+storage in the hook. Omitting it keeps the existing in-memory default. Settings retain the returned
+manager, not the factory. All operations on those settings share it; generated aggregate children
+therefore retain the same cache and single-flight renewal. Independently created managers do not
+coordinate concurrent refreshes, even if their stores are the same. Reuse a client/aggregate within
+an active session; use successive managers to reopen saved sessions.
+
+The application owns persistence, encryption, store access and session boundaries. Provider/client,
+grant, profile and endpoint identities must distinguish environments and users; the API base URL
+alone is not an implicit store namespace. Use a new grant identity for a fresh authorization session.
+For logout, stop requests and wait for pending refresh/persistence to finish before removing the
+session's store entries, then construct fresh settings. `invalidate` expires an access token for
+renewal; it is not logout and deliberately retains refresh state. No disk storage is enabled automatically.

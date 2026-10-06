@@ -142,6 +142,7 @@ class ClientSettingsPersistenceTest {
         assertEquals(listOf(0, 0, 0, 1), listOf(reads, saves, acquisitions, factories))
         val lease = first.tokenManager!!.credentials(first.bindings.getValue("read").single())
         assertEquals("initial", lease.tokens.accessToken)
+        first.tokenManager!!.close()
         assertEquals("initial", token(settings(0, direct = true)).accessToken)
         assertEquals(1, acquisitions)
         val third = settings(96)

@@ -62,8 +62,10 @@ class ClientAuthenticationFilter :
     response: ClientResponseContext,
   ) {
     val invocation = invocation(request) ?: return
+    // Quarkus also runs response filters after failures that have no HTTP response.
+    val headers = response.headers ?: return
     val challenge =
-      response.headers.entries
+      headers.entries
         .filter { it.key.equals("WWW-Authenticate", true) }
         .flatMap { it.value }
         .joinToString(",")

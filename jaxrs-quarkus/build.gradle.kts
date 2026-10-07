@@ -29,6 +29,9 @@ dependencies {
   api(project(":sunday-validation-jakarta"))
   implementation("io.quarkus:quarkus-hibernate-validator")
 
+  api("io.quarkus:quarkus-security:${libs.versions.quarkus.get()}")
+  api("io.quarkus:quarkus-vertx-http:${libs.versions.quarkus.get()}")
+
   api(libs.mutiny)
   api(libs.mutiny.vertx.core)
 

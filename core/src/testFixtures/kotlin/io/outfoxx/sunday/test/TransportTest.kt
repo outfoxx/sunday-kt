@@ -57,6 +57,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.io.readByteArray
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okio.Buffer
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.api.expectThrows
@@ -383,6 +384,153 @@ abstract class TransportTest {
             expectThat(result.headers.getFirst(CONTENT_TYPE)).isEqualTo("application/json")
             expectThat(result.result).isEqualTo(tester)
           }
+      }
+    }
+
+  @Test
+  fun `byte array results preserve raw bodies across media types and response APIs`() =
+    runTest {
+      val binary = byteArrayOf(0, 1, 127, -128, -1)
+      val json = """{ "nested": [true, null], "whitespace": "preserved" }""".encodeToByteArray()
+      val mediaTypes =
+        listOf(
+          "application/octet-stream",
+          "application/pdf",
+          "image/png",
+          "audio/wav",
+          "video/mp4",
+          "application/x-unknown",
+          "application/json",
+          "application/vnd.asset+json; charset=utf-8",
+          "text/plain",
+          "application/cbor",
+          "image/svg+xml",
+          "application/vnd.asset+zip",
+          "application/vnd.asset+cbor",
+          null,
+        )
+      MockWebServer().use { server ->
+        server.start()
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          for (mediaType in mediaTypes) {
+            for (body in listOf(binary, json)) {
+              repeat(2) {
+                server.enqueue(
+                  MockResponse()
+                    .setResponseCode(201)
+                    .setHeader("X-Asset", "original")
+                    .setBody(Buffer().write(body))
+                    .apply {
+                      mediaType?.let { setHeader(CONTENT_TYPE, it) }
+                    },
+                )
+              }
+              expectThat(transport.result<ByteArray>(Method.Get, "")).isEqualTo(body)
+              var validations = 0
+              val response =
+                transport.response<Unit, ByteArray>(
+                  Method.Get,
+                  "",
+                  resultType = typeOf<ByteArray>(),
+                  responseValidation =
+                    PayloadValidator {
+                      expectThat(it).isEqualTo(body)
+                      validations++
+                    },
+                )
+              expectThat(response.result).isEqualTo(body)
+              expectThat(response.statusCode).isEqualTo(201)
+              expectThat(response.header("X-Asset")).isEqualTo("original")
+              expectThat(validations).isEqualTo(1)
+            }
+          }
+        }
+      }
+    }
+
+  @Test
+  fun `byte array results retain empty response errors`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.start()
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          for (status in listOf(200, 204, 205)) {
+            server.enqueue(MockResponse().setResponseCode(status))
+            expectThrows<SundayError> {
+              transport.result<ByteArray>(Method.Get, "")
+            }.and {
+              get { reason }.isEqualTo(
+                if (status == 200) SundayError.Reason.NoData else SundayError.Reason.UnexpectedEmptyResponse,
+              )
+            }
+          }
+          server.enqueue(MockResponse().setChunkedBody("", 1))
+          expectThat(transport.result<ByteArray>(Method.Get, "")).isEqualTo(byteArrayOf())
+        }
+      }
+    }
+
+  @Test
+  fun `byte array validation failures retain native identity without registered decoders`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setBody("raw"))
+        server.start()
+        createTransport(
+          URITemplate(server.url("/").toString()),
+          decoders = MediaTypeDecoders.Builder().build(),
+        ).use { transport ->
+          val failure = IllegalStateException("invalid asset")
+          expectThrows<IllegalStateException> {
+            transport.result<Unit, ByteArray>(
+              Method.Get,
+              "",
+              resultType = typeOf<ByteArray>(),
+              responseValidation = PayloadValidator { throw failure },
+            )
+          }.isEqualTo(failure)
+        }
+      }
+    }
+
+  @Test
+  fun `byte array results retain problem decoding`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.enqueue(
+          MockResponse()
+            .setResponseCode(403)
+            .setHeader(CONTENT_TYPE, Problem)
+            .setBody("""{"type":"about:blank","status":403,"title":"Forbidden"}"""),
+        )
+        server.start()
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          expectThrows<SundayHttpProblem> {
+            transport.result<ByteArray>(Method.Get, "")
+          }.and {
+            get { status }.isEqualTo(403)
+            get { title }.isEqualTo("Forbidden")
+          }
+        }
+      }
+    }
+
+  @Test
+  fun `nested byte arrays retain structured decoding and binary bodies reject models`() =
+    runTest {
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setHeader(CONTENT_TYPE, JSON).setBody("""{"data":"AAH/"}"""))
+        server.enqueue(MockResponse().setHeader(CONTENT_TYPE, "application/octet-stream").setBody("raw"))
+        server.start()
+        createTransport(URITemplate(server.url("/").toString())).use { transport ->
+          val result = transport.result<Map<String, ByteArray>>(Method.Get, "")
+          expectThat(result.getValue("data")).isEqualTo(byteArrayOf(0, 1, -1))
+          expectThrows<SundayError> {
+            transport.result<Map<String, ByteArray>>(Method.Get, "")
+          }.and {
+            get { reason }.isEqualTo(SundayError.Reason.ResponseDecodingFailed)
+          }
+        }
       }
     }
 

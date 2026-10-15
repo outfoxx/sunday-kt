@@ -29,6 +29,7 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
+import io.outfoxx.sunday.mediatypes.codecs.BinaryDecoder
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.StructuredMediaTypeDecoder
@@ -60,6 +61,11 @@ import kotlin.reflect.typeOf
 
 /**
  * Transport for requests, responses and event sources.
+ *
+ * Top-level [ByteArray] results preserve the response body bytes regardless of `Content-Type`,
+ * including when that header is absent. Nested byte arrays still use their structured model codec.
+ * The usual empty-response rules apply: 204/205 require [Unit], and absent bodies or explicit
+ * zero content lengths fail with [SundayError.Reason.NoData].
  */
 abstract class Transport<out Req : Request> : Closeable {
 
@@ -701,16 +707,20 @@ abstract class Transport<out Req : Request> : Closeable {
       throw SundayError(SundayError.Reason.NoData)
     }
 
-    val contentType =
-      response.contentType?.let { MediaType.from(it.toString()) }
-        ?: throw SundayError(
-          SundayError.Reason.InvalidContentType,
-          response.contentType?.value ?: "<none provided>",
-        )
-
     val contentTypeDecoder =
-      mediaTypeDecoders.find(contentType)
-        ?: throw SundayError(NoDecoder, contentType.value)
+      if (resultType.classifier == ByteArray::class) {
+        // A top-level byte array represents the original asset, even for structured media types.
+        BinaryDecoder.default
+      } else {
+        val contentType =
+          response.contentType?.let { MediaType.from(it.toString()) }
+            ?: throw SundayError(
+              SundayError.Reason.InvalidContentType,
+              response.contentType?.value ?: "<none provided>",
+            )
+        mediaTypeDecoders.find(contentType)
+          ?: throw SundayError(NoDecoder, contentType.value)
+      }
 
     val decoded =
       try {

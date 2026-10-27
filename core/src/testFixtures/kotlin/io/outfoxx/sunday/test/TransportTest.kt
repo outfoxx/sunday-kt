@@ -1001,7 +1001,7 @@ abstract class TransportTest {
           expectThrows<SundayHttpProblem> {
             transport.result<String>(Method.Get, "/problem")
           }.and {
-            get { status }.isEqualTo(404)
+            get { status }.isEqualTo(400)
           }
         }
     }

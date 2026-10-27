@@ -3,16 +3,30 @@ package io.outfoxx.sunday.problems
 import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonSetter
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.problems.ProblemFactory.Descriptor
 import java.net.URI
 
+/** Catchable RFC 9457 details, with Jackson normalization confined to standard members. */
+@JsonIgnoreProperties(value = ["cause", "stackTrace", "message", "suppressed", "localizedMessage"], allowSetters = true)
 open class SundayHttpProblem(
-  val type: URI,
-  val title: String?,
-  val status: Int?,
-  val detail: String?,
-  val instance: URI?,
+  @param:ProblemReference
+  @get:ProblemReference
+  val type: URI = URI.create("about:blank"),
+  @param:ProblemString
+  @get:ProblemString
+  val title: String? = null,
+  @param:ProblemStatus
+  @get:ProblemStatus
+  val status: Int? = null,
+  @param:ProblemString
+  @get:ProblemString
+  val detail: String? = null,
+  @param:ProblemReference
+  @get:ProblemReference
+  val instance: URI? = null,
   @JsonIgnore
   val extensions: MutableMap<String, Any?> = mutableMapOf(),
 ) : Problem(createMessage(type, title, status, detail, instance, extensions)) {
@@ -26,6 +40,36 @@ open class SundayHttpProblem(
     value: Any?,
   ) {
     extensions[name] = value
+  }
+
+  /** Preserve an explicitly supplied extension without exposing exception bookkeeping. */
+  @JsonSetter("cause")
+  fun readCauseExtension(value: Any?) {
+    extensions["cause"] = value
+  }
+
+  /** Preserve an explicitly supplied extension without exposing exception bookkeeping. */
+  @JsonSetter("stackTrace")
+  fun readStackTraceExtension(value: Any?) {
+    extensions["stackTrace"] = value
+  }
+
+  /** Preserve an explicitly supplied extension without exposing exception bookkeeping. */
+  @JsonSetter("message")
+  fun readMessageExtension(value: Any?) {
+    extensions["message"] = value
+  }
+
+  /** Preserve an explicitly supplied extension without exposing exception bookkeeping. */
+  @JsonSetter("suppressed")
+  fun readSuppressedExtension(value: Any?) {
+    extensions["suppressed"] = value
+  }
+
+  /** Preserve an explicitly supplied extension without exposing exception bookkeeping. */
+  @JsonSetter("localizedMessage")
+  fun readLocalizedMessageExtension(value: Any?) {
+    extensions["localizedMessage"] = value
   }
 
   override fun equals(other: Any?): Boolean {

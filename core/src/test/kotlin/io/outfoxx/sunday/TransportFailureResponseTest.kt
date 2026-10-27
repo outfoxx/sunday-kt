@@ -54,12 +54,14 @@ class TransportFailureResponseTest {
     override val problemFactory: ProblemFactory = SundayHttpProblem.Factory,
   ) : Transport<Request>() {
 
-    override val registeredProblemTypes: Map<String, KClass<out Problem>> = emptyMap()
+    override val registeredProblemTypes: MutableMap<String, KClass<out Problem>> = mutableMapOf()
 
     override fun registerProblem(
       typeId: String,
       problemType: KClass<out Problem>,
-    ) = Unit
+    ) {
+      registeredProblemTypes[typeId] = problemType
+    }
 
     override suspend fun <B : Any> transportRequest(
       method: Method,
@@ -83,6 +85,43 @@ class TransportFailureResponseTest {
 
     override fun close() = Unit
   }
+
+  @Test
+  fun `standard members normalize on registered and generic transport paths`() =
+    runTest {
+      for (registered in listOf(false, true)) {
+        for (member in listOf("type", "title", "status", "detail", "instance")) {
+          val wrong =
+            if (member == "status") {
+              listOf("null", "true", "\"401\"", "[]", "{}")
+            } else {
+              listOf("null", "true", "42", "[]", "{}")
+            }
+          for (value in wrong) {
+            val body =
+              Buffer().apply {
+                writeString("""{"$member":$value,"trace":null,"nested":{"detail":42}}""", Charsets.UTF_8)
+              }
+            val response =
+              TestResponse(404, "Not Found", listOf(HeaderNames.CONTENT_TYPE to MediaType.Problem.value), body)
+            val transport = TestTransport(response)
+            if (registered) transport.registerProblem("about:blank", SundayHttpProblem::class)
+            val problem = expectThrows<SundayHttpProblem> { transport.result<String>(Method.Get, "/") }.subject
+            expectThat(problem.type.toString()).isEqualTo("about:blank")
+            expectThat(problem.status).isEqualTo(404)
+            expectThat(problem.title).isEqualTo("Not Found")
+            expectThat(problem.detail).isEqualTo(null)
+            expectThat(problem.instance).isEqualTo(null)
+            expectThat(problem.extensions).isEqualTo(
+              mutableMapOf<String, Any?>(
+                "trace" to null,
+                "nested" to mapOf("detail" to 42),
+              ),
+            )
+          }
+        }
+      }
+    }
 
   @Test
   fun `unknown text failure includes response text`() =
@@ -134,7 +173,7 @@ class TransportFailureResponseTest {
     }
 
   @Test
-  fun `problem status map populates status and title`() =
+  fun `wrong typed problem status uses HTTP status and title`() =
     runTest {
       val body =
         Buffer().apply {
@@ -158,8 +197,8 @@ class TransportFailureResponseTest {
           factory.result<String>(Method.Get, "/test")
         }.subject
 
-      expectThat(thrown.status).isEqualTo(499)
-      expectThat(thrown.title).isEqualTo("Custom")
+      expectThat(thrown.status).isEqualTo(400)
+      expectThat(thrown.title).isEqualTo("Bad Request")
       expectThat(thrown.detail).isEqualTo("Oops")
     }
 

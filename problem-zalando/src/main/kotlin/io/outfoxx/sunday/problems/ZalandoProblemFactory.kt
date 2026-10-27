@@ -12,7 +12,7 @@ import org.zalando.problem.Status as ZalandoStatus
  * Problem factory backed by Zalando's `problem` library.
  *
  * This module is intended for legacy/compatibility use. It requires
- * `jackson-datatype-problem` on the classpath, and Sunday registers a
+ * `problem-jackson2` on the classpath, and Sunday registers a
  * custom Jackson handler (see `ObjectMapperDecoder`) so `ThrowableProblem`
  * subclasses can be decoded without explicit type registration.
  */

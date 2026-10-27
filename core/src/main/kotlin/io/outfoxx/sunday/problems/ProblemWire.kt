@@ -1,6 +1,7 @@
 package io.outfoxx.sunday.problems
 
 import com.fasterxml.jackson.annotation.JsonAnySetter
+import com.fasterxml.jackson.annotation.JsonIgnore
 import java.net.URI
 
 /** Internal generic transport representation, sharing the public property annotations. */
@@ -11,6 +12,7 @@ internal class ProblemWire(
   @param:ProblemString val detail: String? = null,
   @param:ProblemReference val instance: URI? = null,
 ) {
+  @JsonIgnore
   val extensions: MutableMap<String, Any?> = mutableMapOf()
 
   @JsonAnySetter

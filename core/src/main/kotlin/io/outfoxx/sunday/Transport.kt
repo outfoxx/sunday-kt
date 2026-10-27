@@ -776,21 +776,27 @@ abstract class Transport<out Req : Request> : Closeable {
         "'${MediaType.Problem}' decoder must support structured decoding",
       )
 
-    val decoded: Map<String, Any> = problemDecoder.decode(body)
-
-    val problemType = decoded["type"] as? String ?: "about:blank"
-    return registeredProblemTypes[problemType]
-      ?.createType()
-      ?.let {
-        val contextual = decoded.toMutableMap()
-        if (contextual["status"] !is Number) contextual["status"] = status.code
-        if (problemType == "about:blank" && contextual["title"] !is String) {
-          val effectiveStatus = problemDecoder.decode<ProblemWire>(contextual).status ?: status.code
-          Status.valueOf(effectiveStatus).reasonPhrase?.let { contextual["title"] = it }
-        }
-        problemDecoder.decode(contextual, it)
+    // Decode standard properties directly from tokens so fractional status values cannot
+    // first be rounded by an untyped Double conversion. Extensions retain ordinary decoding.
+    val decoded = problemDecoder.decode<ProblemWire>(body)
+    val problemType = decoded.type.toString()
+    val registeredType =
+      registeredProblemTypes[problemType]?.createType()
+        ?: return problemFactory.from(toDescriptor(decoded, status))
+    val effectiveStatus = decoded.status ?: status.code
+    val contextual =
+      buildMap<String, Any?> {
+        putAll(decoded.extensions)
+        put("type", problemType)
+        put("status", effectiveStatus)
+        (decoded.title ?: if (problemType == "about:blank") Status.valueOf(effectiveStatus).reasonPhrase else null)
+          ?.let { put("title", it) }
+        decoded.detail?.let { put("detail", it) }
+        decoded.instance?.let { put("instance", it.toString()) }
       }
-      ?: problemFactory.from(toDescriptor(problemDecoder.decode<ProblemWire>(decoded), status))
+    // StructuredMediaTypeDecoder predates nullable map values; retain explicit null extensions.
+    @Suppress("UNCHECKED_CAST")
+    return problemDecoder.decode(contextual as Map<String, Any>, registeredType)
   }
 
   private fun parseUnknownFailureResponseBody(

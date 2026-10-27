@@ -1,5 +1,7 @@
 package io.outfoxx.sunday
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.databind.JsonMappingException
 import io.outfoxx.sunday.http.HeaderNames
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
@@ -9,6 +11,8 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.problems.ProblemReference
+import io.outfoxx.sunday.problems.ProblemStatus
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
@@ -120,6 +124,76 @@ class TransportFailureResponseTest {
             )
           }
         }
+      }
+    }
+
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", visible = true)
+  class BlankProblem(
+    @ProblemReference type: URI = URI.create("about:blank"),
+    @ProblemStatus status: Int? = null,
+  ) : SundayHttpProblem(type = type, status = status)
+
+  @Test
+  fun `registered polymorphic blank problems receive effective type`() =
+    runTest {
+      for (type in listOf("", "\"type\":null,", "\"type\":42,")) {
+        val body = Buffer().apply { writeString("{$type\"extensions\":null}", Charsets.UTF_8) }
+        val transport =
+          TestTransport(
+            TestResponse(
+              409,
+              "Conflict",
+              listOf(HeaderNames.CONTENT_TYPE to MediaType.Problem.value),
+              body,
+            ),
+          )
+        transport.registerProblem("about:blank", BlankProblem::class)
+        val problem = expectThrows<BlankProblem> { transport.result<String>(Method.Get, "/") }.subject
+        expectThat(problem.status).isEqualTo(409)
+        expectThat(problem.extensions).isEqualTo(mutableMapOf<String, Any?>("extensions" to null))
+      }
+    }
+
+  @Test
+  fun `generic extensions retain their name and arbitrary value`() =
+    runTest {
+      for (value in listOf("null", "42", "\"trace\"", "[1]", "{\"trace\":\"abc\"}")) {
+        val body = Buffer().apply { writeString("{\"extensions\":$value}", Charsets.UTF_8) }
+        val transport =
+          TestTransport(
+            TestResponse(
+              409,
+              "Conflict",
+              listOf(HeaderNames.CONTENT_TYPE to MediaType.Problem.value),
+              body,
+            ),
+          )
+        val problem = expectThrows<SundayHttpProblem> { transport.result<String>(Method.Get, "/") }.subject
+        val mapper =
+          com.fasterxml.jackson.module.kotlin
+            .jacksonObjectMapper()
+        expectThat(mapper.valueToTree<com.fasterxml.jackson.databind.JsonNode>(problem.extensions["extensions"]))
+          .isEqualTo(mapper.readTree(value))
+        expectThat(problem.extensions.keys).isEqualTo(mutableSetOf("extensions"))
+      }
+    }
+
+  @Test
+  fun `fractional status is rejected before untyped numeric conversion`() =
+    runTest {
+      for (registered in listOf(false, true)) {
+        val body = Buffer().apply { writeString("{\"status\":401.00000000000001}", Charsets.UTF_8) }
+        val transport =
+          TestTransport(
+            TestResponse(
+              404,
+              "Not Found",
+              listOf(HeaderNames.CONTENT_TYPE to MediaType.Problem.value),
+              body,
+            ),
+          )
+        if (registered) transport.registerProblem("about:blank", SundayHttpProblem::class)
+        expectThrows<JsonMappingException> { transport.result<String>(Method.Get, "/") }
       }
     }
 

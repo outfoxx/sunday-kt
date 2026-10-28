@@ -38,6 +38,7 @@ import io.outfoxx.sunday.mediatypes.codecs.decode
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.problems.ProblemFactory.Descriptor
+import io.outfoxx.sunday.problems.ProblemWire
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.utils.from
 import kotlinx.coroutines.CancellationException
@@ -775,15 +776,27 @@ abstract class Transport<out Req : Request> : Closeable {
         "'${MediaType.Problem}' decoder must support structured decoding",
       )
 
-    val decoded: Map<String, Any> = problemDecoder.decode(body)
-
-    val problemType = decoded["type"]?.toString() ?: ""
-    return registeredProblemTypes[problemType]
-      ?.createType()
-      ?.let {
-        problemDecoder.decode(decoded, it)
+    // Decode standard properties directly from tokens so fractional status values cannot
+    // first be rounded by an untyped Double conversion. Extensions retain ordinary decoding.
+    val decoded = problemDecoder.decode<ProblemWire>(body)
+    val problemType = decoded.type.toString()
+    val registeredType =
+      registeredProblemTypes[problemType]?.createType()
+        ?: return problemFactory.from(toDescriptor(decoded, status))
+    val effectiveStatus = decoded.status ?: status.code
+    val contextual =
+      buildMap<String, Any?> {
+        putAll(decoded.extensions)
+        put("type", problemType)
+        put("status", effectiveStatus)
+        (decoded.title ?: if (problemType == "about:blank") Status.valueOf(effectiveStatus).reasonPhrase else null)
+          ?.let { put("title", it) }
+        decoded.detail?.let { put("detail", it) }
+        decoded.instance?.let { put("instance", it.toString()) }
       }
-      ?: problemFactory.from(toDescriptor(decoded, status))
+    // StructuredMediaTypeDecoder predates nullable map values; retain explicit null extensions.
+    @Suppress("UNCHECKED_CAST")
+    return problemDecoder.decode(contextual as Map<String, Any>, registeredType)
   }
 
   private fun parseUnknownFailureResponseBody(
@@ -817,70 +830,17 @@ abstract class Transport<out Req : Request> : Closeable {
   }
 
   private fun toDescriptor(
-    decoded: Map<String, Any>,
+    decoded: ProblemWire,
     fallbackStatus: Status,
   ): Descriptor {
-    val type =
-      decoded["type"]
-        ?.toString()
-        ?.takeIf { it.isNotBlank() }
-        ?.let(URI::create)
-        ?: URI.create("about:blank")
-
-    val statusCode =
-      when (val rawStatus = decoded["status"]) {
-        is Number -> rawStatus.toInt()
-        is String -> rawStatus.toIntOrNull()
-        is Map<*, *> -> {
-          val code =
-            when (val rawCode = rawStatus["code"]) {
-              is Number -> rawCode.toInt()
-              is String -> rawCode.toIntOrNull()
-              else -> null
-            }
-          code
-        }
-
-        else -> null
-      }
-
-    val status =
-      when (val rawStatus = decoded["status"]) {
-        is Map<*, *> -> {
-          val reason = rawStatus["reasonPhrase"]?.toString()
-          when {
-            statusCode == null -> null
-            reason.isNullOrBlank() -> Status.valueOf(statusCode)
-            else -> Status.valueOf(statusCode, reason)
-          }
-        }
-
-        else -> statusCode?.let(Status::valueOf)
-      } ?: fallbackStatus
-
-    val title =
-      decoded["title"]?.toString()
-        // Fallback to status reason but only if type == null or "about:blank" (matching RFC)
-        ?: defaultTitleForType(type, status)
-
-    val detail = decoded["detail"]?.toString()
-
-    val instance =
-      decoded["instance"]
-        ?.toString()
-        ?.takeIf { it.isNotBlank() }
-        ?.let(URI::create)
-
-    val extensions =
-      decoded.filterKeys { it !in setOf("type", "title", "status", "detail", "instance") }
-
+    val status = decoded.status?.let(Status::valueOf) ?: fallbackStatus
     return Descriptor(
-      type = type,
-      title = title,
+      type = decoded.type,
+      title = decoded.title ?: defaultTitleForType(decoded.type, status),
       status = status.code,
-      detail = detail,
-      instance = instance,
-      extensions = extensions,
+      detail = decoded.detail,
+      instance = decoded.instance,
+      extensions = decoded.extensions,
     )
   }
 

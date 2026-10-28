@@ -135,6 +135,33 @@ class ZalandoProblemValidationTest {
     expectThat(adapter.getTitle(problem)).isEqualTo(REASON_PHRASE)
   }
 
+  @Test
+  fun `jackson module discovery round trips standard fields and nullable extensions`() {
+    val source = """{"type":"urn:latest","status":400,"title":"Bad request","detail":"detail","trace_id":null}"""
+    val decoded = objectMapper.readValue(source, org.zalando.problem.Problem::class.java)
+    expectThat(decoded.type).isEqualTo(URI.create("urn:latest"))
+    expectThat(decoded.status?.statusCode).isEqualTo(400)
+    expectThat(decoded.parameters).containsKey("trace_id").getValue("trace_id").isEqualTo(null)
+    expectThat(objectMapper.readTree(objectMapper.writeValueAsString(decoded)))
+      .isEqualTo(objectMapper.readTree(source))
+  }
+
+  @Test
+  fun `standalone upstream string coercion remains outside Sunday transport normalization`() {
+    for (member in listOf("type", "title", "detail", "instance")) {
+      for ((raw, expected) in listOf("42" to "42", "true" to "true")) {
+        val decoded = objectMapper.readValue("""{"$member":$raw}""", org.zalando.problem.Problem::class.java)
+        val encoded = objectMapper.readTree(objectMapper.writeValueAsString(decoded))
+        expectThat(encoded[member].asText()).isEqualTo(expected)
+      }
+      for (raw in listOf("[]", "{}")) {
+        expectThrows<com.fasterxml.jackson.databind.JsonMappingException> {
+          objectMapper.readValue("""{"$member":$raw}""", org.zalando.problem.Problem::class.java)
+        }
+      }
+    }
+  }
+
   private fun createTransport(server: MockWebServer) =
     JdkTransport(
       URITemplate(server.url("/").toString()),

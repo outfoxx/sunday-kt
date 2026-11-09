@@ -285,8 +285,10 @@ ordinary failures and returned responses remain subject to normal transport and 
 
 Body repeatability is independent of content length and operation idempotency. Follow-ups retaining
 a body require `Request.isBodyRepeatable`; a redirect that drops the body does not. OkHttp one-shot
-and duplex bodies cannot be replayed, including zero-length bodies. JDK body publishers own repeat
-subscriptions under their native contract. Custom request implementations must explicitly declare
+and duplex bodies cannot be replayed, including zero-length bodies. JDK native recovery may resubscribe
+to repeatable publishers. For adapter-declared non-repeatable bodies, managed execution permits only
+one subscription; a second fails with a request stop signal before reopening the body. The JDK may
+skip subscribing to a zero-length publisher entirely. Custom request implementations must explicitly declare
 repeatability; the default is conservative. Adapter-declared non-repeatability survives effective-request
 copies and is also passed to OkHttp's native one-shot body flag, including for zero-length bodies. These checks do not broaden authentication recovery policy.
 

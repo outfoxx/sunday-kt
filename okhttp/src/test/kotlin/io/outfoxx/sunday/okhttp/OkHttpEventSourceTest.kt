@@ -16,9 +16,10 @@
 
 package io.outfoxx.sunday.okhttp
 
+import io.outfoxx.sunday.RequestExecution
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
-import io.outfoxx.sunday.responseEvents
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.test.EventSourceTest
 import org.junit.jupiter.api.AfterEach
 
@@ -43,9 +44,11 @@ class OkHttpEventSourceTest : EventSourceTest<okhttp3.Request, okhttp3.Response>
     )
 
   override fun startRequest(request: Request<okhttp3.Request>) =
-    responseEvents {
-      client.executeRequest(request.transport)
-    }
+    RequestExecution<okhttp3.Request, okhttp3.Response>().start(
+      request,
+      AuthenticationRecoveryBudget(),
+      send = { client.executeRequest(it.transport) },
+    )
 
   @AfterEach
   fun closeClient() {

@@ -690,4 +690,93 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
       }
     }
 
+
+  @Test
+  fun `native authentication honors non-repeatable bodies during buffered execution`() =
+    checkNativeAuthentication(false)
+
+  @Test
+  fun `native authentication honors non-repeatable bodies during streaming execution`() =
+    checkNativeAuthentication(true)
+
+  private fun checkNativeAuthentication(streaming: Boolean) =
+    runTest {
+      for (repeatable in listOf(false, true)) {
+        for (challenge in listOf(false, true)) {
+          for (length in listOf(null, 7L)) {
+            val writes = AtomicInteger()
+            val adaptations = AtomicInteger()
+            val challenges = AtomicInteger()
+            val responses = mutableListOf<Int>()
+            MockWebServer().use { server ->
+              if (challenge) {
+                server.enqueue(
+                  MockResponse()
+                    .setResponseCode(401)
+                    .setHeader("WWW-Authenticate", "Basic realm=probe")
+                    .setBody("challenge"),
+                )
+              }
+              server.enqueue(MockResponse().setBody("done"))
+              val client =
+                OkHttpClient
+                  .Builder()
+                  .authenticator { _, response ->
+                    challenges.incrementAndGet()
+                    response.request
+                      .newBuilder()
+                      .header("Authorization", "Basic dXNlcjpwYXNzd29yZA==")
+                      .build()
+                  }.build()
+              try {
+                OkHttpTransport(
+                  URITemplate(server.url("/").toString()),
+                  SundayHttpProblem.Factory,
+                  httpClient = client,
+                  requestAdapter =
+                    object : RequestAdapter {
+                      override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> {
+                        adaptations.incrementAndGet()
+                        val withBody =
+                          request.withBody(
+                            StreamingBody.source(length) {
+                              writes.incrementAndGet()
+                              Buffer().apply { writeString("payload") }
+                            },
+                          )
+                        return if (repeatable) withBody else RestrictedRequest(withBody)
+                      }
+                    },
+                  responseAdapter =
+                    object : ResponseAdapter {
+                      override suspend fun <TRes> adapt(
+                        response: Response<TRes>,
+                        request: Request<*>,
+                      ): Response<TRes> {
+                        responses += response.statusCode
+                        return response
+                      }
+                    },
+                ).use { transport ->
+                  val response = perform(transport, streaming, Method.Post)
+                  val expectedStatus = if (challenge && !repeatable) 401 else 200
+                  assertEquals(expectedStatus, response.statusCode)
+                  val expectedBody = if (expectedStatus == 401) "challenge" else "done"
+                  response.body!!.use { assertEquals(expectedBody, it.readString()) }
+                  assertEquals(listOf(expectedStatus), responses)
+                  assertEquals(if (challenge && repeatable) 2 else 1, server.requestCount)
+                  assertEquals(if (challenge && repeatable) 2 else 1, writes.get())
+                  assertEquals(1, adaptations.get())
+                  assertEquals(if (challenge) 1 else 0, challenges.get())
+                  assertEquals("payload", server.takeRequest().body.readUtf8())
+                }
+              } finally {
+                client.dispatcher.executorService.shutdown()
+                client.connectionPool.evictAll()
+              }
+            }
+          }
+        }
+      }
+    }
 }

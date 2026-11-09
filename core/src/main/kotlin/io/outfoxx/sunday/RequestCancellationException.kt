@@ -43,9 +43,6 @@ fun Throwable.causes(): Sequence<Throwable> =
 val Throwable.isRequestCancelled: Boolean
   get() = causes().any { it is RequestCancellationException || it is CancellationException }
 
-/** Tests request cancellation through the same cause-chain traversal as [isRequestCancelled]. */
-fun Throwable.isRequestCancellation(): Boolean = isRequestCancelled
-
 /** Removes leading asynchronous-result wrappers, stopping at a marked wrapper to preserve its stop signal. */
 fun Throwable.unwrapRequestException(): Throwable =
   causes().firstOrNull {

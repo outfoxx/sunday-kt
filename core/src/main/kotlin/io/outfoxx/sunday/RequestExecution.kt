@@ -152,15 +152,6 @@ class RequestExecution<TReq, TRes>(
   }
 }
 
-/** Streams a native response with bounded chunks and structured resource ownership. */
-fun <TRes> responseEvents(response: suspend () -> Response<TRes>): Flow<ResponseEvent<TRes>> =
-  flow {
-    val received = response()
-    received.body.use {
-      received.cancellable { emitResponse(received) }
-    }
-  }.flowOn(Dispatchers.IO)
-
 private suspend fun <TRes> kotlinx.coroutines.flow.FlowCollector<ResponseEvent<TRes>>.emitResponse(
   response: Response<TRes>,
 ) {

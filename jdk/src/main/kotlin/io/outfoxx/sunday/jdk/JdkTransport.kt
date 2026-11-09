@@ -283,7 +283,7 @@ class JdkTransport(
         "Credentialed JDK execution requires a client without ambient authentication or cookies"
       }
     }
-    return httpClient.executeRequest(request.transport)
+    return httpClient.executeRequest(request.transport.withBodyRepeatability(request.isBodyRepeatable))
   }
 
   private fun redirect(

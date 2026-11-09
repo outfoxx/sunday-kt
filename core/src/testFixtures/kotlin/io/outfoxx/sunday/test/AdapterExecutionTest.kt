@@ -29,7 +29,7 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.copy
-import io.outfoxx.sunday.isRequestCancellation
+import io.outfoxx.sunday.isRequestCancelled
 import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.AuthorizationRequiredException
 import io.outfoxx.sunday.security.SecurityBinding
@@ -378,15 +378,19 @@ abstract class AdapterExecutionTest<TReq, TRes> {
     }
 
   @Test
-  fun `query-only redirects preserve the path during buffered execution`() = checkQueryOnlyRedirects(false)
+  fun `empty-path redirects preserve the path during buffered execution`() = checkEmptyPathRedirects(false)
 
   @Test
-  fun `query-only redirects preserve the path during streaming execution`() = checkQueryOnlyRedirects(true)
+  fun `empty-path redirects preserve the path during streaming execution`() = checkEmptyPathRedirects(true)
 
-  private fun checkQueryOnlyRedirects(streaming: Boolean) =
+  private fun checkEmptyPathRedirects(streaming: Boolean) =
     runTest {
       val cases =
         listOf(
+          Triple("/items/list?page=1", "", "/items/list?page=1"),
+          Triple("/items/list", "", "/items/list"),
+          Triple("/items/list?page=1", "#section", "/items/list?page=1"),
+          Triple("/items/a%2Fb%3Fc%23d%25?page=%2F%3F%23%25", "", "/items/a%2Fb%3Fc%23d%25?page=%2F%3F%23%25"),
           Triple("/items/list?page=1", "?page=2", "/items/list?page=2"),
           Triple("/items/list", "?page=2", "/items/list?page=2"),
           Triple("/items/list?page=1", "?", "/items/list?"),
@@ -1130,7 +1134,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
               server.enqueue(MockResponse())
               transport(URITemplate(server.url("/").toString()), request, response).use { transport ->
                 val failure = runCatching { perform(transport, streaming, Method.Post) }.exceptionOrNull()!!
-                assertTrue(failure.isRequestCancellation())
+                assertTrue(failure.isRequestCancelled)
                 assertTrue(failure.causes().any { it === stop })
                 assertSame(stop.cause, failure.causes().last())
                 assertEquals(failOn, opens.get())
@@ -1193,7 +1197,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
                   }
                 transport(URITemplate(server.url("/").toString()), outbound, incoming).use { transport ->
                   val failure = runCatching { perform(transport, streaming) }.exceptionOrNull()!!
-                  assertTrue(failure.isRequestCancellation())
+                  assertTrue(failure.isRequestCancelled)
                   assertTrue(failure.causes().any { it === thrown })
                   assertTrue(failure.causes().any { it === stop })
                   assertEquals(if (inbound) 1 else 0, server.requestCount)

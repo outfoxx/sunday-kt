@@ -36,12 +36,12 @@ class RequestCancellationExceptionTest {
   fun `nested signals are detected without removing diagnostic wrappers`() {
     for (signal in listOf(Stop("stop"), CancellationException("cancel"))) {
       val diagnostic = IOException("outer", IllegalStateException("middle", signal))
-      assertTrue(diagnostic.isRequestCancellation())
+      assertTrue(diagnostic.isRequestCancelled)
       assertSame(signal, diagnostic.causes().last())
       assertSame(diagnostic, diagnostic.unwrapRequestException())
       assertSame(diagnostic, CompletionException(ExecutionException(diagnostic)).unwrapRequestException())
     }
-    assertFalse(IOException("ordinary", IllegalStateException("ordinary")).isRequestCancellation())
+    assertFalse(IOException("ordinary", IllegalStateException("ordinary")).isRequestCancelled)
   }
 
   class CompletionStop(
@@ -60,7 +60,7 @@ class RequestCancellationExceptionTest {
       for (wrapped in listOf(stop, CompletionException(ExecutionException(stop)))) {
         val result = wrapped.unwrapRequestException()
         assertSame(stop, result)
-        assertTrue(result.isRequestCancellation())
+        assertTrue(result.isRequestCancelled)
         assertSame(stop.cause, result.cause)
       }
     }
@@ -77,7 +77,7 @@ class RequestCancellationExceptionTest {
       assertEquals(2, causes.size)
       assertSame(first, causes[0])
       assertSame(last, causes[1])
-      assertEquals(last is RequestCancellationException, first.isRequestCancellation())
+      assertEquals(last is RequestCancellationException, first.isRequestCancelled)
       assertSame(first, first.unwrapRequestException())
     }
   }

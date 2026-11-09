@@ -35,17 +35,13 @@ fun <TReq> Request<TReq>.redirectedRequest(
   val location = response.headers.firstOrNull { it.first.equals("Location", true) }?.second ?: return null
   val target =
     runCatching {
-      if (location.startsWith("?")) {
-        // URI.resolve drops the last path segment for query-only references, contrary to RFC 3986 section 5.2.2.
-        // Retain the raw path so escaped separators are neither decoded nor encoded again.
-        URI(
-          sent.uri
-            .toString()
-            .substringBefore('#')
-            .substringBefore('?') + location,
-        )
-      } else {
-        sent.uri.resolve(location)
+      // URI.resolve drops the last path segment for empty and query-only references (RFC 3986 section 5.2.2).
+      // Compose raw components to preserve escaped separators and the existing query when appropriate.
+      val base = sent.uri.toString().substringBefore('#')
+      when {
+        location.isEmpty() || location.startsWith("#") -> URI(base + location)
+        location.startsWith("?") -> URI(base.substringBefore('?') + location)
+        else -> sent.uri.resolve(location)
       }
     }.getOrNull() ?: return null
   if (target.scheme !in setOf("http", "https")) return null

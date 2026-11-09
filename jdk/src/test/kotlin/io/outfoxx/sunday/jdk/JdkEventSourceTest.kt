@@ -16,9 +16,10 @@
 
 package io.outfoxx.sunday.jdk
 
+import io.outfoxx.sunday.RequestExecution
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
-import io.outfoxx.sunday.responseEvents
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.test.EventSourceTest
 import org.junit.jupiter.api.AfterEach
 
@@ -39,9 +40,11 @@ class JdkEventSourceTest : EventSourceTest<java.net.http.HttpRequest, java.net.h
     )
 
   override fun startRequest(request: Request<java.net.http.HttpRequest>) =
-    responseEvents {
-      client.executeRequest(request.transport)
-    }
+    RequestExecution<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>().start(
+      request,
+      AuthenticationRecoveryBudget(),
+      send = { client.executeRequest(it.transport) },
+    )
 
   @AfterEach
   fun closeClient() {

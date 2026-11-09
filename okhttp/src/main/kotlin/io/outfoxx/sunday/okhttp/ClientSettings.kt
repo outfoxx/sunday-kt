@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.okhttp
 
+import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.security.ClientSettings
@@ -27,10 +29,14 @@ import okhttp3.OkHttpClient
 fun ClientSettings.okhttpTransport(
   problemFactory: ProblemFactory,
   httpClient: OkHttpClient = OkHttpClient(),
+  requestAdapter: RequestAdapter? = null,
+  responseAdapter: ResponseAdapter? = null,
 ): OkHttpTransport =
   OkHttpTransport(
     URITemplate(baseURL.toString()),
     problemFactory,
     httpClient = httpClient,
-    tokenManager = tokenManager,
+    tokenProviders = tokenProviders,
+    requestAdapter = requestAdapter,
+    responseAdapter = responseAdapter,
   )

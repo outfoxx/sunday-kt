@@ -5,6 +5,7 @@ import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
@@ -55,19 +56,17 @@ class OperationTest {
       }
   }
 
-  private data class TestRequest(
+  private class TestRequest(
     override val method: Method,
     override val uri: URI,
     override val headers: Headers,
-  ) : Request {
+  ) : Request<Unit> {
+    override val transport = Unit
+
     override suspend fun body(): Source? = null
-
-    override suspend fun execute(): Response = error("unused")
-
-    override fun start() = emptyFlow<Request.Event>()
   }
 
-  private object CancelingTransport : Transport<Request>() {
+  private object CancelingTransport : Transport<Unit, Unit>() {
 
     override val registeredProblemTypes: Map<String, KClass<out Problem>> = emptyMap()
     override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default
@@ -92,18 +91,24 @@ class OperationTest {
       purpose: RequestPurpose,
       requestValidation: PayloadValidator<B>?,
       parameterValidation: ParameterValidator?,
-    ): Request = TestRequest(method, URI.create("http://example.com"), emptyList())
+    ): Request<Unit> = TestRequest(method, URI.create("http://example.com"), emptyList())
 
-    override suspend fun transportResponse(request: Request): Response = throw CancellationException("cancelled")
+    override suspend fun transportResponse(request: Request<Unit>): Response<Unit> =
+      throw CancellationException("cancelled")
 
-    override fun eventSource(requestSupplier: suspend (Headers) -> Request) = error("unused")
+    override fun eventSource(requestSupplier: suspend (Headers) -> Request<Unit>) = error("unused")
+
+    override fun start(
+      request: Request<Unit>,
+      budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
+    ): kotlinx.coroutines.flow.Flow<ResponseEvent<Unit>> = kotlinx.coroutines.flow.emptyFlow()
 
     override fun close(cancelOutstandingRequests: Boolean) = Unit
 
     override fun close() = Unit
   }
 
-  private class CapturingPurposeTransport : Transport<Request>() {
+  private class CapturingPurposeTransport : Transport<Unit, Unit>() {
 
     val purposes = CopyOnWriteArrayList<RequestPurpose>()
 
@@ -130,15 +135,20 @@ class OperationTest {
       purpose: RequestPurpose,
       requestValidation: PayloadValidator<B>?,
       parameterValidation: ParameterValidator?,
-    ): Request {
+    ): Request<Unit> {
       purposes += purpose
       return TestRequest(method, URI.create("http://example.com"), emptyList())
     }
 
-    override suspend fun transportResponse(request: Request): Response = error("unused")
+    override suspend fun transportResponse(request: Request<Unit>): Response<Unit> = error("unused")
 
-    override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-      EventSource(requestSupplier, problemFactory, eventTimeout = null)
+    override fun eventSource(requestSupplier: suspend (Headers) -> Request<Unit>): EventSource<Unit, Unit> =
+      EventSource(requestSupplier, problemFactory, eventTimeout = null, requestStarter = ::start)
+
+    override fun start(
+      request: Request<Unit>,
+      budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
+    ): kotlinx.coroutines.flow.Flow<ResponseEvent<Unit>> = kotlinx.coroutines.flow.emptyFlow()
 
     override fun close(cancelOutstandingRequests: Boolean) = Unit
 
@@ -157,7 +167,7 @@ class OperationTest {
   fun `nullable operations rethrow cancellation without nullify matching`() =
     runTest {
       val operation =
-        CancelingTransport.nullableOperation<Unit, Unit, Request>(
+        CancelingTransport.nullableOperation<Unit, Unit, Unit, Unit>(
           OperationSpec(
             method = Method.Get,
             pathTemplate = "/test",

@@ -44,18 +44,19 @@ class JdkRequestBodyTest {
       val body = mutableMapOf("count" to 1)
       var validations = 0
       val operation =
-        factory.operation<Map<String, Int>, Unit, JdkRequest>(
-          OperationSpec(
-            Method.Put,
-            "/body",
-            body = body,
-            contentTypes = listOf(MediaType.JSON),
-            requestValidation = { value ->
-              validations += 1
-              require(value.getValue("count") > 0)
-            },
-          ),
-        )
+        factory
+          .operation<Map<String, Int>, Unit, java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>(
+            OperationSpec(
+              Method.Put,
+              "/body",
+              body = body,
+              contentTypes = listOf(MediaType.JSON),
+              requestValidation = { value ->
+                validations += 1
+                require(value.getValue("count") > 0)
+              },
+            ),
+          )
       assertEquals(0, validations)
       operation.transportRequest()
       assertEquals(1, validations)

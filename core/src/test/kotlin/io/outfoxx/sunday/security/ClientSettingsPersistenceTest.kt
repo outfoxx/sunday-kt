@@ -20,7 +20,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -103,24 +102,19 @@ class ClientSettingsPersistenceTest {
               )
             }
           }
-        val factory: TokenManagerFactory = { providers ->
-          factories++
-          assertEquals(mapOf("resolved-provider" to provider), providers)
+        factories++
+        val manager =
           TokenManager(
-            providers,
-            store,
-            Duration.ofSeconds(5),
-            Clock.fixed(Instant.ofEpochSecond(time), ZoneOffset.UTC),
-            this,
-          ).also {
-            managers +=
-              it
-          }
-        }
+            provider = provider,
+            store = store,
+            expirySkew = Duration.ofSeconds(5),
+            clock = Clock.fixed(Instant.ofEpochSecond(time), ZoneOffset.UTC),
+            scope = this,
+          ).also { managers += it }
         val selected = binding.copy(profile = profile)
-        val credentials = mapOf("identity" to ProviderCredentials(provider))
+        val credentials = mapOf("identity" to ProviderCredentials(manager))
         return if (direct) {
-          ClientSettings(URI("https://api.example"), mapOf("read" to listOf(selected)), credentials, factory)
+          ClientSettings(URI("https://api.example"), mapOf("read" to listOf(selected)), credentials)
         } else {
           ClientSettings.resolve(
             URI("https://api.example"),
@@ -130,19 +124,26 @@ class ClientSettingsPersistenceTest {
               "public" to listOf(emptyList()),
             ),
             credentials,
-            tokenManagerFactory = factory,
           )
         }
       }
 
       suspend fun token(settings: ClientSettings) =
-        settings.tokenManager!!.credentials(settings.bindings.getValue("read").single()).tokens
+        settings.tokenProviders
+          .getValue(
+            "resolved-provider",
+          ).credentials(settings.bindings.getValue("read").single())
+          .tokens
       try {
         val first = settings(0)
         assertEquals(listOf(0, 0, 0, 1), listOf(reads, saves, acquisitions, factories))
-        val lease = first.tokenManager!!.credentials(first.bindings.getValue("read").single())
+        val lease =
+          first.tokenProviders
+            .getValue(
+              "resolved-provider",
+            ).credentials(first.bindings.getValue("read").single())
         assertEquals("initial", lease.tokens.accessToken)
-        first.tokenManager.close()
+        (first.tokenProviders.getValue("resolved-provider") as TokenManager).close()
         assertEquals("initial", token(settings(0, direct = true)).accessToken)
         assertEquals(1, acquisitions)
         val third = settings(96)
@@ -164,32 +165,19 @@ class ClientSettingsPersistenceTest {
     }
 
   @Test
-  fun `public and invalid settings skip factory and factory failures propagate`() {
-    val factory: TokenManagerFactory = { error("application factory failed") }
-    assertNull(ClientSettings(URI("https://api.example"), tokenManagerFactory = factory).tokenManager)
-    assertNull(
+  fun `public settings have no providers and missing credentials fail`() {
+    assertEquals(emptyMap<String, TokenProvider>(), ClientSettings(URI("https://api.example")).tokenProviders)
+    assertEquals(
+      emptyMap<String, TokenProvider>(),
       ClientSettings
         .resolve(
           URI("https://api.example"),
           mapOf("public" to listOf(emptyList())),
           emptyMap(),
-          tokenManagerFactory = factory,
-        ).tokenManager,
+        ).tokenProviders,
     )
     assertThrows(IllegalArgumentException::class.java) {
-      ClientSettings(URI("https://api.example"), mapOf("read" to listOf(binding)), tokenManagerFactory = factory)
-    }
-    assertThrows(IllegalStateException::class.java) {
-      ClientSettings(
-        URI("https://api.example"),
-        mapOf(
-          "read" to listOf(binding.copy(flow = SecurityBinding.Flow.Static)),
-        ),
-        mapOf(
-          "identity" to BearerCredentials("secret"),
-        ),
-        factory,
-      )
+      ClientSettings(URI("https://api.example"), mapOf("read" to listOf(binding)))
     }
   }
 }

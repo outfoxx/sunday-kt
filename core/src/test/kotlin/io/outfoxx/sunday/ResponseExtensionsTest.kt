@@ -8,7 +8,6 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
 import io.outfoxx.sunday.http.isSuccessful
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.io.Source
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -18,16 +17,14 @@ import java.net.URI
 
 class ResponseExtensionsTest {
 
-  private data class TestRequest(
+  private class TestRequest(
     override val method: Method = Method.Get,
     override val uri: URI = URI.create("http://example.com"),
     override val headers: Headers = emptyList(),
-  ) : Request {
+  ) : Request<Unit> {
+    override val transport = Unit
+
     override suspend fun body(): Source? = null
-
-    override suspend fun execute(): Response = error("unused")
-
-    override fun start() = emptyFlow<Request.Event>()
   }
 
   private data class TestResponse(
@@ -35,9 +32,10 @@ class ResponseExtensionsTest {
     override val reasonPhrase: String?,
     override val headers: Headers,
     override val body: Source?,
-  ) : Response {
+  ) : Response<Unit> {
+    override val transport = Unit
     override val trailers: Headers? = null
-    override val request: Request = TestRequest()
+    override val request: Request<Unit> = TestRequest()
   }
 
   @Test

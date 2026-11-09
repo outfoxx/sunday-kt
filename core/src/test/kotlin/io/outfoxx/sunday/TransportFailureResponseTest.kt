@@ -7,6 +7,7 @@ import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.Problem
@@ -28,16 +29,14 @@ import kotlin.reflect.KClass
 
 class TransportFailureResponseTest {
 
-  private data class TestRequest(
+  private class TestRequest(
     override val method: Method,
     override val uri: URI,
     override val headers: Headers,
-  ) : Request {
+  ) : Request<Unit> {
+    override val transport = Unit
+
     override suspend fun body(): Source? = null
-
-    override suspend fun execute(): Response = error("unused")
-
-    override fun start() = emptyFlow<Request.Event>()
   }
 
   private data class TestResponse(
@@ -45,18 +44,19 @@ class TransportFailureResponseTest {
     override val reasonPhrase: String?,
     override val headers: Headers,
     override val body: Source?,
-  ) : Response {
+  ) : Response<Unit> {
+    override val transport = Unit
     override val trailers: Headers? = null
-    override val request: Request = TestRequest(Method.Get, URI.create("http://example.com"), emptyList())
+    override val request: Request<Unit> = TestRequest(Method.Get, URI.create("http://example.com"), emptyList())
   }
 
   private class TestTransport(
-    private val response: Response,
+    private val response: Response<Unit>,
     override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
     override val problemFactory: ProblemFactory = SundayHttpProblem.Factory,
-  ) : Transport<Request>() {
+  ) : Transport<Unit, Unit>() {
 
     override val registeredProblemTypes: MutableMap<String, KClass<out Problem>> = mutableMapOf()
 
@@ -79,11 +79,16 @@ class TransportFailureResponseTest {
       purpose: RequestPurpose,
       requestValidation: PayloadValidator<B>?,
       parameterValidation: ParameterValidator?,
-    ): Request = TestRequest(method, URI.create("http://example.com$pathTemplate"), emptyList())
+    ): Request<Unit> = TestRequest(method, URI.create("http://example.com$pathTemplate"), emptyList())
 
-    override suspend fun transportResponse(request: Request): Response = response
+    override suspend fun transportResponse(request: Request<Unit>): Response<Unit> = response
 
-    override fun eventSource(requestSupplier: suspend (Headers) -> Request) = error("unused")
+    override fun eventSource(requestSupplier: suspend (Headers) -> Request<Unit>) = error("unused")
+
+    override fun start(
+      request: Request<Unit>,
+      budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
+    ): kotlinx.coroutines.flow.Flow<ResponseEvent<Unit>> = kotlinx.coroutines.flow.emptyFlow()
 
     override fun close(cancelOutstandingRequests: Boolean) = Unit
 

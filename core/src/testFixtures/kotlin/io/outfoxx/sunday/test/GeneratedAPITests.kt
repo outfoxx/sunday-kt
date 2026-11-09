@@ -28,7 +28,6 @@ import io.outfoxx.sunday.http.HeaderNames.CONTENT_LENGTH
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.OperationResponse
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.nullableOperation
@@ -41,7 +40,7 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isEqualTo
 
-abstract class GeneratedAPITests {
+abstract class GeneratedAPITests<TReq, TRes> {
 
   companion object {
 
@@ -54,10 +53,10 @@ abstract class GeneratedAPITests {
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders = MediaTypeEncoders.default,
     decoders: MediaTypeDecoders = MediaTypeDecoders.default,
-  ): Transport<Request>
+  ): Transport<TReq, TRes>
 
-  class API(
-    private val transport: Transport<Request>,
+  class API<TReq, TRes>(
+    private val transport: Transport<TReq, TRes>,
   ) {
 
     data class TestResult(
@@ -72,20 +71,20 @@ abstract class GeneratedAPITests {
         acceptTypes = listOf(JSON),
       )
 
-    suspend fun testOperationResponse(): OperationResponse<TestResult> =
+    suspend fun testOperationResponse(): OperationResponse<TestResult, TRes> =
       transport.response(
         method = Method.Get,
         pathTemplate = "/test",
         acceptTypes = listOf(JSON),
       )
 
-    suspend fun testVoidOperationResponse(): OperationResponse<Unit> =
+    suspend fun testVoidOperationResponse(): OperationResponse<Unit, TRes> =
       transport.response(
         method = Method.Get,
         pathTemplate = "/test",
       )
 
-    fun testOperation(): Operation<Unit, TestResult, Request> =
+    fun testOperation(): Operation<Unit, TestResult, TReq, TRes> =
       transport.operation(
         OperationSpec(
           method = Method.Get,
@@ -94,7 +93,7 @@ abstract class GeneratedAPITests {
         ),
       )
 
-    fun testVoidOperation(): Operation<Unit, Unit, Request> =
+    fun testVoidOperation(): Operation<Unit, Unit, TReq, TRes> =
       transport.operation(
         OperationSpec(
           method = Method.Get,
@@ -102,7 +101,7 @@ abstract class GeneratedAPITests {
         ),
       )
 
-    fun testNullableOperation(): NullableOperation<Unit, TestResult, Request> =
+    fun testNullableOperation(): NullableOperation<Unit, TestResult, TReq, TRes> =
       transport.nullableOperation(
         OperationSpec(
           method = Method.Get,

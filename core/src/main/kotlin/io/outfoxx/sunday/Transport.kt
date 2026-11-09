@@ -26,6 +26,7 @@ import io.outfoxx.sunday.http.OperationResponse
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.contentLength
 import io.outfoxx.sunday.http.contentType
@@ -61,14 +62,15 @@ import kotlin.reflect.full.createType
 import kotlin.reflect.typeOf
 
 /**
- * Transport for requests, responses and event sources.
+ * Transport for requests, responses and event sources. [Req] and [TRes] are the native request
+ * and response types, preserved through wrappers, authorization, execution and export.
  *
  * Top-level [ByteArray] results preserve the response body bytes regardless of `Content-Type`,
  * including when that header is absent. Nested byte arrays still use their structured model codec.
  * The usual empty-response rules apply: 204/205 require [Unit], and absent bodies or explicit
  * zero content lengths fail with [SundayError.Reason.NoData].
  */
-abstract class Transport<out Req : Request> : Closeable {
+abstract class Transport<Req, TRes> : Closeable {
 
   companion object {
 
@@ -82,6 +84,8 @@ abstract class Transport<out Req : Request> : Closeable {
    * Purpose of the request.
    */
   enum class RequestPurpose {
+    /** Materializes a caller-owned request without retaining managed authorization state. */
+    Export,
 
     /**
      * Request will be used for normal RPC style calls.
@@ -149,19 +153,19 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-    purpose: RequestPurpose = RequestPurpose.Normal,
+    purpose: RequestPurpose = RequestPurpose.Export,
     requestValidation: PayloadValidator<B>? = null,
     parameterValidation: ParameterValidator? = null,
-  ): Req
+  ): Request<Req>
 
   /**
-   * Attaches selected credentials to a native request. Implementations must revalidate credentials
-   * on each execution and own any bounded authentication replay.
+   * Materializes selected credentials, or defers acquisition to execution when [managed] is true.
    */
   open suspend fun authorize(
-    request: Request,
+    request: Request<Req>,
     bindings: List<SecurityBinding>,
-  ): Req = throw UnsupportedOperationException("This transport does not support managed security bindings")
+    managed: Boolean = false,
+  ): Request<Req> = throw UnsupportedOperationException("This transport does not support managed security bindings")
 
   /**
    * Execute a [request][Request] and return the server's [response][Response].
@@ -169,7 +173,13 @@ abstract class Transport<out Req : Request> : Closeable {
    * @param request Request used to generate the response.
    * @return [Response] returned from the executed [request].
    */
-  abstract suspend fun transportResponse(request: Request): Response
+  abstract suspend fun transportResponse(request: Request<Req>): Response<TRes>
+
+  /** Starts a transport-managed connection using a subscription-wide retry budget. */
+  abstract fun start(
+    request: Request<Req>,
+    budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
+  ): Flow<ResponseEvent<TRes>>
 
   /**
    * Create and execute a [request][Request] created from the given request
@@ -213,7 +223,7 @@ abstract class Transport<out Req : Request> : Closeable {
     headers: Parameters? = null,
     requestValidation: PayloadValidator<B>? = null,
     parameterValidation: ParameterValidator? = null,
-  ): Response {
+  ): Response<TRes> {
     val request =
       transportRequest(
         method,
@@ -224,6 +234,7 @@ abstract class Transport<out Req : Request> : Closeable {
         contentTypes,
         acceptTypes,
         headers,
+        purpose = RequestPurpose.Normal,
         requestValidation = requestValidation,
         parameterValidation = parameterValidation,
       )
@@ -337,7 +348,7 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): OperationResponse<R> =
+  ): OperationResponse<R, TRes> =
     response(
       method,
       pathTemplate,
@@ -365,7 +376,7 @@ abstract class Transport<out Req : Request> : Closeable {
     contentTypes: List<MediaType>? = null,
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
-  ): OperationResponse<R> =
+  ): OperationResponse<R, TRes> =
     response(
       method,
       pathTemplate,
@@ -398,7 +409,7 @@ abstract class Transport<out Req : Request> : Closeable {
     requestValidation: PayloadValidator<B>? = null,
     responseValidation: PayloadValidator<R>? = null,
     parameterValidation: ParameterValidator? = null,
-  ): OperationResponse<R> {
+  ): OperationResponse<R, TRes> {
     val response =
       transportResponse(
         method,
@@ -447,7 +458,7 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     parameterValidation: ParameterValidator? = null,
-  ): EventSource =
+  ): EventSource<Req, TRes> =
     eventSource { eventSourceHeaders ->
       transportRequest(
         method,
@@ -478,7 +489,7 @@ abstract class Transport<out Req : Request> : Closeable {
     acceptTypes: List<MediaType>? = null,
     headers: Parameters? = null,
     parameterValidation: ParameterValidator? = null,
-  ): EventSource =
+  ): EventSource<Req, TRes> =
     eventSource { eventSourceHeaders ->
       transportRequest(
         method,
@@ -500,7 +511,8 @@ abstract class Transport<out Req : Request> : Closeable {
    *
    * @return [EventSource] instance.
    */
-  protected abstract fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource
+  protected open fun eventSource(requestSupplier: suspend (Headers) -> Request<Req>): EventSource<Req, TRes> =
+    EventSource(requestSupplier, problemFactory, requestStarter = ::start)
 
   /**
    * Creates an [Flow] of events that uses the provided request parameters to supply
@@ -627,7 +639,7 @@ abstract class Transport<out Req : Request> : Closeable {
    */
   fun <D : Any> eventStream(
     decoder: (TextMediaTypeDecoder, String?, String?, String, Logger) -> D?,
-    requestSupplier: suspend (Headers) -> Request,
+    requestSupplier: suspend (Headers) -> Request<Req>,
   ): Flow<D> =
     callbackFlow {
       val jsonDecoder = mediaTypeDecoders.find(JSON) ?: throw SundayError(NoDecoder, JSON.value)
@@ -635,7 +647,7 @@ abstract class Transport<out Req : Request> : Closeable {
 
       val eventSource = eventSource(requestSupplier)
 
-      eventSource.onMessage = { event ->
+      eventSource.onMessage = onMessage@{ event ->
 
         val data = event.data
         if (data != null) {
@@ -646,6 +658,11 @@ abstract class Transport<out Req : Request> : Closeable {
               cancel(x)
               null
             } catch (x: Throwable) {
+              if (x.isRequestCancelled) {
+                close(x)
+                eventSource.close()
+                return@onMessage
+              }
               logger.warn(
                 "Skipping undecodable event from EventSource; event={}, id={}",
                 event.event,
@@ -688,10 +705,10 @@ abstract class Transport<out Req : Request> : Closeable {
     eventSourceHeaders: Headers,
   ): Parameters = (eventSourceHeaders + HeaderParameters.encode(headers)).toMap()
 
-  private fun isFailureResponse(response: Response) = failureStatusCodes.contains(response.statusCode)
+  private fun isFailureResponse(response: Response<*>) = failureStatusCodes.contains(response.statusCode)
 
   private fun <T : Any> parseSuccess(
-    response: Response,
+    response: Response<*>,
     resultType: KType,
     validation: PayloadValidator<T>? = null,
   ): T {
@@ -727,17 +744,18 @@ abstract class Transport<out Req : Request> : Closeable {
       try {
         contentTypeDecoder.decode<T>(body, resultType)
       } catch (x: Throwable) {
+        if (x.isRequestCancelled) throw x
         throw SundayError(SundayError.Reason.ResponseDecodingFailed, cause = x)
       }
     validation?.validate(decoded)
     return decoded
   }
 
-  private fun parseFailure(response: Response): Problem =
+  private fun parseFailure(response: Response<*>): Problem =
     parseFailureResponseBody(response, Status.valueOf(response.statusCode))
 
   private fun parseFailureResponseBody(
-    response: Response,
+    response: Response<*>,
     status: Status,
   ): Problem {
     val body = response.body

@@ -21,10 +21,10 @@ import io.outfoxx.sunday.MediaType
 /**
  * HTTP response that includes a parsed/decoded result.
  */
-data class OperationResponse<T : Any>(
+data class OperationResponse<T : Any, out TRes>(
   val result: T,
-  private val response: Response,
-) : Response by response {
+  private val response: Response<TRes>,
+) : Response<TRes> by response {
 
   /**
    * Retrieves all response header values matching the given name.

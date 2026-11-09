@@ -26,7 +26,6 @@ class ClientSettings(
   val baseURL: URI,
   bindings: Map<String, List<SecurityBinding>> = emptyMap(),
   credentials: Map<String, Credentials> = emptyMap(),
-  tokenManagerFactory: TokenManagerFactory? = null,
 ) {
   /** Complete security alternatives indexed by operation identity. */
   val bindings: Map<String, List<SecurityBinding>> =
@@ -71,10 +70,10 @@ class ClientSettings(
     }
   }
 
-  /** Prepared manager shared by this configuration's operations, without acquiring tokens. */
-  val tokenManager: TokenManager? = prepareTokenManager(tokenManagerFactory)
+  /** Application providers shared by operations without adding a cache. */
+  val tokenProviders: Map<String, TokenProvider> = prepareTokenProviders()
 
-  private fun prepareTokenManager(factory: TokenManagerFactory?): TokenManager? {
+  private fun prepareTokenProviders(): Map<String, TokenProvider> {
     val owners = mutableMapOf<String, String>()
     val providers = mutableMapOf<String, TokenProvider>()
     bindings.values.flatten().forEach { binding ->
@@ -121,10 +120,7 @@ class ClientSettings(
           }
       }
     }
-    return providers.takeIf { it.isNotEmpty() }?.let {
-      factory?.invoke(Collections.unmodifiableMap(it))
-        ?: TokenManager(it)
-    }
+    return Collections.unmodifiableMap(providers)
   }
 
   private fun resolveEndpoint(value: String?): String? =
@@ -164,7 +160,6 @@ class ClientSettings(
       credentials: Map<String, Credentials>,
       selection: Map<String, Set<String>> = emptyMap(),
       alternativeSelection: Map<String, Int> = emptyMap(),
-      tokenManagerFactory: TokenManagerFactory? = null,
     ): ClientSettings {
       require((selection.keys + alternativeSelection.keys).all { it in alternatives }) { "Unknown operation selection" }
       val bindings =
@@ -180,7 +175,7 @@ class ClientSettings(
           require(usable.size == 1) { "Operation '$operation' requires one complete security alternative" }
           usable.single()
         }
-      return ClientSettings(baseURL, bindings, credentials, tokenManagerFactory)
+      return ClientSettings(baseURL, bindings, credentials)
     }
 
     private fun validate(

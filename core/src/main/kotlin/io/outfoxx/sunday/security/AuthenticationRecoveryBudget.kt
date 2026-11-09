@@ -17,15 +17,32 @@
 package io.outfoxx.sunday.security
 
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.AbstractCoroutineContextElement
-import kotlin.coroutines.CoroutineContext
 
 /** One authentication recovery per invocation, shared by every connection of an event subscription. */
-class AuthenticationRecoveryBudget : AbstractCoroutineContextElement(Key) {
-  /** Context key used by native requests without bypassing existing request decorators. */
-  companion object Key : CoroutineContext.Key<AuthenticationRecoveryBudget>
-
+class AuthenticationRecoveryBudget {
   private val used = AtomicBoolean(false)
+
+  /** Permits at most one bodyless safe-method retry after an explicit invalid-token response. */
+  fun shouldRetry(
+    request: io.outfoxx.sunday.http.Request<*>,
+    response: io.outfoxx.sunday.http.Response<*>,
+  ): Boolean =
+    response.statusCode == 401 &&
+      !request.hasBody &&
+      request.isBodyRepeatable &&
+      request.method in
+      setOf(
+        io.outfoxx.sunday.http.Method.Get,
+        io.outfoxx.sunday.http.Method.Head,
+        io.outfoxx.sunday.http.Method.Options,
+      ) &&
+      BearerChallenge.token(request.headers.firstOrNull { it.first.equals("Authorization", true) }?.second) != null &&
+      BearerChallenge.isInvalidToken(
+        response.headers
+          .filter { it.first.equals("WWW-Authenticate", true) }
+          .joinToString(",") { it.second },
+      ) &&
+      consume()
 
   internal fun consume(): Boolean = used.compareAndSet(false, true)
 }

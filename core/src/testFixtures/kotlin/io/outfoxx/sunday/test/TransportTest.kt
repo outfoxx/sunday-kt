@@ -36,7 +36,6 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.http.getFirst
 import io.outfoxx.sunday.mediatypes.codecs.BinaryEncoder
@@ -71,7 +70,7 @@ import java.net.URI
 import kotlin.coroutines.resume
 import kotlin.reflect.typeOf
 
-abstract class TransportTest {
+abstract class TransportTest<TReq, TRes> {
 
   companion object {
 
@@ -86,7 +85,7 @@ abstract class TransportTest {
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders = MediaTypeEncoders.default,
     decoders: MediaTypeDecoders = MediaTypeDecoders.default,
-  ): Transport<Request>
+  ): Transport<TReq, TRes>
 
   /**
    * General
@@ -321,11 +320,6 @@ abstract class TransportTest {
   @Test
   fun `fetches typed results`() =
     runTest {
-      data class Tester(
-        val name: String,
-        val count: Int,
-      )
-
       val tester = Tester("Test", 10)
 
       val server = MockWebServer()
@@ -355,11 +349,6 @@ abstract class TransportTest {
   @Test
   fun `fetches typed results with body`() =
     runTest {
-      data class Tester(
-        val name: String,
-        val count: Int,
-      )
-
       val tester = Tester("Test", 10)
 
       val server = MockWebServer()
@@ -791,7 +780,7 @@ abstract class TransportTest {
           var validations = 0
           val failure = IllegalArgumentException("unknown parameter")
           val operation =
-            io.outfoxx.sunday.Operation<Unit, Unit, io.outfoxx.sunday.http.Request>(
+            io.outfoxx.sunday.Operation<Unit, Unit, TReq, TRes>(
               transport,
               io.outfoxx.sunday.OperationSpec(
                 Method.Get,
@@ -1490,6 +1479,11 @@ abstract class TransportTest {
           }
       }
     }
+
+  data class Tester(
+    val name: String,
+    val count: Int,
+  )
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   data class TestProblem(

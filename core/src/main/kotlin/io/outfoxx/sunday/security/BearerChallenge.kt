@@ -18,6 +18,10 @@ package io.outfoxx.sunday.security
 
 /** Recognizes invalid-token challenges without confusing quoted parameters or other authentication schemes. */
 object BearerChallenge {
+  /** Extracts an exact bearer credential, accepting case-insensitive schemes and HTTP spaces. */
+  fun token(header: String?): String? =
+    header?.let { Regex("(?i:Bearer) +([^\\s]+)").matchEntire(it)?.groupValues?.get(1) }
+
   /** Returns whether a complete Bearer challenge explicitly reports an invalid access token. */
   fun isInvalidToken(header: String): Boolean {
     val parts = mutableListOf<String>()

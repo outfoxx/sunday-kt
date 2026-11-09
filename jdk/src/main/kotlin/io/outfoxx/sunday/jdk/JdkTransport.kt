@@ -16,13 +16,15 @@
 
 package io.outfoxx.sunday.jdk
 
-import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.ParameterValidator
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.PayloadValidator
+import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestExecution
+import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
@@ -34,19 +36,23 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.ACCEPT
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.HeaderParameters
-import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.isCredentialed
+import io.outfoxx.sunday.http.redirectedRequest
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.SecurityBinding
-import io.outfoxx.sunday.security.TokenManager
-import kotlinx.io.asInputStream
+import io.outfoxx.sunday.security.SecurityContext
+import io.outfoxx.sunday.security.TokenProvider
+import io.outfoxx.sunday.security.withSecurityContext
+import kotlinx.io.readByteArray
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.Authenticator
@@ -54,29 +60,40 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
-import java.nio.ByteBuffer
 import java.time.Duration
-import java.util.concurrent.Flow
 import kotlin.reflect.KClass
 
 /**
- * JDK11 HTTP Client implementation of [Transport].
+ * JDK HTTP Client implementation of [Transport].
+ *
+ * Custom clients must use [HttpClient.Redirect.NEVER]; [redirectPolicy] controls redirects after response adaptation.
+ * The legacy native [adapter] is composed before [requestAdapter], once per attempt or export.
  */
 class JdkTransport(
   private val baseURI: URITemplate,
   override val problemFactory: ProblemFactory,
   httpClient: HttpClient? = null,
-  private val adapter: suspend (HttpRequest) -> HttpRequest = { it },
+  adapter: (suspend (HttpRequest) -> HttpRequest)? = null,
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration? = null,
-  private val tokenManager: TokenManager? = null,
-) : Transport<JdkRequest>(),
+  tokenProviders: Map<String, TokenProvider> = emptyMap(),
+  requestAdapter: RequestAdapter? = null,
+  responseAdapter: ResponseAdapter? = null,
+  private val redirectPolicy: HttpClient.Redirect = httpClient?.followRedirects() ?: HttpClient.Redirect.NORMAL,
+) : Transport<HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>(),
   Closeable {
 
-  private val httpClient = httpClient ?: defaultHttpClient(allowRedirects = tokenManager == null)
+  private val httpClient = httpClient ?: defaultHttpClient(allowRedirects = false)
+  private val execution =
+    RequestExecution<HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>(
+      tokenProviders,
+      requestAdapter,
+      responseAdapter,
+      adapter?.let { native -> { request -> request.copy(transport = native(request.transport)) } },
+    )
 
   companion object {
 
@@ -127,7 +144,7 @@ class JdkTransport(
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
     parameterValidation: ParameterValidator?,
-  ): JdkRequest {
+  ): Request<HttpRequest> {
     parameterValidation?.validateRequest()
     logger.trace("Building request")
 
@@ -175,9 +192,9 @@ class JdkTransport(
             ?: error("Cannot find encoder that was reported as supported")
 
         requestValidation?.validate(body)
-        val encodedBody = mediaTypeEncoder.encode(body)
+        val encodedBody = mediaTypeEncoder.encode(body).readByteArray()
 
-        BodyPublishers.ofInputStream { encodedBody.asInputStream() }
+        BodyPublishers.ofByteArray(encodedBody)
       }
 
     if (requestBodyPublisher == null && method.bodyAllowed) {
@@ -186,7 +203,7 @@ class JdkTransport(
 
     val timeout =
       when (purpose) {
-        RequestPurpose.Normal -> requestTimeout
+        RequestPurpose.Normal, RequestPurpose.Export -> requestTimeout
         RequestPurpose.Events -> eventRequestTimeout
       }
     timeout?.let(requestBuilder::timeout)
@@ -198,10 +215,8 @@ class JdkTransport(
 
     logger.debug("Built request: {}", request)
 
-    return JdkRequest(
-      adapter.invoke(request),
-      httpClient,
-    )
+    val prepared = JdkRequest(request)
+    return if (purpose == RequestPurpose.Export) execution.export(prepared) else prepared
   }
 
   private fun uri(
@@ -238,43 +253,61 @@ class JdkTransport(
   }
 
   override suspend fun authorize(
-    request: Request,
+    request: Request<HttpRequest>,
     bindings: List<SecurityBinding>,
-  ): JdkRequest = (request as? JdkRequest ?: error("Expected a JDK request")).authenticated(bindings, tokenManager)
-
-  override suspend fun transportResponse(request: Request): Response {
-    logger.debug("Initiating request")
-
-    return request.execute()
+    managed: Boolean,
+  ): Request<HttpRequest> {
+    val selected = request.withSecurityContext(SecurityContext(bindings.toList()))
+    return if (managed) selected else execution.export(selected)
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-    EventSource(requestSupplier, problemFactory)
+  override suspend fun transportResponse(
+    request: Request<HttpRequest>,
+  ): Response<java.net.http.HttpResponse<kotlinx.io.Source>> {
+    logger.debug("Initiating request")
+
+    return execution.execute(request, ::send, ::redirect)
+  }
+
+  override fun start(
+    request: Request<HttpRequest>,
+    budget: AuthenticationRecoveryBudget,
+  ) = execution.start(request, budget, ::send, ::redirect)
+
+  private suspend fun send(request: Request<HttpRequest>): JdkResponse {
+    require(httpClient.followRedirects() == HttpClient.Redirect.NEVER) {
+      "Transport-managed JDK execution requires a client with Redirect.NEVER"
+    }
+    if (request.isCredentialed) {
+      require(httpClient.authenticator().isEmpty && httpClient.cookieHandler().isEmpty) {
+        "Credentialed JDK execution requires a client without ambient authentication or cookies"
+      }
+    }
+    return httpClient.executeRequest(request.transport)
+  }
+
+  private fun redirect(
+    prepared: Request<HttpRequest>,
+    response: Response<java.net.http.HttpResponse<kotlinx.io.Source>>,
+    sent: Request<*>,
+  ): Request<HttpRequest>? {
+    if (redirectPolicy == HttpClient.Redirect.NEVER) return null
+    val next = prepared.redirectedRequest(response, sent) ?: return null
+    if (redirectPolicy == HttpClient.Redirect.NORMAL &&
+      sent.uri.scheme == "https" &&
+      next.uri.scheme == "http"
+    ) {
+      return null
+    }
+    return next
+  }
 
   override fun close() {
     close(true)
   }
 
   override fun close(cancelOutstandingRequests: Boolean) {
-    // TODO track outstanding requests and implement appropriately
+    if (cancelOutstandingRequests) httpClient.shutdownNow() else httpClient.shutdown()
   }
 
-  private fun StreamingBody.bodyPublisher(): HttpRequest.BodyPublisher {
-    val publisher = BodyPublishers.ofInputStream { openSource().asInputStream() }
-    return contentLength?.let { contentLength ->
-      ContentLengthBodyPublisher(publisher, contentLength)
-    } ?: publisher
-  }
-
-  private class ContentLengthBodyPublisher(
-    private val delegate: HttpRequest.BodyPublisher,
-    private val contentLength: Long,
-  ) : HttpRequest.BodyPublisher {
-
-    override fun contentLength(): Long = contentLength
-
-    override fun subscribe(subscriber: Flow.Subscriber<in ByteBuffer>) {
-      delegate.subscribe(subscriber)
-    }
-  }
 }

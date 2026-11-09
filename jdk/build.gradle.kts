@@ -1,5 +1,5 @@
 plugins {
-  id("oauth-tests.conventions")
+  id("transport-tests.conventions")
 }
 
 dependencies {

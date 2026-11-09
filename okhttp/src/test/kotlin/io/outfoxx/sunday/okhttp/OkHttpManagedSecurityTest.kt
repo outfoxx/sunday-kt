@@ -18,12 +18,24 @@ package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.SundayHttpProblem
-import io.outfoxx.sunday.security.TokenManager
+import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.test.ManagedSecurityTest
 
-class OkHttpManagedSecurityTest : ManagedSecurityTest() {
+class OkHttpManagedSecurityTest : ManagedSecurityTest<okhttp3.Request, okhttp3.Response>() {
+  override suspend fun executeExport(request: io.outfoxx.sunday.http.Request<okhttp3.Request>): Int =
+    okhttp3
+      .OkHttpClient()
+      .newCall(request.transport)
+      .execute()
+      .use { it.code }
+
   override fun transport(
     base: URITemplate,
-    manager: TokenManager?,
-  ) = OkHttpTransport(base, SundayHttpProblem.Factory, tokenManager = manager)
+    manager: TokenProvider?,
+  ) = OkHttpTransport(
+    base,
+    SundayHttpProblem.Factory,
+    tokenProviders =
+      manager?.let { mapOf("identity" to it) } ?: emptyMap(),
+  )
 }

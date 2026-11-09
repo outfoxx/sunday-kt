@@ -23,6 +23,7 @@ import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
 import io.outfoxx.sunday.security.TokenManager
@@ -43,12 +44,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /** Real-HTTP credential and recovery checks shared by Kotlin transports. */
-abstract class ManagedSecurityTest {
+abstract class ManagedSecurityTest<TReq, TRes> {
   /** Creates the native transport under test. */
   abstract fun transport(
     base: URITemplate,
-    manager: TokenManager?,
-  ): Transport<Request>
+    manager: TokenProvider?,
+  ): Transport<TReq, TRes>
+
+  /** Executes an export with the consumer's native client. */
+  abstract suspend fun executeExport(request: Request<TReq>): Int
 
   private val binding =
     SecurityBinding(
@@ -84,6 +88,67 @@ abstract class ManagedSecurityTest {
   }
 
   @Test
+  fun `direct providers acquire once per attempt and exported requests have no managed lifecycle`() =
+    runTest {
+      var token = "first"
+      var acquisitions = 0
+      var rejections = 0
+      val provider =
+        object : TokenProvider {
+          override val identity = "external"
+
+          override fun configure(binding: SecurityBinding) = TokenConfiguration("client", "session")
+
+          override suspend fun acquire(request: TokenRequest): TokenSet {
+            acquisitions++
+            if (token.isEmpty()) throw TokenProviderException()
+            return TokenSet(token)
+          }
+
+          override suspend fun reject(
+            request: TokenRequest,
+            rejectedToken: String,
+          ): Boolean {
+            rejections++
+            if (token == rejectedToken) token = "renewed"
+            return true
+          }
+        }
+      MockWebServer().use { server ->
+        server.enqueue(MockResponse().setResponseCode(204))
+        server.enqueue(MockResponse().setResponseCode(204))
+        server.enqueue(MockResponse().setResponseCode(401).setHeader("WWW-Authenticate", "Bearer error=invalid_token"))
+        server.enqueue(MockResponse().setResponseCode(401).setHeader("WWW-Authenticate", "Bearer error=invalid_token"))
+        server.enqueue(MockResponse().setResponseCode(204))
+        transport(URITemplate(server.url("/").toString()), provider).use { transport ->
+          val secured = transport.withSecurity(listOf(binding))
+          secured.transportResponse(Method.Get, "value")
+          token = "changed"
+          secured.transportResponse(Method.Get, "value")
+          val exported = secured.transportRequest(Method.Get, "value")
+          assertEquals(3, acquisitions)
+          assertEquals(401, executeExport(exported))
+          assertEquals(3, acquisitions)
+          assertEquals(0, rejections)
+          secured.transportResponse(Method.Get, "value")
+          assertEquals(5, acquisitions)
+          assertEquals(1, rejections)
+          assertEquals(
+            listOf("Bearer first", "Bearer changed", "Bearer changed", "Bearer changed", "Bearer renewed"),
+            (1..5).map { server.takeRequest().getHeader("Authorization") },
+          )
+          val old = provider.credentials(binding)
+          token = "new-session"
+          assertTrue(old.invalidate())
+          assertEquals("new-session", provider.credentials(binding).tokens.accessToken)
+          token = ""
+          expectFailure { secured.transportResponse(Method.Get, "value") }
+          assertEquals(5, server.requestCount)
+        }
+      }
+    }
+
+  @Test
   fun `native execution recovers once and rechecks credentials on reuse`() =
     runTest {
       val provider = Provider()
@@ -93,8 +158,7 @@ abstract class ManagedSecurityTest {
         TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
           transport(URITemplate(server.url("/").toString()), manager).use { transport ->
             val secured = transport.withSecurity(listOf(binding))
-            val request = secured.transportRequest(Method.Get, "value")
-            val response = request.execute()
+            val response = secured.transportResponse(Method.Get, "value")
             assertEquals(204, response.statusCode)
             assertFalse(
               response.request.headers
@@ -104,7 +168,7 @@ abstract class ManagedSecurityTest {
             assertEquals("Bearer first-1", server.takeRequest().getHeader("Authorization"))
             assertEquals("Bearer renewed-1", server.takeRequest().getHeader("Authorization"))
             manager.invalidate(manager.credentials(binding))
-            request.execute()
+            secured.transportResponse(Method.Get, "value")
             assertEquals("Bearer renewed-2", server.takeRequest().getHeader("Authorization"))
             assertEquals(1, provider.acquired)
             assertEquals(2, provider.refreshed)
@@ -130,8 +194,7 @@ abstract class ManagedSecurityTest {
           }
           TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
             transport(URITemplate(server.url("/").toString()), manager).use { transport ->
-              val request = transport.withSecurity(listOf(binding)).transportRequest(method, "value")
-              val response = request.execute()
+              val response = transport.withSecurity(listOf(binding)).transportResponse(method, "value")
               response.body?.close()
               assertEquals(status, response.statusCode)
               assertEquals(count, server.requestCount)
@@ -176,8 +239,9 @@ abstract class ManagedSecurityTest {
                 queryParameters = mapOf("untouched" to "a+b"),
                 body = mapOf("value" to "same"),
                 contentTypes = listOf(MediaType.JSON),
+                purpose = Transport.RequestPurpose.Normal,
               )
-            val response = request.execute()
+            val response = transport.transportResponse(request)
             val sent = server.takeRequest()
             assertEquals("Bearer first-1", sent.getHeader("Authorization"))
             assertEquals("first-2", sent.requestUrl!!.queryParameter("key"))
@@ -255,11 +319,21 @@ abstract class ManagedSecurityTest {
         server.enqueue(MockResponse().setHeader("Content-Type", "text/event-stream").setBody("data: first\n\n"))
         TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
           transport(URITemplate(server.url("/").toString()), manager).use { transport ->
-            val request = transport.withSecurity(listOf(binding)).transportRequest(Method.Get, "events")
-            val events = request.start().toList()
-            assertEquals(listOf(200), events.filterIsInstance<Request.Event.Start>().map { it.value.statusCode })
-            assertTrue(events.any { it is Request.Event.Data })
-            assertTrue(events.any { it is Request.Event.End })
+            val request =
+              transport
+                .withSecurity(
+                  listOf(binding),
+                ).transportRequest<Unit>(Method.Get, "events", purpose = Transport.RequestPurpose.Events)
+            val events =
+              transport
+                .start(
+                  request,
+                  io.outfoxx.sunday.security
+                    .AuthenticationRecoveryBudget(),
+                ).toList()
+            assertEquals(listOf(200), events.filterIsInstance<ResponseEvent.Start<*>>().map { it.value.statusCode })
+            assertTrue(events.any { it is ResponseEvent.Data })
+            assertTrue(events.any { it is ResponseEvent.End })
             assertEquals(2, server.requestCount)
             assertEquals(1, provider.refreshed)
           }
@@ -352,11 +426,18 @@ abstract class ManagedSecurityTest {
       MockWebServer().use { server ->
         server.enqueue(MockResponse().setResponseCode(204))
         TokenManager(mapOf("identity" to Provider()), scope = this).use { manager ->
-          DefaultFactories.transport(URITemplate(server.url("/").toString()), tokenManager = manager).use { transport ->
-            val request = transport.withSecurity(listOf(binding)).transportRequest(Method.Get, "value")
-            assertEquals(204, request.execute().statusCode)
-            assertEquals("Bearer first-1", server.takeRequest().getHeader("Authorization"))
-          }
+          DefaultFactories
+            .transport(
+              URITemplate(server.url("/").toString()),
+              tokenProviders =
+                mapOf(
+                  "identity" to manager,
+                ),
+            ).use { transport ->
+              val request = transport.withSecurity(listOf(binding)).transportRequest(Method.Get, "value")
+              assertEquals("Bearer first-1", request.headers.first { it.first.equals("Authorization", true) }.second)
+              assertEquals(0, server.requestCount)
+            }
         }
       }
     }
@@ -389,6 +470,41 @@ abstract class ManagedSecurityTest {
               assertEquals(2, attempts)
             }
           }
+        }
+      }
+    }
+
+  @Test
+  fun `provider rejection failure terminates recovery and allows later operations`() =
+    runTest {
+      val provider =
+        object : TokenProvider {
+          override val identity = "external"
+
+          override fun configure(binding: SecurityBinding) = TokenConfiguration("client")
+
+          override suspend fun acquire(request: TokenRequest) = TokenSet("token")
+
+          override suspend fun reject(
+            request: TokenRequest,
+            rejectedToken: String,
+          ): Boolean = throw IllegalStateException("private-provider-detail")
+        }
+      MockWebServer().use { server ->
+        server.enqueue(
+          MockResponse()
+            .setResponseCode(
+              401,
+            ).setHeader("WWW-Authenticate", "Bearer error=invalid_token")
+            .setBody("rejected"),
+        )
+        server.enqueue(MockResponse().setResponseCode(204))
+        transport(URITemplate(server.url("/").toString()), provider).use { transport ->
+          val authenticated = transport.withSecurity(listOf(binding))
+          expectFailure { authenticated.transportResponse(Method.Get, "value") }
+          assertEquals(1, server.requestCount)
+          assertEquals(204, authenticated.transportResponse(Method.Get, "value").statusCode)
+          assertEquals(2, server.requestCount)
         }
       }
     }

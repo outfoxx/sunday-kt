@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday.security
 
+import io.outfoxx.sunday.causes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -114,6 +115,31 @@ class TokenManagerTest {
     }
 
   @Test
+  fun `a wrapped stop prevents invalid-grant fallback acquisition`() =
+    runTest {
+      val stop = AuthorizationRequiredException()
+      val thrown = TokenProviderException(TokenProviderException.Reason.InvalidGrant, cause = stop)
+      val provider =
+        object : Provider() {
+          override suspend fun refresh(
+            request: TokenRequest,
+            refreshToken: String,
+          ): TokenSet {
+            refreshed += refreshToken
+            throw thrown
+          }
+        }
+      TokenManager(mapOf("identity" to provider), clock = TestClock(), scope = this).use { manager ->
+        manager.invalidate(manager.credentials(binding))
+        val failure = runCatching { manager.credentials(binding) }.exceptionOrNull()!!
+        assertTrue(failure.causes().any { it === thrown })
+        assertTrue(failure.causes().any { it === stop })
+        assertEquals(1, provider.acquired.size)
+        assertEquals(1, provider.refreshed.size)
+      }
+    }
+
+  @Test
   fun `a provider ignoring last waiter cancellation cannot cache late acquisition`() =
     runTest {
       val finish = CompletableDeferred<Unit>()
@@ -182,20 +208,20 @@ class TokenManagerTest {
     }
 
   @Test
-  fun `failed authorization cannot retry a consumed grant and errors do not expose secrets`() =
+  fun `failed authorization cannot retry a consumed grant and retains the provider failure`() =
     runTest {
       val provider =
         object : Provider() {
           override suspend fun acquire(request: TokenRequest): TokenSet {
             acquired += request
-            error("SECRET")
+            error("Provider unavailable")
           }
         }
       TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
         val interactive = binding.copy(flow = SecurityBinding.Flow.AuthorizationCode)
         val failure = expectFailure<TokenProviderException> { manager.credentials(interactive) }
-        assertFalse(failure.toString().contains("SECRET"))
-        assertFalse(failure.stackTraceToString().contains("SECRET"))
+        assertFalse(failure.toString().contains("Provider unavailable"))
+        assertEquals("Provider unavailable", failure.cause?.message)
         expectFailure<AuthorizationRequiredException> { manager.credentials(interactive) }
         assertEquals(1, provider.acquired.size)
         repeat(2) { expectFailure<TokenProviderException> { manager.credentials(binding) } }

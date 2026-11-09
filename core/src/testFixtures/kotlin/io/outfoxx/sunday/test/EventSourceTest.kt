@@ -28,6 +28,7 @@ import io.outfoxx.sunday.http.HeaderNames.LAST_EVENT_ID
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import kotlinx.coroutines.flow.onEach
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Test
@@ -52,13 +53,16 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 
 @Timeout(30)
-abstract class EventSourceTest {
+abstract class EventSourceTest<TReq, TRes> {
 
   abstract fun createRequest(
     url: String,
     headers: Headers,
-    onStart: () -> Unit = {},
-  ): Request
+  ): Request<TReq>
+
+  abstract fun startRequest(
+    request: Request<TReq>,
+  ): kotlinx.coroutines.flow.Flow<io.outfoxx.sunday.http.ResponseEvent<TRes>>
 
   @Test
   fun `test ignore double connect`() {
@@ -82,6 +86,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       val completed = CountDownLatch(1)
@@ -127,6 +132,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       var receivedEvent: EventSource.Event? = null
@@ -177,6 +183,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       var receivedEvent: EventSource.Event? = null
@@ -231,6 +238,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           retryTime = Duration.ofMillis(100),
         )
 
@@ -269,6 +277,7 @@ abstract class EventSourceTest {
       EventSource(
         { headers -> createRequest("http://example.com", headers) },
         SundayHttpProblem.Factory,
+        requestStarter = { request, _ -> startRequest(request) },
       )
 
     val handler: (EventSource.Event) -> Unit = { }
@@ -301,6 +310,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       val completed = CountDownLatch(1)
@@ -341,6 +351,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       val completed = CountDownLatch(1)
@@ -381,6 +392,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       val completed = CountDownLatch(1)
@@ -418,6 +430,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           eventTimeout = Duration.ofMillis(250),
         )
 
@@ -457,6 +470,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       val completed = CountDownLatch(1)
@@ -491,6 +505,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           eventTimeoutCheckInterval = Duration.ofMillis(50),
         )
 
@@ -518,6 +533,7 @@ abstract class EventSourceTest {
       EventSource(
         { headers -> createRequest("http://example.com", headers) },
         SundayHttpProblem.Factory,
+        requestStarter = { request, _ -> startRequest(request) },
       )
 
     expectThat(eventSource.eventTimeout).isNull()
@@ -544,13 +560,17 @@ abstract class EventSourceTest {
             createRequest(
               server.url("/test").toString(),
               headers,
-              onStart = {
-                openedAt += System.nanoTime()
-                opened.countDown()
-              },
             )
           },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ ->
+            startRequest(request).onEach { event ->
+              if (event is io.outfoxx.sunday.http.ResponseEvent.Start<*>) {
+                openedAt += System.nanoTime()
+                opened.countDown()
+              }
+            }
+          },
           retryTime = Duration.ofMillis(100),
         )
 
@@ -578,6 +598,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           retryTime = Duration.ofMillis(50),
         )
 
@@ -605,6 +626,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           retryTime = Duration.ofMillis(50),
         )
 
@@ -649,6 +671,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
         )
 
       eventSource.use {
@@ -705,6 +728,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           retryTime = Duration.ofMillis(100),
         )
 
@@ -748,6 +772,7 @@ abstract class EventSourceTest {
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
+          requestStarter = { request, _ -> startRequest(request) },
           eventTimeout = Duration.ofMillis(500),
           eventTimeoutCheckInterval = Duration.ofMillis(100),
         )
@@ -805,6 +830,7 @@ abstract class EventSourceTest {
           EventSource(
             { headers -> createRequest("http://127.0.0.1:${server.localPort}/test", headers) },
             SundayHttpProblem.Factory,
+            requestStarter = { request, _ -> startRequest(request) },
             retryTime = Duration.ofMillis(50),
           )
         eventSource.onMessage = { received.countDown() }

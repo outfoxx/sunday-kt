@@ -16,13 +16,15 @@
 
 package io.outfoxx.sunday.okhttp
 
-import io.outfoxx.sunday.EventSource
 import io.outfoxx.sunday.MediaType
 import io.outfoxx.sunday.MediaType.Companion.WWWFormUrlEncoded
 import io.outfoxx.sunday.ParameterValidator
 import io.outfoxx.sunday.PathEncoder
 import io.outfoxx.sunday.PathEncoders
 import io.outfoxx.sunday.PayloadValidator
+import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestExecution
+import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.SundayError
 import io.outfoxx.sunday.SundayError.Reason.InvalidBaseUri
@@ -34,27 +36,27 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.ACCEPT
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.HeaderParameters
-import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.isCredentialed
+import io.outfoxx.sunday.http.redirectedRequest
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.SecurityBinding
-import io.outfoxx.sunday.security.TokenManager
-import kotlinx.io.Buffer
-import kotlinx.io.readByteArray
+import io.outfoxx.sunday.security.SecurityContext
+import io.outfoxx.sunday.security.TokenProvider
+import io.outfoxx.sunday.security.withSecurityContext
 import kotlinx.io.readByteString
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okio.BufferedSink
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import kotlin.reflect.KClass
@@ -67,15 +69,20 @@ class OkHttpTransport(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-  private val tokenManager: TokenManager? = null,
-) : Transport<OkHttpRequest>(),
+  tokenProviders: Map<String, TokenProvider> = emptyMap(),
+  requestAdapter: RequestAdapter? = null,
+  responseAdapter: ResponseAdapter? = null,
+) : Transport<okhttp3.Request, okhttp3.Response>(),
   Closeable {
+
+  private val execution =
+    RequestExecution<okhttp3.Request, okhttp3.Response>(tokenProviders, requestAdapter, responseAdapter)
+  private val attemptClients = OkHttpAttemptClients(httpClient)
+  private val eventAttemptClients = OkHttpAttemptClients(eventHttpClient)
 
   companion object {
 
     private val logger = LoggerFactory.getLogger(OkHttpTransport::class.java)
-    private const val EOF = -1L
-    private const val READ_SIZE = 8192L
   }
 
   override val registeredProblemTypes: Map<String, KClass<out Problem>>
@@ -101,7 +108,7 @@ class OkHttpTransport(
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
     parameterValidation: ParameterValidator?,
-  ): OkHttpRequest {
+  ): Request<okhttp3.Request> {
     parameterValidation?.validateRequest()
     logger.trace("Building request")
 
@@ -177,7 +184,7 @@ class OkHttpTransport(
       }
 
     if (requestBody == null && method.bodyAllowed) {
-      requestBody = byteArrayOf().toRequestBody()
+      requestBody = okhttp3.RequestBody.EMPTY
     }
 
     val request =
@@ -187,29 +194,53 @@ class OkHttpTransport(
 
     logger.debug("Built request: {}", request)
 
-    val httpClient =
-      when (purpose) {
-        RequestPurpose.Normal -> httpClient
-        RequestPurpose.Events -> eventHttpClient
-      }
-
-    return OkHttpRequest(request, httpClient)
+    val prepared = OkHttpRequest(request)
+    return if (purpose == RequestPurpose.Export) execution.export(prepared) else prepared
   }
 
   override suspend fun authorize(
-    request: Request,
+    request: Request<okhttp3.Request>,
     bindings: List<SecurityBinding>,
-  ): OkHttpRequest =
-    (request as? OkHttpRequest ?: error("Expected an OkHttp request")).authenticated(bindings, tokenManager)
-
-  override suspend fun transportResponse(request: Request): Response {
-    logger.debug("Initiating request")
-
-    return request.execute()
+    managed: Boolean,
+  ): Request<okhttp3.Request> {
+    val selected = request.withSecurityContext(SecurityContext(bindings.toList()))
+    return if (managed) selected else execution.export(selected)
   }
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-    EventSource(requestSupplier, problemFactory)
+  override suspend fun transportResponse(request: Request<okhttp3.Request>): Response<okhttp3.Response> {
+    logger.debug("Initiating request")
+
+    return execution.execute(request, { send(it, attemptClients) }, { prepared, response, sent ->
+      redirect(prepared, response, sent, httpClient)
+    })
+  }
+
+  override fun start(
+    request: Request<okhttp3.Request>,
+    budget: AuthenticationRecoveryBudget,
+  ) = execution.start(request, budget, { send(it, eventAttemptClients) }, { prepared, response, sent ->
+    redirect(prepared, response, sent, eventHttpClient)
+  })
+
+  private suspend fun send(
+    request: Request<okhttp3.Request>,
+    clients: OkHttpAttemptClients,
+  ): OkHttpResponse =
+    (if (request.isCredentialed) clients.credentialed else clients.standard).executeRequest(
+      request.transport,
+      request.isBodyRepeatable,
+    )
+
+  private fun redirect(
+    prepared: Request<okhttp3.Request>,
+    response: Response<okhttp3.Response>,
+    sent: Request<*>,
+    client: OkHttpClient,
+  ): Request<okhttp3.Request>? {
+    if (!client.followRedirects) return null
+    val next = prepared.redirectedRequest(response, sent) ?: return null
+    return next.takeIf { client.followSslRedirects || it.uri.scheme == sent.uri.scheme }
+  }
 
   override fun close() {
     close(true)
@@ -222,26 +253,4 @@ class OkHttpTransport(
     }
   }
 
-  private class StreamingRequestBody(
-    private val body: StreamingBody,
-    private val contentType: okhttp3.MediaType,
-  ) : RequestBody() {
-
-    override fun contentType(): okhttp3.MediaType = contentType
-
-    override fun contentLength(): Long = body.contentLength ?: -1L
-
-    override fun writeTo(sink: BufferedSink) {
-      body.openSource().use { source ->
-        val buffer = Buffer()
-        while (true) {
-          val bytesRead = source.readAtMostTo(buffer, READ_SIZE)
-          if (bytesRead == EOF) {
-            break
-          }
-          sink.write(buffer.readByteArray())
-        }
-      }
-    }
-  }
 }

@@ -17,7 +17,6 @@
 package io.outfoxx.sunday.security
 
 import io.outfoxx.sunday.http.Headers
-import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Response
 import java.net.URI
 import java.net.URLDecoder
@@ -27,7 +26,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 /** Credential attachment and conservative recovery shared by native HTTP adapters. */
 class RequestSecurity(
   private val bindings: List<SecurityBinding>,
-  private val manager: TokenManager?,
+  private val providers: Map<String, TokenProvider>,
 ) {
   /** Complete credential set, retained only for request execution and conditional invalidation. */
   data class Credentials(
@@ -42,10 +41,8 @@ class RequestSecurity(
   suspend fun authorize(
     uri: URI,
     headers: Headers,
-    previous: Credentials? = null,
   ): Credentials {
     if (bindings.isEmpty()) return Credentials(uri, headers, emptyList())
-    val provider = manager ?: throw TokenProviderException()
     val names = mutableSetOf<Pair<SecurityBinding.CredentialTransport.Location, String>>()
     bindings.forEach { binding ->
       val transport = binding.transport
@@ -58,17 +55,15 @@ class RequestSecurity(
           transport.name
         }
       if (!names.add(transport.location to name)) throw TokenProviderException()
-      if (previous == null &&
+      val credentialPresent =
         when (transport.location) {
           SecurityBinding.CredentialTransport.Location.Header -> headers.any { it.first.equals(name, true) }
           SecurityBinding.CredentialTransport.Location.Query -> queryNames(uri).contains(name)
           SecurityBinding.CredentialTransport.Location.Cookie -> cookies(headers).any { it.first == name }
         }
-      ) {
-        throw TokenProviderException()
-      }
+      if (credentialPresent) throw TokenProviderException()
     }
-    val leases = bindings.map { provider.credentials(it) }
+    val leases = bindings.map { (providers[it.provider] ?: throw TokenProviderException()).credentials(it) }
     var resultUri = uri
     var resultHeaders: Headers = headers.toList()
     bindings.zip(leases).forEach { (binding, lease) ->
@@ -92,37 +87,36 @@ class RequestSecurity(
     return Credentials(resultUri, resultHeaders, leases)
   }
 
-  /** Invalidates only bearer credentials after a safe, bodyless request receives an invalid-token challenge. */
-  suspend fun recover(
-    method: Method,
-    hasBody: Boolean,
+  /** Reports rejected credentials before the transport decides whether this operation may be retried. */
+  suspend fun reject(
     credentials: Credentials,
-    response: Response,
-    budget: AuthenticationRecoveryBudget = AuthenticationRecoveryBudget(),
-  ): Boolean {
-    if (response.statusCode != 401 || hasBody || method !in setOf(Method.Get, Method.Head, Method.Options)) return false
-    val challenge =
-      response.headers
-        .filter {
-          it.first.equals(
-            "WWW-Authenticate",
-            true,
-          )
-        }.joinToString(",") { it.second }
-    if (!BearerChallenge.isInvalidToken(challenge)) return false
+    response: Response<*>,
+  ) {
+    if (response.statusCode != 401 ||
+      !BearerChallenge.isInvalidToken(
+        response.headers.filter { it.first.equals("WWW-Authenticate", true) }.joinToString(",") { it.second },
+      )
+    ) {
+      return
+    }
+    val token =
+      BearerChallenge.token(
+        credentials.headers.firstOrNull { it.first.equals("Authorization", true) }?.second,
+      )
     val leases =
       bindings
         .zip(credentials.leases)
-        .filter { (binding, _) ->
-          val transport = binding.transport
-          transport.location == SecurityBinding.CredentialTransport.Location.Header &&
-            transport.name.equals("Authorization", true) &&
-            transport.prefix.equals("Bearer", true)
+        .filter { (binding, lease) ->
+          binding.transport.location == SecurityBinding.CredentialTransport.Location.Header &&
+            binding.transport.name.equals("Authorization", true) &&
+            binding.transport.prefix.equals("Bearer", true) &&
+            token == lease.tokens.accessToken
         }.map { it.second }
-    if (leases.isEmpty() || !budget.consume()) return false
-    val provider = manager ?: throw TokenProviderException()
-    leases.forEach { provider.invalidate(it) }
-    return true
+    var recoverable = true
+    for (lease in leases) {
+      recoverable = lease.invalidate() && recoverable
+    }
+    if (!recoverable) throw TokenRejectedException()
   }
 
   /** Removes managed credentials before emitting request diagnostics. */

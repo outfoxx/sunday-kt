@@ -18,46 +18,33 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.responseEvents
 import io.outfoxx.sunday.test.EventSourceTest
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
+import org.junit.jupiter.api.AfterEach
 
-class JdkEventSourceTest : EventSourceTest() {
-
-  class JdkTrackingRequest(
-    request: HttpRequest,
-    httpClient: HttpClient,
-    private val onStart: () -> Unit,
-  ) : JdkRequest(
-      request,
-      httpClient,
-    ) {
-
-    override fun start(): Flow<Request.Event> =
-      super
-        .start()
-        .onEach {
-          if (it is Request.Event.Start) {
-            onStart()
-          }
-        }
-  }
+class JdkEventSourceTest : EventSourceTest<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>() {
+  private val client =
+    java.net.http.HttpClient
+      .newHttpClient()
 
   override fun createRequest(
     url: String,
     headers: Headers,
-    onStart: () -> Unit,
-  ): Request =
-    JdkTrackingRequest(
-      HttpRequest
-        .newBuilder(URI(url))
+  ): Request<java.net.http.HttpRequest> =
+    JdkRequest(
+      java.net.http.HttpRequest
+        .newBuilder(java.net.URI(url))
         .headers(headers)
         .build(),
-      HttpClient.newHttpClient(),
-      onStart,
     )
 
+  override fun startRequest(request: Request<java.net.http.HttpRequest>) =
+    responseEvents {
+      client.executeRequest(request.transport)
+    }
+
+  @AfterEach
+  fun closeClient() {
+    client.close()
+  }
 }

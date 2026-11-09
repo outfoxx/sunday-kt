@@ -24,29 +24,6 @@ internal fun HttpRequest.Builder.headers(headers: Headers) =
     headers.forEach { header(it.first, it.second) }
   }
 
-fun HttpRequest.copyToBuilder(includeHeaders: Boolean = true): HttpRequest.Builder {
-  val builder = HttpRequest.newBuilder()
-  builder.uri(uri())
-  builder.expectContinue(expectContinue())
-
-  version().ifPresent(builder::version)
-  timeout().ifPresent(builder::timeout)
-
-  if (includeHeaders) {
-    headers().map().forEach { (name, values) -> values.forEach { builder.header(name, it) } }
-  }
-
-  val method = method()
-  bodyPublisher().ifPresentOrElse(
-    { builder.method(method, it) },
-    {
-      when (method) {
-        "GET" -> builder.GET()
-        "DELETE" -> builder.DELETE()
-        else -> builder.method(method, HttpRequest.BodyPublishers.noBody())
-      }
-    },
-  )
-
-  return builder
-}
+/** Copies every native request setting while optionally omitting headers. Body publishers remain shared. */
+fun HttpRequest.copyToBuilder(includeHeaders: Boolean = true): HttpRequest.Builder =
+  HttpRequest.newBuilder(this) { _, _ -> includeHeaders }

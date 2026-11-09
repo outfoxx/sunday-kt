@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.security
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.outfoxx.sunday.isRequestCancelled
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -44,12 +45,14 @@ import java.util.concurrent.ConcurrentHashMap
  * Completed rotation is saved even when every caller cancels. Close this manager at application shutdown.
  */
 class TokenManager(
-  providers: Map<String, TokenProvider>,
+  providers: Map<String, TokenProvider> = emptyMap(),
   private val store: TokenStore = MemoryTokenStore(),
   private val expirySkew: Duration = Duration.ofSeconds(30),
   private val clock: Clock = Clock.systemUTC(),
   scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
-) : Closeable {
+  private val provider: TokenProvider? = null,
+) : TokenProvider,
+  Closeable {
   private val providers = providers.toMap()
   private val scope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
   private val guard = Any()
@@ -62,8 +65,21 @@ class TokenManager(
     require(!expirySkew.isNegative) { "Invalid token expiry skew" }
   }
 
+  /** Non-secret identity of the explicitly managed provider. */
+  override val identity: String =
+    provider?.identity ?: java.util.UUID
+      .randomUUID()
+      .toString()
+
+  /** Forwards application configuration without acquiring credentials. */
+  override fun configure(binding: SecurityBinding): TokenConfiguration =
+    (provider ?: providers[binding.provider] ?: throw TokenProviderException()).configure(binding)
+
+  /** Acquires managed credentials; transports use receipts to preserve rejection identity. */
+  override suspend fun acquire(request: TokenRequest): TokenSet = credentials(request.binding).tokens
+
   /** Obtains current credentials without reusing a failed or consumed authorization grant. */
-  suspend fun credentials(binding: SecurityBinding): TokenLease {
+  override suspend fun credentials(binding: SecurityBinding): TokenLease {
     currentCoroutineContext().ensureActive()
     val (provider, request, key) = resolve(binding)
     val renewal =
@@ -81,7 +97,11 @@ class TokenManager(
         selected
       }
     try {
-      return renewal.task.await()
+      val lease = renewal.task.await()
+      return TokenLease(lease.key, lease.tokens) {
+        invalidate(lease)
+        true
+      }
     } finally {
       synchronized(guard) {
         renewal.waiters--
@@ -111,7 +131,7 @@ class TokenManager(
 
   private fun resolve(binding: SecurityBinding): Resolved {
     try {
-      val provider = providers[binding.provider] ?: throw TokenProviderException()
+      val provider = provider ?: providers[binding.provider] ?: throw TokenProviderException()
       val configuration = provider.configure(binding)
       if (provider.identity.isBlank() ||
         configuration.clientIdentity.isBlank() ||
@@ -147,8 +167,9 @@ class TokenManager(
       return Resolved(provider, request, key)
     } catch (error: CancellationException) {
       throw error
-    } catch (_: Exception) {
-      throw TokenProviderException()
+    } catch (error: Exception) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(cause = error)
     }
   }
 
@@ -170,6 +191,7 @@ class TokenManager(
                 it.copy(refreshToken = it.refreshToken ?: stored.refreshToken)
               }
             } catch (error: TokenProviderException) {
+              if (error.isRequestCancelled) throw error
               if (error.reason != TokenProviderException.Reason.InvalidGrant ||
                 request.binding.flow != SecurityBinding.Flow.ClientCredentials
               ) {
@@ -223,8 +245,9 @@ class TokenManager(
       throw error
     } catch (error: TokenProviderException) {
       throw error
-    } catch (_: Exception) {
-      throw TokenProviderException()
+    } catch (error: Exception) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(cause = error)
     }
 
   private data class Resolved(

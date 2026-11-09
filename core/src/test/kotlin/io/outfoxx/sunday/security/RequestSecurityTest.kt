@@ -74,7 +74,7 @@ class RequestSecurityTest {
           ),
         )
       TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
-        val security = RequestSecurity(bindings, manager)
+        val security = RequestSecurity(bindings, mapOf("identity" to manager))
         val headers = listOf("X-Trace" to "trace", "Cookie" to "existing=untouched")
         val credentials = security.authorize(uri, headers)
         assertEquals("https://api.example/a%2Fb?z=a%2Bb&keep=one%20two&key=token-2", credentials.uri.toString())
@@ -95,12 +95,17 @@ class RequestSecurityTest {
       val provider = Provider()
       val uri = URI("https://api.example/value")
       TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
-        expectFailure { RequestSecurity(listOf(binding), null).authorize(uri, emptyList()) }
-        expectFailure { RequestSecurity(listOf(binding, binding), manager).authorize(uri, emptyList()) }
+        expectFailure { RequestSecurity(listOf(binding), emptyMap()).authorize(uri, emptyList()) }
+        expectFailure {
+          RequestSecurity(
+            listOf(binding, binding),
+            mapOf("identity" to manager),
+          ).authorize(uri, emptyList())
+        }
         expectFailure {
           RequestSecurity(
             listOf(binding),
-            manager,
+            mapOf("identity" to manager),
           ).authorize(uri, listOf("authorization" to "existing"))
         }
         assertEquals(0, provider.acquired)
@@ -118,10 +123,11 @@ class RequestSecurityTest {
           transport = SecurityBinding.CredentialTransport(SecurityBinding.CredentialTransport.Location.Query, "key"),
         )
       TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
-        val security = RequestSecurity(listOf(binding, key), manager)
-        val credentials = security.authorize(URI("https://api.example/value"), emptyList())
+        val security = RequestSecurity(listOf(binding, key), mapOf("identity" to manager))
+        val uri = URI("https://api.example/value")
+        val credentials = security.authorize(uri, emptyList())
         assertTrue(security.recover(Method.Get, false, credentials, response(401, "Bearer error=invalid_token")))
-        val refreshed = security.authorize(credentials.uri, credentials.headers, credentials)
+        val refreshed = security.authorize(uri, emptyList())
         assertTrue(refreshed.headers.contains("Authorization" to "Bearer token-3"))
         assertEquals(credentials.uri, refreshed.uri)
         assertEquals(3, provider.acquired)
@@ -132,7 +138,7 @@ class RequestSecurityTest {
   fun `forbidden unsafe and malformed challenge responses never recover`() =
     runTest {
       TokenManager(mapOf("identity" to Provider()), scope = this).use { manager ->
-        val security = RequestSecurity(listOf(binding), manager)
+        val security = RequestSecurity(listOf(binding), mapOf("identity" to manager))
         val credentials = security.authorize(URI("https://api.example/value"), emptyList())
         assertFalse(security.recover(Method.Post, false, credentials, response(401, "Bearer error=invalid_token")))
         assertFalse(security.recover(Method.Get, true, credentials, response(401, "Bearer error=invalid_token")))
@@ -157,17 +163,62 @@ class RequestSecurityTest {
       }
     }
 
+  @Test
+  fun `empty content requires explicit repeatability before authentication recovery`() {
+    val request =
+      object : Request<Unit> {
+        override val transport = Unit
+        override val method = Method.Options
+        override val hasBody = false
+        override val uri = URI("https://api.example/value")
+        override val headers: Headers = listOf("Authorization" to "Bearer token")
+
+        override suspend fun body() = null
+      }
+    val response = response(401, "Bearer error=invalid_token")
+    val budget = AuthenticationRecoveryBudget()
+    assertFalse(budget.shouldRetry(request, response))
+    val repeatable =
+      object : Request<Unit> by request {
+        override val isBodyRepeatable = true
+      }
+    assertTrue(budget.shouldRetry(repeatable, response))
+    assertFalse(budget.shouldRetry(repeatable, response))
+  }
+
+  private suspend fun RequestSecurity.recover(
+    method: Method,
+    hasBody: Boolean,
+    credentials: RequestSecurity.Credentials,
+    response: Response<*>,
+  ): Boolean {
+    reject(credentials, response)
+    val request =
+      object : Request<Unit> {
+        override val transport = Unit
+        override val method = method
+        override val hasBody = hasBody
+        override val isBodyRepeatable = true
+        override val uri = credentials.uri
+        override val headers = credentials.headers
+
+        override suspend fun body() = null
+      }
+    return AuthenticationRecoveryBudget().shouldRetry(request, response)
+  }
+
   private fun response(
     status: Int,
     challenge: String,
-  ): Response =
-    object : Response {
+  ): Response<*> =
+    object : Response<Unit> {
+      override val transport = Unit
       override val statusCode = status
       override val reasonPhrase: String? = null
       override val headers: Headers = listOf("WWW-Authenticate" to challenge)
       override val body = null
       override val trailers = null
-      override val request: Request get() = error("unused")
+      override val request: Request<Unit> get() = error("unused")
     }
 
   private suspend fun expectFailure(action: suspend () -> Unit) {

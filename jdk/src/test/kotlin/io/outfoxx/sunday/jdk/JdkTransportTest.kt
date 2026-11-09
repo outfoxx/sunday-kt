@@ -21,7 +21,6 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.HeaderNames.AUTHORIZATION
 import io.outfoxx.sunday.http.HeaderNames.CONTENT_TYPE
 import io.outfoxx.sunday.http.Method
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.SundayHttpProblem
@@ -37,7 +36,7 @@ import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 
-class JdkTransportTest : TransportTest() {
+class JdkTransportTest : TransportTest<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>() {
 
   override val implementation = Implementation.JDK
 
@@ -45,7 +44,7 @@ class JdkTransportTest : TransportTest() {
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): Transport<Request> =
+  ): Transport<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>> =
     JdkTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,

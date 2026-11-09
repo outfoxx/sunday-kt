@@ -16,6 +16,7 @@
 
 package io.outfoxx.sunday
 
+/** Runtime failure with optional classification and originating cause. */
 class SundayError(
   message: String,
   val reason: Reason? = null,

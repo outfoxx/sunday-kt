@@ -17,4 +17,7 @@
 package io.outfoxx.sunday.security
 
 /** The application must obtain fresh authorization and supply a new grant identity. */
-class AuthorizationRequiredException : RuntimeException("Fresh application authorization is required")
+class AuthorizationRequiredException(
+  cause: Throwable? = null,
+) : RuntimeException("Fresh application authorization is required", cause),
+  io.outfoxx.sunday.RequestCancellationException

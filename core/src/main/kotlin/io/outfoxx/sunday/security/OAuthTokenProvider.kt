@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.security
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import io.outfoxx.sunday.isRequestCancelled
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import java.net.URI
@@ -214,11 +215,14 @@ class OAuthTokenProvider(
       throw error
     } catch (error: TokenProviderException) {
       throw error
-    } catch (_: JsonProcessingException) {
-      throw TokenProviderException()
-    } catch (_: IOException) {
-      throw TokenProviderException(TokenProviderException.Reason.Temporary)
-    } catch (_: Exception) {
-      throw TokenProviderException()
+    } catch (error: JsonProcessingException) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(cause = error)
+    } catch (error: IOException) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(TokenProviderException.Reason.Temporary, cause = error)
+    } catch (error: Exception) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(cause = error)
     }
 }

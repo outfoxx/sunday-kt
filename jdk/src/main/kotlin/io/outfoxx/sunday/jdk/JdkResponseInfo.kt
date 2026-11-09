@@ -27,7 +27,9 @@ import java.net.http.HttpResponse.ResponseInfo
 class JdkResponseInfo(
   private val responseInfo: ResponseInfo,
   override val request: JdkRequest,
-) : Response {
+) : Response<ResponseInfo> {
+
+  override val transport: ResponseInfo get() = responseInfo
 
   override val statusCode: Int
     get() = responseInfo.statusCode()

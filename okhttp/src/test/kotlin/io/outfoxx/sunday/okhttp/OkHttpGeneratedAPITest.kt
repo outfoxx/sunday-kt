@@ -24,13 +24,13 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.GeneratedAPITests
 
-class OkHttpGeneratedAPITest : GeneratedAPITests() {
+class OkHttpGeneratedAPITest : GeneratedAPITests<okhttp3.Request, okhttp3.Response>() {
 
   override fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): Transport<Request> =
+  ): Transport<okhttp3.Request, okhttp3.Response> =
     OkHttpTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,

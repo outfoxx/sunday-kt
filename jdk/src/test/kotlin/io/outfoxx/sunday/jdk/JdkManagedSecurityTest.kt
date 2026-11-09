@@ -18,12 +18,28 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.SundayHttpProblem
-import io.outfoxx.sunday.security.TokenManager
+import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.test.ManagedSecurityTest
 
-class JdkManagedSecurityTest : ManagedSecurityTest() {
+class JdkManagedSecurityTest :
+  ManagedSecurityTest<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>() {
+  override suspend fun executeExport(request: io.outfoxx.sunday.http.Request<java.net.http.HttpRequest>): Int =
+    java.net.http.HttpClient.newHttpClient().use { client ->
+      client
+        .send(
+          request.transport,
+          java.net.http.HttpResponse.BodyHandlers
+            .discarding(),
+        ).statusCode()
+    }
+
   override fun transport(
     base: URITemplate,
-    manager: TokenManager?,
-  ) = JdkTransport(base, SundayHttpProblem.Factory, tokenManager = manager)
+    manager: TokenProvider?,
+  ) = JdkTransport(
+    base,
+    SundayHttpProblem.Factory,
+    tokenProviders =
+      manager?.let { mapOf("identity" to it) } ?: emptyMap(),
+  )
 }

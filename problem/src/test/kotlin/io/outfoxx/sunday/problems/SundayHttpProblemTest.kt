@@ -1,5 +1,10 @@
 package io.outfoxx.sunday.problems
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -9,6 +14,19 @@ import strikt.assertions.isEqualTo
 import java.net.URI
 
 class SundayHttpProblemTest {
+
+  @Test
+  fun `copy retains exception cause without serializing exception bookkeeping`() {
+    val cause = IllegalStateException("internal failure")
+    val problem = SundayHttpProblem(status = 400, cause = cause)
+    val copy = problem.copy(detail = "updated")
+    assertSame(cause, copy.cause)
+    val mapper = jacksonObjectMapper()
+    val json = mapper.valueToTree<JsonNode>(copy)
+    assertFalse(json.has("cause"))
+    val decoded = mapper.readValue("""{"status":400}""", SundayHttpProblem::class.java)
+    assertNull(decoded.cause)
+  }
 
   @Test
   fun `extensions are exposed and mutable`() {

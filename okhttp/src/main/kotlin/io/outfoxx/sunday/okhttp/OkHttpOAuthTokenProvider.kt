@@ -84,7 +84,7 @@ class OkHttpOAuthTokenProvider(
             response.use {
               if (continuation.isActive) {
                 val result =
-                  runCatching { OAuthTokenProvider.ExchangeResponse(response.code, response.body?.string().orEmpty()) }
+                  runCatching { OAuthTokenProvider.ExchangeResponse(response.code, response.body.string()) }
                 continuation.resumeWith(result)
               }
             }

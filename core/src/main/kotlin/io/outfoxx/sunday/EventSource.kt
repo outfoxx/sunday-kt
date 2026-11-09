@@ -27,16 +27,18 @@ import io.outfoxx.sunday.http.HeaderNames.LAST_EVENT_ID
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.isSuccessful
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
-import io.outfoxx.sunday.security.AuthorizationRequiredException
 import io.outfoxx.sunday.security.TokenProviderException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
 import org.slf4j.Logger
@@ -64,13 +66,17 @@ import kotlin.random.Random
  * [EventSource] is built on Sunday requests and allows customizing the
  * requests for scenarios like authentication and custom headers.
  */
-class EventSource(
-  private val requestSupplier: suspend (Headers) -> Request,
+class EventSource<TReq, TRes>(
+  private val requestSupplier: suspend (Headers) -> Request<TReq>,
   private val problemFactory: ProblemFactory,
   retryTime: Duration = retryTimeDefault,
   eventTimeout: Duration? = eventTimeoutDefault,
   private val eventTimeoutCheckInterval: Duration = eventTimeoutCheckIntervalDefault,
   private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java),
+  private val requestStarter: (
+    Request<TReq>,
+    AuthenticationRecoveryBudget,
+  ) -> kotlinx.coroutines.flow.Flow<ResponseEvent<TRes>>,
 ) : Closeable {
 
   /**
@@ -373,38 +379,34 @@ class EventSource(
         createRequestEventScope()
           .launch(start = CoroutineStart.LAZY) {
             try {
-              requestSupplier(headers)
-                .start(recoveryBudget)
-                .collect(::dispatchEvent)
-            } catch (_: CancellationException) {
-              // Closing a subscription also cancels credential acquisition.
-            } catch (error: TokenProviderException) {
-              if (error.reason ==
-                TokenProviderException.Reason.Temporary
-              ) {
-                receivedError(error)
-              } else {
-                receivedFatalError(error)
-              }
-            } catch (error: ParameterValidator.Failure) {
-              receivedFatalError(error)
-            } catch (error: AuthorizationRequiredException) {
-              receivedFatalError(error)
+              requestStarter(requestSupplier(headers), recoveryBudget).collect(::dispatchEvent)
             } catch (error: Throwable) {
-              receivedError(error)
+              when {
+                error is CancellationException -> if (currentCoroutineContext().isActive) receivedFatalError(error)
+                error.isRequestCancelled -> receivedFatalError(error)
+                error is TokenProviderException -> {
+                  if (error.reason == TokenProviderException.Reason.Temporary) {
+                    receivedError(error)
+                  } else {
+                    receivedFatalError(error)
+                  }
+                }
+                error is ParameterValidator.Failure -> receivedFatalError(error)
+                else -> receivedError(error)
+              }
             }
           }.also { currentRequest = it }
       }
     connection.start()
   }
 
-  private fun dispatchEvent(event: Request.Event) {
+  private fun dispatchEvent(event: ResponseEvent<*>) {
     if (readyStateValue.isClosed) {
       return
     }
 
     when (event) {
-      is Request.Event.Start -> {
+      is ResponseEvent.Start<*> -> {
         if (event.value.statusCode == 204) {
           close()
           return
@@ -418,10 +420,10 @@ class EventSource(
         receivedResponse(event.value)
       }
 
-      is Request.Event.Data ->
+      is ResponseEvent.Data ->
         receivedData(event.value)
 
-      is Request.Event.End ->
+      is ResponseEvent.End ->
         receivedComplete()
     }
   }
@@ -505,7 +507,7 @@ class EventSource(
    */
 
 
-  private fun receivedResponse(response: Response) {
+  private fun receivedResponse(response: Response<*>) {
     if (!readyStateValue.updateIfNotClosed(Open)) {
       logger.warn("Invalid state for receiving headers: {}", readyStateValue.current)
 

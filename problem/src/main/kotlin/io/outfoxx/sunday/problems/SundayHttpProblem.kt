@@ -29,7 +29,8 @@ open class SundayHttpProblem(
   val instance: URI? = null,
   @JsonIgnore
   val extensions: MutableMap<String, Any?> = mutableMapOf(),
-) : Problem(createMessage(type, title, status, detail, instance, extensions)) {
+  cause: Throwable? = null,
+) : Problem(createMessage(type, title, status, detail, instance, extensions), cause) {
 
   @JsonAnyGetter
   fun extensions(): Map<String, Any?> = extensions
@@ -104,7 +105,8 @@ open class SundayHttpProblem(
     detail: String? = this.detail,
     instance: URI? = this.instance,
     extensions: MutableMap<String, Any?> = this.extensions,
-  ): SundayHttpProblem = SundayHttpProblem(type, title, status, detail, instance, extensions)
+    cause: Throwable? = this.cause,
+  ): SundayHttpProblem = SundayHttpProblem(type, title, status, detail, instance, extensions, cause)
 
   object Factory : ProblemFactory {
 

@@ -16,9 +16,11 @@
 
 package io.outfoxx.sunday
 
+/** Failure in the event-source lifecycle, retaining its originating cause when available. */
 class EventSourceError(
   val reason: Reason,
-) : Exception(reason.message) {
+  cause: Throwable? = null,
+) : Exception(reason.message, cause) {
 
   enum class Reason(
     val message: String,

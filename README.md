@@ -142,7 +142,7 @@ val provider = JdkOAuthTokenProvider(
 )
 val tokens = TokenManager(mapOf("external" to provider))
 val transport = DefaultFactories.transport(
-  URITemplate("https://api.example.com"), providerId = "jdk", tokenManager = tokens,
+  URITemplate("https://api.example.com"), providerId = "jdk", tokenProviders = mapOf("external" to tokens),
 )
 ```
 
@@ -234,6 +234,122 @@ Built-in OAuth providers retain at most 1,024 consumed authorization-code hashes
 After this limit, create a provider for a newly authorized application session; old hashes are never
 evicted to allow code reuse. Refresh exchanges do not consume this history.
 
+### Request and response adapters
+
+`RequestAdapter` and `ResponseAdapter` are independent suspendable interfaces on Sunday's
+shared `Request<TReq>` and `Response<TRes>` wrappers. Configure either slot on `JdkTransport`, `OkHttpTransport`,
+`TransportConfig`, `DefaultFactories.transport`, or the client-settings factory extensions.
+No response behavior is inferred from a request adapter, even when it implements both interfaces.
+
+```kotlin
+val trace = object : RequestAdapter {
+  override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> =
+    request.copy(headers = request.headers + ("X-Trace" to traceId))
+}
+val observe = object : ResponseAdapter {
+  override suspend fun <TRes> adapt(response: Response<TRes>, request: Request<*>): Response<TRes> {
+    recordStatus(request.uri, response.statusCode)
+    return response
+  }
+}
+val transport = DefaultFactories.transport(
+  URITemplate("https://api.example.com"), providerId = "okhttp",
+  requestAdapter = trace.chainTo(signRequest),
+  responseAdapter = observe.chainTo(validateResponse),
+)
+```
+
+The native type is preserved through copies, adapter chains, authorization and request export.
+Adapters implement generic methods so the same instance can serve different transports; Kotlin SAM
+lambdas cannot express this contract. `Transport<TReq, TRes>`, `Operation<B, R, TReq, TRes>` and `EventSource<TReq, TRes>`
+carry native types through execution and export. For example, an OkHttp export's `request.transport` is statically an
+`okhttp3.Request`, including when an adapter returns a delegating wrapper. Decorators must preserve
+their behavior in `copy` and `withBody` overrides.
+
+`Response<TRes>.transport` exposes the underlying native response. Adapted status, headers and body
+remain authoritative through the common response interface; changing them does not rebuild the native
+response. `Response.copy`, response chains and `OperationResponse<R, TRes>` retain a known native type.
+Execution returns `Response<TRes>`, decoded results retain `OperationResponse<R, TRes>`, and streaming
+returns `Flow<ResponseEvent<TRes>>`. Shared decoding and policy helpers use `Response<*>` when they
+only need the common HTTP fields.
+
+`chainTo` and the `RequestAdapters` / `ResponseAdapters` constructors build flat, ordered chains.
+Errors stop the remaining adapters. An exception implementing `RequestCancellationException` is an
+unconditional stop signal anywhere in the cause chain: Sunday prevents retry and SSE reconnect and
+preserves the signal through exception causes. Diagnostic wrappers, native wrappers and coroutine
+debug recovery copies are supported, so top-level reference identity is not guaranteed.
+`Throwable.isRequestCancelled` recognizes request and coroutine cancellation through the cause chain.
+`Throwable.causes()` traverses the exception and its causes safely, including cyclic chains. A request
+stop does not cancel the parent coroutine. Coroutine `CancellationException` also stops work;
+ordinary failures and returned responses remain subject to normal transport and reconnect policy.
+
+Body repeatability is independent of content length and operation idempotency. Follow-ups retaining
+a body require `Request.isBodyRepeatable`; a redirect that drops the body does not. OkHttp one-shot
+and duplex bodies cannot be replayed, including zero-length bodies. JDK native recovery may resubscribe
+to repeatable publishers. For adapter-declared non-repeatable bodies, managed execution permits only
+one subscription; a second fails with a request stop signal before reopening the body. The JDK may
+skip subscribing to a zero-length publisher entirely. Custom request implementations must explicitly declare
+repeatability; the default is conservative. Adapter-declared non-repeatability survives effective-request
+copies and is also passed to OkHttp's native one-shot body flag, including for zero-length bodies. These checks do not broaden authentication recovery policy.
+
+An adapter runs once per Sunday-managed attempt: adapt the request, execute a native client call,
+adapt the returned response, then apply Sunday's body collection, redirects, status validation and
+authentication recovery. Native recovery can retransmit the adapted request and consume intermediate
+responses inside that call. Request adapters do not regenerate credentials, signatures or nonces for
+those transmissions; response adapters see the returned response. Sunday retry budgets count managed
+attempts, not wire transmissions. A stop exception takes effect when the adapter throws it. The execution loop
+belongs to the transport; requests carry only native settings and immutable credential metadata.
+Use `transport.transportResponse(request)` or `transport.start(request, budget)` for managed execution.
+`Request<TReq>` represents request fields and body resources; it does not execute requests or own
+HTTP clients or redirect policy. `RequestExecution<TReq, TRes>` uses native-send and redirect callbacks
+supplied by the transport. Native wrappers contain only the native request; credential metadata lives
+in a shared decorator that preserves it across copies. Standalone `EventSource` construction requires
+an explicit `requestStarter` callback.
+
+`transportRequest()` exports an optionally adapted/authorized request exactly once. The consumer
+executes its typed `request.transport` through their own native client and owns subsequent handling.
+For example, an OkHttp consumer can call `client.newCall(request.transport).execute().use { ... }`.
+Passing an export back through managed execution invokes adapters again; it is not the export path.
+
+Supplying `tokenProviders` composes an `AuthenticationAdapter` explicitly into both slots before custom
+adapters. Providers own acquisition, invalidation and renewal; provide a `TokenManager` only when Sunday
+should cache. An invalid-token response invalidates the matching credential before deciding whether
+replay is safe, including POST requests and exhausted budgets. Automatic authentication recovery remains
+limited to one bodyless GET, HEAD or OPTIONS per invocation (one for the entire SSE subscription).
+
+`Request.copy` preserves native settings and body ownership. `withBody(StreamingBody.source { ... })`
+installs a replacement replayable source factory. For native changes at a transport-specific boundary, use the typed `request.transport`
+with `HttpRequest.newBuilder(original) { _, _ -> true }` (or `copyToBuilder`), or
+`request.transport.newBuilder()` for OkHttp, then return `request.copy(transport = rebuilt)`.
+`Response.copy` preserves the source and lazy trailers. Copies do not consume or duplicate streams.
+OkHttp trailer inspection uses `peekTrailers()` so it never blocks or discards unread body bytes.
+An adapter that consumes a source must replace it before returning; Sunday never reconstructs a consumed
+resource on the adapter's behalf. Body I/O inside an adapter should run on `Dispatchers.IO`.
+
+JDK managed calls use the standard streaming body subscriber; OkHttp retains its native body source.
+RPC bodies are collected in bulk, and SSE reads bounded chunks. Coroutine cancellation cancels the
+OkHttp call or closes the JDK subscriber input stream; the reader then closes its buffered source.
+Cancellation follows each returned response through composed adapters and final body collection.
+A replacement response that owns different I/O must implement thread-safe `cancel()` for that I/O;
+its reader retains responsibility for closing the buffered source. This also covers body reads inside
+response adapters. JDK request copies
+use the platform's complete builder copy. OkHttp source transfer uses Okio directly. Body-factory stop exceptions survive native callback/future wrappers unchanged.
+
+The JDK client is immutable and cannot disable redirects per call. Custom clients must be configured
+with `HttpClient.Redirect.NEVER`; set `JdkTransport.redirectPolicy` to `NORMAL` or `ALWAYS` to follow
+redirects after response adaptation. The default transport configures this automatically. Credentialed
+JDK calls also require no ambient authenticator or cookie handler. OkHttp derives clients that share
+its connection pool and dispatcher while disabling automatic redirects and connection retries.
+Credentialed calls suppress native redirects and ambient authentication/cookies, ensuring that
+`401 invalid_token` reaches Sunday's authentication adapter. OkHttp's native status-based recovery
+remains enabled: a `503 Retry-After: 0` or a `421` on a coalesced HTTP/2 connection can result in another
+transmission within the same Sunday attempt. Native body replay restrictions still apply; a replayable
+POST can be resent. Native observers receive the real responses, including intermediate statuses.
+Raw exported requests retain their native behavior.
+Response adapters receive the effective request after native interceptor changes, so token rejection
+is attributed only to the credential actually sent. The unused `OkHttpRequest.requestDispatcher`
+constructor parameter has been removed; blocking response collection uses `Dispatchers.IO`.
+
 ### Typed request parameters
 
 `OperationSpec.parameterValidation` and the transport overloads accept a `ParameterValidator` for
@@ -268,34 +384,48 @@ For an undefined `id`, `/items{/id}` becomes `/items`, while `/items/{id}` becom
 stored on the template; omitting the override keeps the stored value. This applies
 to template expressions in both the base URI and the operation path.
 
-## Application-owned token persistence
+## Application-owned token lifecycle
+
+Transports accept named `TokenProvider` instances directly. Settings preserve supplied providers and
+never add a token cache. Every managed network attempt asks its provider for current credentials.
+An external framework (for example Auth0) remains responsible for storage, renewal and logout.
+Return only its access token and optional expiry; keep its refresh token inside that framework.
+
+For Sunday's caching and refresh lifecycle, explicitly supply a `TokenManager` as the provider:
 
 ```kotlin
-val settings = ClientSettings.resolve(
-  baseURL, alternatives, credentials,
-  tokenManagerFactory = { providers ->
-    TokenManager(providers, store = applicationStore, expirySkew = Duration.ofSeconds(30),
-      clock = applicationClock, scope = applicationScope)
-  },
-)
+val tokens = TokenManager(provider = oauthProvider, store = applicationStore,
+  expirySkew = Duration.ofSeconds(30), clock = applicationClock, scope = applicationScope)
+val settings = ClientSettings.resolve(baseURL, alternatives,
+  mapOf("identity" to ProviderCredentials(tokens)))
+// Supply an external framework's provider directly instead to keep its lifecycle authoritative.
+val transport = settings.jdkTransport(SundayHttpProblem.Factory)
 ```
 
-The same optional `tokenManagerFactory: TokenManagerFactory?` is available on the settings constructor.
-The application closes `settings.tokenManager` when all clients sharing it are done. Closing a transport
-does not close the shared manager or erase its store. `TokenManager.close()` cancels its own jobs without
-canceling the application parent scope; let pending operations/commits settle before erasing storage.
+Managers retain expiry skew, coalesced renewal, refresh rotation and application-selected persistence.
+Call `tokens.close()` after all clients sharing the manager finish.
+Transport closure does not erase the store or close a shared provider. Separate managers do not
+coordinate refreshes merely because they share a store. Reuse the same manager across clients that
+share a credential lifecycle, and distinguish users/environments with provider and grant identities.
 
-The hook is invoked once with the resolved provider map, after security validation, and is skipped
-when no providers are selected. It must only construct a manager: do not acquire tokens or read
-storage in the hook. Omitting it keeps the existing in-memory default. Settings retain the returned
-manager, not the factory. All operations on those settings share it; generated aggregate children
-therefore retain the same cache and single-flight renewal. Independently created managers do not
-coordinate concurrent refreshes, even if their stores are the same. Reuse a client/aggregate within
-an active session; use successive managers to reopen saved sessions.
+Providers can implement `reject` to handle an invalid bearer token. It receives the original request
+context and rejected access token, and returns whether recovery can proceed. Compare the rejected
+credential with the current session before renewing: a late rejection must not invalidate a newer token
+or a new login. Providers without this capability do not automatically retry. Acquisition and rejection
+must not start interactive login automatically; return an authorization-required failure to the caller.
+For an Auth0 adapter, retrieve through its credentials manager and force renewal through that same
+manager on rejection, serializing concurrent rejection handling without maintaining a second token cache.
 
-The application owns persistence, encryption, store access and session boundaries. Provider/client,
-grant, profile and endpoint identities must distinguish environments and users; the API base URL
-alone is not an implicit store namespace. Use a new grant identity for a fresh authorization session.
-For logout, stop requests and wait for pending refresh/persistence to finish before removing the
-session's store entries, then construct fresh settings. `invalidate` expires an access token for
-renewal; it is not logout and deliberately retains refresh state. No disk storage is enabled automatically.
+Request export materializes an optionally authorized native request once and hands its lifecycle to
+the consumer. Exported requests retain no Sunday-managed recovery state. Executing an operation through
+Sunday acquires once per managed attempt and retains the bounded safe-request recovery and SSE reconnect budget.
+
+Migration: replace transport `tokenManager`/`token_manager` arguments with named
+`tokenProviders`/`token_providers` maps. Replace `TokenManagerFactory` hooks with explicitly constructed
+managers supplied through provider credentials. Direct built-in OAuth providers are not implicitly cached;
+wrap them explicitly when Sunday should retain and refresh their tokens. For logout, stop outstanding
+requests and settle refresh commits before clearing the owning framework's or application's storage.
+
+Custom transports must handle `RequestPurpose.Export` and the `managed` argument to `authorize`.
+Export is the default for `transportRequest`: materialize credentials without retaining recovery
+state. Normal operation execution and event requests defer acquisition until each Sunday-managed attempt.

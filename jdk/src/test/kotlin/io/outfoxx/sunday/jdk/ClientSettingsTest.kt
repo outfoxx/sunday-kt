@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test
 
 class ClientSettingsTest {
   @Test
-  fun `settings adapter uses the prepared manager and endpoint`() =
+  fun `settings adapter uses the supplied providers and endpoint`() =
     runTest {
       MockWebServer().use { server ->
         server.enqueue(MockResponse().setResponseCode(204))
@@ -52,7 +52,7 @@ class ClientSettingsTest {
             mapOf("read" to listOf(binding)),
             mapOf("identity" to BearerCredentials("secret")),
           )
-        settings.tokenManager!!.use {
+        run {
           settings.jdkTransport(SundayHttpProblem.Factory).use { transport ->
             assertEquals(0, server.requestCount)
             val request =
@@ -60,7 +60,17 @@ class ClientSettingsTest {
                 .withSecurity(
                   settings.bindings.getValue("read"),
                 ).transportRequest(Method.Get, "items")
-            assertEquals(204, request.execute().statusCode)
+            java.net.http.HttpClient.newHttpClient().use { client ->
+              assertEquals(
+                204,
+                client
+                  .send(
+                    request.transport,
+                    java.net.http.HttpResponse.BodyHandlers
+                      .discarding(),
+                  ).statusCode(),
+              )
+            }
             val sent = server.takeRequest()
             assertEquals("/v1/items", sent.path)
             assertEquals("Bearer secret", sent.getHeader("Authorization"))

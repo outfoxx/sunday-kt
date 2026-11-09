@@ -16,20 +16,44 @@
 
 package io.outfoxx.sunday.http
 
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.io.Buffer
+
+import io.outfoxx.sunday.StreamingBody
+import io.outfoxx.sunday.security.SecurityContext
 import kotlinx.io.Source
 import java.net.URI
 
-/**
- * HTTP request based on coroutines.
- *
- * [Request] can produce a complete [response][Response] by calling [execute] or
- * can produce a [flow][Flow] of [events][Request.Event] by calling [start].
- */
-interface Request {
+/** HTTP request representation wrapping the native request type [TReq]. */
+interface Request<TReq> {
+
+  /** Native request represented by this wrapper. */
+  val transport: TReq
+
+  /** Credential metadata retained when copying native requests; never contains execution state. */
+  val securityContext: SecurityContext? get() = null
+
+  /** True unless the body is known to contain no bytes, without consuming it. */
+  val hasBody: Boolean get() = true
+
+  /**
+   * Whether the body can be produced again, independently of length and operation retry policy.
+   * Unknown implementations are conservatively non-repeatable; native requests also return true for no body.
+   */
+  val isBodyRepeatable: Boolean get() = false
+
+  /** Copies wire fields while preserving native settings and the existing body resource. */
+  fun copy(
+    method: Method = this.method,
+    uri: URI = this.uri,
+    headers: Headers = this.headers,
+  ): Request<TReq> = throw UnsupportedOperationException("This request does not support copying")
+
+  /** Replaces the native request while preserving wrapper metadata. */
+  fun copy(transport: TReq): Request<TReq> =
+    throw UnsupportedOperationException("This request does not support native copying")
+
+  /** Replaces the body with a repeatable source factory, or removes it when null. */
+  fun withBody(body: StreamingBody?): Request<TReq> =
+    throw UnsupportedOperationException("This request does not support bodies")
 
   /**
    * HTTP method for request.
@@ -50,51 +74,5 @@ interface Request {
    * Body data to send with request.
    */
   suspend fun body(): Source?
-
-  /**
-   * Executes the request and returns a complete [response][Response].
-   */
-  suspend fun execute(): Response
-
-  /**
-   * Events representing the state of the HTTP request/response.
-   */
-  sealed interface Event {
-
-    /**
-     * HTTP response has started.
-     *
-     * The provided response will include status and headers. [Response.body]
-     * and [Response.trailers] will not be available. The response body data,
-     * if any, will be provided in [Data] events that follow.
-     */
-    data class Start(
-      val value: Response,
-    ) : Event
-
-    /**
-     * HTTP response body data has been received.
-     */
-    data class Data(
-      val value: Buffer,
-    ) : Event
-
-    /**
-     * HTTP response has completed.
-     *
-     * Response trailers are provided if any were delivered.
-     */
-    data class End(
-      val trailers: Headers,
-    ) : Event
-  }
-
-  /**
-   * Starts the HTTP request and returns a [Flow] of [events][Request.Event].
-   */
-  fun start(): Flow<Event>
-
-  /** Starts an event connection using the subscription's shared authentication recovery budget. */
-  fun start(recoveryBudget: AuthenticationRecoveryBudget): Flow<Event> = start().flowOn(recoveryBudget)
 
 }

@@ -59,7 +59,7 @@ class JdkResponseTest {
     val body = Buffer().apply { writeString("ok", Charsets.UTF_8) }
 
     val response = TestHttpResponse(200, request, headers, body)
-    val jdkResponse = JdkResponse(response, HttpClient.newHttpClient())
+    val jdkResponse = JdkResponse(response)
 
     expectThat(jdkResponse.statusCode).isEqualTo(200)
     expectThat(jdkResponse.reasonPhrase).isEqualTo("OK")

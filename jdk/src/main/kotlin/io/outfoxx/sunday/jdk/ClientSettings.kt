@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.jdk
 
+import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
 import io.outfoxx.sunday.security.ClientSettings
@@ -27,10 +29,16 @@ import java.net.http.HttpClient
 fun ClientSettings.jdkTransport(
   problemFactory: ProblemFactory,
   httpClient: HttpClient? = null,
+  requestAdapter: RequestAdapter? = null,
+  responseAdapter: ResponseAdapter? = null,
+  redirectPolicy: HttpClient.Redirect = httpClient?.followRedirects() ?: HttpClient.Redirect.NORMAL,
 ): JdkTransport =
   JdkTransport(
     URITemplate(baseURL.toString()),
     problemFactory,
     httpClient = httpClient,
-    tokenManager = tokenManager,
+    tokenProviders = tokenProviders,
+    requestAdapter = requestAdapter,
+    responseAdapter = responseAdapter,
+    redirectPolicy = redirectPolicy,
   )

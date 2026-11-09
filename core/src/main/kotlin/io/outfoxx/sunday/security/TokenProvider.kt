@@ -16,6 +16,12 @@
 
 package io.outfoxx.sunday.security
 
+import io.outfoxx.sunday.isRequestCancelled
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import java.time.Instant
+
 /** Application credential provider; coroutine cancellation propagates to acquisition calls. */
 interface TokenProvider {
   /** Non-secret identity that changes with application credential configuration. */
@@ -26,6 +32,42 @@ interface TokenProvider {
 
   /** Acquires credentials for a fresh grant or external/static binding. */
   suspend fun acquire(request: TokenRequest): TokenSet
+
+  /** Acquires once without adding a cache, retaining the original request for conditional rejection. */
+  suspend fun credentials(binding: SecurityBinding): TokenLease {
+    try {
+      currentCoroutineContext().ensureActive()
+      val config = configure(binding)
+      if (identity.isBlank() || config.clientIdentity.isBlank()) throw TokenProviderException()
+      val request =
+        TokenRequest(
+          binding.copy(endpoints = binding.endpoints.overriddenBy(config.endpoints), scopes = binding.scopes.toSet()),
+          config.clientIdentity,
+          config.grantIdentity,
+        )
+      val tokens = acquire(request)
+      currentCoroutineContext().ensureActive()
+      if (tokens.accessToken.isEmpty() || tokens.expiresAt?.let { it <= Instant.now() } == true) {
+        throw TokenProviderException()
+      }
+      return TokenLease("", tokens) { reject(request, tokens.accessToken) }
+    } catch (error: CancellationException) {
+      throw error
+    } catch (error: AuthorizationRequiredException) {
+      throw error
+    } catch (error: TokenProviderException) {
+      throw error
+    } catch (error: Exception) {
+      if (error.isRequestCancelled) throw error
+      throw TokenProviderException(cause = error)
+    }
+  }
+
+  /** Rejects only this credential in its original session. False leaves recovery to the caller. */
+  suspend fun reject(
+    request: TokenRequest,
+    rejectedToken: String,
+  ): Boolean = false
 
   /** Optional capability for rotating existing refresh credentials. */
   interface Refreshing : TokenProvider {

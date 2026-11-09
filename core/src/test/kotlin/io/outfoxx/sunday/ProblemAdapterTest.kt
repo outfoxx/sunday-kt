@@ -1,6 +1,5 @@
 package io.outfoxx.sunday
 
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Status
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemAdapter
@@ -43,7 +42,7 @@ class ProblemAdapterTest {
       object : TransportProvider {
         override val id: String = "transport"
 
-        override fun create(config: TransportConfig): Transport<Request> = error("unused")
+        override fun create(config: TransportConfig): Transport<Unit, Unit> = error("unused")
       }
 
     val problemProvider =

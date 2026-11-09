@@ -59,11 +59,12 @@ class ProblemsTest {
     override val reasonPhrase: String?,
     override val headers: Headers,
     override val body: Source?,
-  ) : Response {
+  ) : Response<Unit> {
+    override val transport = Unit
 
     override val trailers: Headers?
       get() = null
-    override val request: Request
+    override val request: Request<Unit>
       get() = TODO("Not yet implemented")
   }
 

@@ -16,11 +16,12 @@
 
 package io.outfoxx.sunday.security
 
-/** Safe provider failure without a provider's potentially credential-bearing message or cause. */
+/** Credential-provider failure with a recovery classification and the originating cause. */
 class TokenProviderException(
-  /** Safe classification used for recovery without retaining credential-bearing provider errors. */
+  /** Classification used to decide whether recovery is possible. */
   val reason: Reason = Reason.Unavailable,
-) : RuntimeException("The credential provider could not supply usable credentials") {
+  cause: Throwable? = null,
+) : RuntimeException("The credential provider could not supply usable credentials", cause) {
   /** Separates temporary outages and rejected grants from terminal provider failures. */
   enum class Reason { Unavailable, Temporary, InvalidGrant }
 }

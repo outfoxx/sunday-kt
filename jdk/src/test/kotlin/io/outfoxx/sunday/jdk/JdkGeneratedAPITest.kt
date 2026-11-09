@@ -18,19 +18,19 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.Transport
 import io.outfoxx.sunday.URITemplate
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.GeneratedAPITests
 
-class JdkGeneratedAPITest : GeneratedAPITests() {
+class JdkGeneratedAPITest :
+  GeneratedAPITests<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>() {
 
   override fun createTransport(
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): Transport<Request> =
+  ): Transport<java.net.http.HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>> =
     JdkTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,

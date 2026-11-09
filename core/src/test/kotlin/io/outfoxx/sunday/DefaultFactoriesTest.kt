@@ -1,6 +1,5 @@
 package io.outfoxx.sunday
 
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
 import io.outfoxx.sunday.spi.TransportProvider
 import org.junit.jupiter.api.Test
@@ -14,7 +13,7 @@ class DefaultFactoriesTest {
     override val id: String,
     override val priority: Int = 0,
   ) : TransportProvider {
-    override fun create(config: TransportConfig): Transport<Request> = error("unused")
+    override fun create(config: TransportConfig): Transport<Unit, Unit> = error("unused")
   }
 
   private class TestProblemProvider(

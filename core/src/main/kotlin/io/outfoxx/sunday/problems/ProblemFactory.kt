@@ -34,7 +34,7 @@ interface ProblemFactory {
 
   fun from(descriptor: Descriptor): Problem
 
-  fun from(response: Response): Builder = Status.valueOf(response.statusCode, response.reasonPhrase).let(::from)
+  fun from(response: Response<*>): Builder = Status.valueOf(response.statusCode, response.reasonPhrase).let(::from)
 
   fun adapter(): ProblemAdapter
 }

@@ -16,284 +16,92 @@
 
 package io.outfoxx.sunday.okhttp
 
+import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
-import io.outfoxx.sunday.security.RequestSecurity
-import io.outfoxx.sunday.security.SecurityBinding
-import io.outfoxx.sunday.security.TokenManager
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.ProducerScope
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.transformWhile
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.io.Buffer
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.okio.asKotlinxIoRawSource
-import okhttp3.Authenticator
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.CookieJar
-import okhttp3.OkHttpClient
-import okhttp3.internal.connection.RealCall
-import org.slf4j.LoggerFactory
-import java.io.IOException
+import kotlinx.io.okio.asOkioSource
+import okhttp3.RequestBody
+import okio.BufferedSink
 import java.net.URI
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
-/**
- * Okhttp implementation of [Request]
- */
+/** OkHttp request. Builders retain native tags, body replay capabilities, and all request settings. */
 open class OkHttpRequest(
-  private val request: okhttp3.Request,
-  private val httpClient: OkHttpClient,
-  private val requestDispatcher: CoroutineDispatcher = Dispatchers.IO,
-  private val security: RequestSecurity? = null,
-  private val authorization: RequestSecurity.Credentials? = null,
-) : Request {
+  override val transport: okhttp3.Request,
+) : Request<okhttp3.Request> {
 
-  companion object {
 
-    private val logger = LoggerFactory.getLogger(OkHttpRequest::class.java)
-    private const val EOF = -1L
-    private const val READ_SIZE = 8192L
+  override val method: Method get() = Method.valueOf(transport.method)
+  override val uri: URI get() = transport.url.toUri()
+  override val headers: Headers get() = transport.headers
+  override val hasBody: Boolean get() = transport.body?.contentLength()?.let { it != 0L } ?: false
+  override val isBodyRepeatable: Boolean get() =
+    transport.body?.let { !it.isOneShot() && !it.isDuplex() } ?: true
+
+  /** Replaces the native request using a platform builder. */
+  override fun copy(transport: okhttp3.Request): OkHttpRequest = OkHttpRequest(transport)
+
+  override fun copy(
+    method: Method,
+    uri: URI,
+    headers: Headers,
+  ): OkHttpRequest {
+    val builder =
+      transport
+        .newBuilder()
+        .url(uri.toURL())
+        .headers(
+          okhttp3.Headers
+            .Builder()
+            .apply { headers.forEach { (name, value) -> add(name, value) } }
+            .build(),
+        ).method(
+          method.name,
+          when {
+            method == this.method -> transport.body
+            method.bodyAllowed -> transport.body ?: RequestBody.EMPTY
+            else -> null
+          },
+        )
+    return OkHttpRequest(builder.build())
   }
 
-  override val method: Method by lazy {
-    Method.valueOf(request.method)
-  }
-
-  override val uri: URI by lazy {
-    request.url.toUri()
-  }
-
-  override val headers: Headers
-    get() = request.headers
+  override fun withBody(body: StreamingBody?): OkHttpRequest =
+    copy(
+      transport
+        .newBuilder()
+        .method(
+          transport.method,
+          body?.let { StreamingRequestBody(it, transport.body?.contentType()) }
+            ?: if (method.bodyAllowed) RequestBody.EMPTY else null,
+        ).build(),
+    )
 
   override suspend fun body(): Source? =
-    request.body?.let { requestBody ->
-      val buffer = okio.Buffer()
-      requestBody.writeTo(buffer)
-      buffer.asKotlinxIoRawSource().buffered()
+    transport.body?.let { body ->
+      okio
+        .Buffer()
+        .also { body.writeTo(it) }
+        .asKotlinxIoRawSource()
+        .buffered()
     }
 
-  /** Applies complete selected credentials and prevents native redirects or authentication replay. */
-  internal suspend fun authenticated(
-    bindings: List<SecurityBinding>,
-    manager: TokenManager?,
-  ): OkHttpRequest {
-    val security = RequestSecurity(bindings, manager)
-    val credentials = security.authorize(uri, headers)
-    val client =
-      httpClient
-        .newBuilder()
-        .followRedirects(false)
-        .followSslRedirects(false)
-        .retryOnConnectionFailure(false)
-        .authenticator(Authenticator.NONE)
-        .cookieJar(CookieJar.NO_COOKIES)
-        .build()
-    return OkHttpRequest(request.withCredentials(credentials), client, requestDispatcher, security, credentials)
-  }
 
-  override suspend fun execute(): OkHttpResponse {
-    val security = security ?: return executeNative(request)
-    var credentials = security.authorize(uri, headers, authorization)
-    var response = executeNative(request.withCredentials(credentials))
-    if (security.recover(method, request.body != null, credentials, response)) {
-      response.body?.close()
-      credentials = security.authorize(uri, headers, authorization)
-      response = executeNative(request.withCredentials(credentials))
-    }
-    return response.redacted(security)
-  }
-
-  private suspend fun executeNative(request: okhttp3.Request): OkHttpResponse {
-    logger.debug("Executing")
-
-    val call = httpClient.newCall(request)
-
-    return suspendCancellableCoroutine { continuation ->
-      continuation.invokeOnCancellation {
-        call.cancel()
-      }
-      call.enqueue(
-        object : Callback {
-          override fun onResponse(
-            call: Call,
-            response: okhttp3.Response,
-          ) {
-            logger.debug("Received response")
-
-            // Don't bother with resuming the continuation if it is already cancelled.
-            if (continuation.isCancelled) {
-              response.close()
-              return
-            }
-
-            continuation.resume(OkHttpResponse(response, httpClient)) { _, _, _ -> response.close() }
-          }
-
-          override fun onFailure(
-            call: Call,
-            e: IOException,
-          ) {
-            logger.debug("Received error")
-
-            // Don't bother with resuming the continuation if it is already cancelled.
-            if (continuation.isCancelled) return
-
-            continuation.resumeWithException(e)
-          }
-        },
-      )
-    }
-  }
-
-  @OptIn(ExperimentalCoroutinesApi::class)
-  override fun start(): Flow<Request.Event> =
-    flow {
-      val recoveryBudget = currentCoroutineContext()[AuthenticationRecoveryBudget] ?: AuthenticationRecoveryBudget()
-      val security = security
-      if (security == null) {
-        startNative(request).collect { emit(it) }
-        return@flow
-      }
-      do {
-        var replay = false
-        val credentials = security.authorize(uri, headers, authorization)
-        startNative(request.withCredentials(credentials))
-          .transformWhile { event ->
-            if (event is Request.Event.Start &&
-              security.recover(method, request.body != null, credentials, event.value, recoveryBudget)
-            ) {
-              replay = true
-              false
-            } else {
-              emit(
-                if (event is Request.Event.Start) {
-                  Request.Event.Start(
-                    (event.value as OkHttpResponse).redacted(security),
-                  )
-                } else {
-                  event
-                },
-              )
-              true
-            }
-          }.collect { emit(it) }
-      } while (replay)
-    }
-
-  private fun startNative(request: okhttp3.Request): Flow<Request.Event> =
-    callbackFlow {
-      logger.debug("Starting")
-
-      val callback = RequestCallback(this, httpClient, requestDispatcher)
-
-      val call = httpClient.newCall(request)
-      call.enqueue(callback)
-
-      awaitClose {
-        call.cancel()
-        callback.cancel()
-      }
-    }
-
-  class RequestCallback(
-    private val scope: ProducerScope<Request.Event>,
-    private val httpClient: OkHttpClient,
-    private val dispatcher: CoroutineDispatcher,
-  ) : Callback {
-
-    private var reader: Job? = null
-
-    fun cancel() {
-      reader?.cancel()
-    }
-
-    override fun onResponse(
-      call: Call,
-      response: okhttp3.Response,
-    ) {
-      logger.debug("Received response")
-
-      reader =
-        scope.launch(dispatcher) {
-          response.use {
-            // Because they called `start`, this is a long-lived response,
-            // cancel full-call timeouts.
-            (call as? RealCall)?.timeoutEarlyExit()
-
-            val startEvent = Request.Event.Start(OkHttpResponse(response, httpClient))
-
-            scope.send(startEvent)
-
-            val body = response.body
-            if (body != null) {
-              logger.debug("Processing: response body")
-
-              while (isActive && scope.isActive) {
-                val buffer = Buffer()
-
-                val bytesRead =
-                  body
-                    .source()
-                    .asKotlinxIoRawSource()
-                    .buffered()
-                    .readAtMostTo(buffer, READ_SIZE)
-                if (bytesRead == EOF) {
-                  break
-                }
-
-                scope.send(Request.Event.Data(buffer))
-              }
-
-            }
-
-            if (isActive && scope.isActive) {
-              scope.send(Request.Event.End(response.trailers()))
-            }
-          }
-
-          scope.close()
-
-          logger.debug("Closed: response events")
-        }
-    }
-
-    override fun onFailure(
-      call: Call,
-      e: IOException,
-    ) {
-      logger.debug("Received error")
-
-      scope.cancel("Call failed", e)
-    }
-  }
 }
 
-/** Rebuilds native wire fields without consuming or copying the request body. */
-internal fun okhttp3.Request.withCredentials(credentials: RequestSecurity.Credentials): okhttp3.Request =
-  newBuilder()
-    .url(credentials.uri.toURL())
-    .headers(
-      okhttp3.Headers
-        .Builder()
-        .apply {
-          credentials.headers.forEach { (name, value) -> add(name, value) }
-        }.build(),
-    ).build()
+/** Bridges sources in bulk through Okio; each write opens a fresh body source. */
+internal class StreamingRequestBody(
+  private val body: StreamingBody,
+  private val type: okhttp3.MediaType?,
+) : RequestBody() {
+  override fun contentType() = type
+
+  override fun contentLength(): Long = body.contentLength ?: -1L
+
+  override fun writeTo(sink: BufferedSink) {
+    body.openSource().use { sink.writeAll(it.asOkioSource()) }
+  }
+}

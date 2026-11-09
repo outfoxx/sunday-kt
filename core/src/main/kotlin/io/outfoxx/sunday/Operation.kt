@@ -54,16 +54,16 @@ data class NullifySpec(
 /**
  * A generated operation that can be executed or converted into a native request.
  */
-class Operation<B : Any, R : Any, Req : Request>(
-  private val transport: Transport<Req>,
+class Operation<B : Any, R : Any, Req, TRes>(
+  private val transport: Transport<Req, TRes>,
   val spec: OperationSpec<B>,
   private val resultType: KType,
 ) {
 
   /**
-   * Builds a native request without executing it.
+   * Builds a typed request wrapper without executing it.
    */
-  suspend fun transportRequest(): Req =
+  suspend fun transportRequest(): Request<Req> =
     transport.transportRequest(
       spec.method,
       spec.pathTemplate,
@@ -78,9 +78,21 @@ class Operation<B : Any, R : Any, Req : Request>(
     )
 
   /**
-   * Executes the operation and returns the native transport response.
+   * Executes the operation and returns the HTTP response wrapper.
    */
-  suspend fun transportResponse() = transport.transportResponse(transportRequest())
+  suspend fun transportResponse() =
+    transport.transportResponse(
+      spec.method,
+      spec.pathTemplate,
+      spec.pathParameters,
+      spec.queryParameters,
+      spec.body,
+      spec.contentTypes,
+      spec.acceptTypes,
+      spec.headers,
+      requestValidation = spec.requestValidation,
+      parameterValidation = spec.parameterValidation,
+    )
 
   /**
    * Executes the operation and decodes the response value.
@@ -104,7 +116,7 @@ class Operation<B : Any, R : Any, Req : Request>(
   /**
    * Executes the operation and returns the decoded value with the HTTP response.
    */
-  suspend fun response(): OperationResponse<R> =
+  suspend fun response(): OperationResponse<R, TRes> =
     transport.response(
       spec.method,
       spec.pathTemplate,
@@ -125,27 +137,27 @@ class Operation<B : Any, R : Any, Req : Request>(
 /**
  * A generated operation with a streaming request body.
  */
-typealias StreamingOperation<R, Req> = Operation<StreamingBody, R, Req>
+typealias StreamingOperation<R, Req, TRes> = Operation<StreamingBody, R, Req, TRes>
 
 /**
  * A generated operation that can execute select problems as null responses.
  */
-class NullableOperation<B : Any, R : Any, Req : Request>(
-  private val transport: Transport<Req>,
+class NullableOperation<B : Any, R : Any, Req, TRes>(
+  private val transport: Transport<Req, TRes>,
   val spec: OperationSpec<B>,
   private val resultType: KType,
   val nullify: NullifySpec,
 ) {
 
-  private val operation = Operation<B, R, Req>(transport, spec, resultType)
+  private val operation = Operation<B, R, Req, TRes>(transport, spec, resultType)
 
   /**
-   * Builds a native request without executing it.
+   * Builds a typed request wrapper without executing it.
    */
-  suspend fun transportRequest(): Req = operation.transportRequest()
+  suspend fun transportRequest(): Request<Req> = operation.transportRequest()
 
   /**
-   * Executes the operation and returns the native transport response.
+   * Executes the operation and returns the HTTP response wrapper.
    */
   suspend fun transportResponse() = operation.transportResponse()
 
@@ -163,6 +175,7 @@ class NullableOperation<B : Any, R : Any, Req : Request>(
     } catch (cancellation: CancellationException) {
       throw cancellation
     } catch (problem: Problem) {
+      if (problem.isRequestCancelled) throw problem
       if (matchesNullify(problem)) {
         null
       } else {
@@ -173,7 +186,7 @@ class NullableOperation<B : Any, R : Any, Req : Request>(
   /**
    * Executes the operation and returns the decoded value with the HTTP response.
    */
-  suspend fun response(): OperationResponse<R> = operation.response()
+  suspend fun response(): OperationResponse<R, TRes> = operation.response()
 
   private fun matchesNullify(problem: Problem): Boolean =
     problemStatus(problem)?.let(nullify.statuses::contains) == true ||
@@ -191,14 +204,14 @@ class NullableOperation<B : Any, R : Any, Req : Request>(
 /**
  * Creates an operation using the response type as the decoded result type.
  */
-inline fun <B : Any, reified R : Any, Req : Request> Transport<Req>.operation(
+inline fun <B : Any, reified R : Any, Req, TRes> Transport<Req, TRes>.operation(
   spec: OperationSpec<B>,
-): Operation<B, R, Req> = Operation(this, spec, typeOf<R>())
+): Operation<B, R, Req, TRes> = Operation(this, spec, typeOf<R>())
 
 /**
  * Creates a nullable operation using the response type as the decoded result type.
  */
-inline fun <B : Any, reified R : Any, Req : Request> Transport<Req>.nullableOperation(
+inline fun <B : Any, reified R : Any, Req, TRes> Transport<Req, TRes>.nullableOperation(
   spec: OperationSpec<B>,
   nullify: NullifySpec,
-): NullableOperation<B, R, Req> = NullableOperation(this, spec, typeOf<R>(), nullify)
+): NullableOperation<B, R, Req, TRes> = NullableOperation(this, spec, typeOf<R>(), nullify)

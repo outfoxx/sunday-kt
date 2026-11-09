@@ -25,7 +25,7 @@ import io.outfoxx.sunday.problems.SundayHttpProblem
 import io.outfoxx.sunday.test.Implementation
 import io.outfoxx.sunday.test.TransportTest
 
-class OkHttpTransportTest : TransportTest() {
+class OkHttpTransportTest : TransportTest<okhttp3.Request, okhttp3.Response>() {
 
   override val implementation = Implementation.OkHttp
 
@@ -33,7 +33,7 @@ class OkHttpTransportTest : TransportTest() {
     uriTemplate: URITemplate,
     encoders: MediaTypeEncoders,
     decoders: MediaTypeDecoders,
-  ): Transport<Request> =
+  ): Transport<okhttp3.Request, okhttp3.Response> =
     OkHttpTransport(
       uriTemplate,
       problemFactory = SundayHttpProblem.Factory,

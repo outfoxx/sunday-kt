@@ -44,7 +44,7 @@ class OkHttpRequestBodyTest {
       val body = mutableMapOf("count" to 1)
       var validations = 0
       val operation =
-        factory.operation<Map<String, Int>, Unit, OkHttpRequest>(
+        factory.operation<Map<String, Int>, Unit, okhttp3.Request, okhttp3.Response>(
           OperationSpec(
             Method.Put,
             "/body",

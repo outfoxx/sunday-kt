@@ -16,7 +16,6 @@
 
 package io.outfoxx.sunday
 
-import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Parameters
 import io.outfoxx.sunday.http.Request
@@ -25,13 +24,13 @@ import io.outfoxx.sunday.security.SecurityBinding
 import kotlin.reflect.KClass
 
 /** Selects operation credentials while preserving the transport's validation, encoding, and execution paths. */
-fun <Req : Request> Transport<Req>.withSecurity(bindings: List<SecurityBinding>): Transport<Req> =
+fun <Req, TRes> Transport<Req, TRes>.withSecurity(bindings: List<SecurityBinding>): Transport<Req, TRes> =
   if (bindings.isEmpty()) this else AuthenticatedTransport(this, bindings.toList())
 
-private class AuthenticatedTransport<Req : Request>(
-  private val transport: Transport<Req>,
+private class AuthenticatedTransport<Req, TRes>(
+  private val transport: Transport<Req, TRes>,
   private val bindings: List<SecurityBinding>,
-) : Transport<Req>() {
+) : Transport<Req, TRes>() {
   override val registeredProblemTypes get() = transport.registeredProblemTypes
   override val mediaTypeEncoders get() = transport.mediaTypeEncoders
   override val mediaTypeDecoders get() = transport.mediaTypeDecoders
@@ -55,7 +54,7 @@ private class AuthenticatedTransport<Req : Request>(
     purpose: RequestPurpose,
     requestValidation: PayloadValidator<B>?,
     parameterValidation: ParameterValidator?,
-  ): Req =
+  ): Request<Req> =
     transport.authorize(
       transport.transportRequest(
         method,
@@ -66,22 +65,26 @@ private class AuthenticatedTransport<Req : Request>(
         contentTypes,
         acceptTypes,
         headers,
-        purpose,
+        if (purpose == RequestPurpose.Export) RequestPurpose.Normal else purpose,
         requestValidation,
         parameterValidation,
       ),
       bindings,
+      managed = purpose != RequestPurpose.Export,
     )
 
   override suspend fun authorize(
-    request: Request,
+    request: Request<Req>,
     bindings: List<SecurityBinding>,
-  ): Req = transport.authorize(request, bindings)
+    managed: Boolean,
+  ): Request<Req> = transport.authorize(request, bindings, managed)
 
-  override suspend fun transportResponse(request: Request) = transport.transportResponse(request)
+  override suspend fun transportResponse(request: Request<Req>) = transport.transportResponse(request)
 
-  override fun eventSource(requestSupplier: suspend (Headers) -> Request): EventSource =
-    EventSource(requestSupplier, problemFactory)
+  override fun start(
+    request: Request<Req>,
+    budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
+  ) = transport.start(request, budget)
 
   override fun close() = transport.close()
 

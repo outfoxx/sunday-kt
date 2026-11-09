@@ -18,7 +18,6 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.security.OAuthTokenProvider
 import io.outfoxx.sunday.security.TokenProvider
-import kotlinx.coroutines.future.await
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -31,7 +30,7 @@ class JdkOAuthTokenProvider(
     val builder = HttpRequest.newBuilder(request.uri)
     request.headers.forEach { (name, value) -> builder.header(name, value) }
     request.encodedForm()?.let { builder.POST(HttpRequest.BodyPublishers.ofString(it)) }
-    val response = httpClient.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString()).await()
+    val response = httpClient.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString()).requestAwait()
     OAuthTokenProvider.ExchangeResponse(response.statusCode(), response.body())
   }) {
   init {

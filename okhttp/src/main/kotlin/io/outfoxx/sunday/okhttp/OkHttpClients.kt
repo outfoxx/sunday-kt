@@ -27,5 +27,6 @@ import okhttp3.OkHttpClient
 fun OkHttpClient.reconfiguredForEvents(): OkHttpClient =
   newBuilder()
     .readTimeout(EventSource.httpReadTimeoutDefault)
+    .callTimeout(java.time.Duration.ZERO)
     .retryOnConnectionFailure(false)
     .build()

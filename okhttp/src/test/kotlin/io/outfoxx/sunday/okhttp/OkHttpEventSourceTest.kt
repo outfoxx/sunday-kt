@@ -16,55 +16,43 @@
 
 package io.outfoxx.sunday.okhttp
 
+import io.outfoxx.sunday.RequestExecution
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Request
+import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.test.EventSourceTest
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
-import okhttp3.Headers.Companion.toHeaders
-import okhttp3.OkHttpClient
-import java.time.Duration
+import org.junit.jupiter.api.AfterEach
 
-class OkHttpEventSourceTest : EventSourceTest() {
-
-  class OkHttpTrackingRequest(
-    request: okhttp3.Request,
-    httpClient: OkHttpClient,
-    requestDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val onStart: () -> Unit,
-  ) : OkHttpRequest(
-      request,
-      httpClient,
-      requestDispatcher,
-    ) {
-
-    override fun start(): Flow<Request.Event> =
-      super
-        .start()
-        .onEach {
-          if (it is Request.Event.Start) {
-            onStart()
-          }
-        }
-  }
+class OkHttpEventSourceTest : EventSourceTest<okhttp3.Request, okhttp3.Response>() {
+  private val client = okhttp3.OkHttpClient().reconfiguredForEvents()
 
   override fun createRequest(
     url: String,
     headers: Headers,
-    onStart: () -> Unit,
-  ): Request =
-    OkHttpTrackingRequest(
+  ): Request<okhttp3.Request> =
+    OkHttpRequest(
       okhttp3.Request
         .Builder()
-        .method("GET", null)
         .url(url)
-        .headers(headers.toMap().toHeaders())
-        .build(),
-      // EventSource owns timeout behavior; a native read timeout must not hide failed cancellation.
-      OkHttpClient.Builder().readTimeout(Duration.ZERO).build(),
-      onStart = onStart,
+        .headers(
+          okhttp3.Headers
+            .Builder()
+            .apply {
+              headers.forEach { (name, value) -> add(name, value) }
+            }.build(),
+        ).build(),
     )
 
+  override fun startRequest(request: Request<okhttp3.Request>) =
+    RequestExecution<okhttp3.Request, okhttp3.Response>().start(
+      request,
+      AuthenticationRecoveryBudget(),
+      send = { client.executeRequest(it.transport) },
+    )
+
+  @AfterEach
+  fun closeClient() {
+    client.dispatcher.executorService.shutdown()
+    client.connectionPool.evictAll()
+  }
 }

@@ -16,10 +16,10 @@
 
 package io.outfoxx.sunday.security
 
-/**
- * Creates the manager for already-resolved providers, without acquiring tokens or reading storage.
- * Applications can supply [TokenManager]'s store, expiry skew, clock and coroutine scope here.
- * The application owns the returned manager and must close it when its clients are no longer used.
- * Called once for secured settings and never for settings with no selected providers.
- */
-typealias TokenManagerFactory = (Map<String, TokenProvider>) -> TokenManager
+import io.outfoxx.sunday.RequestCancellationException
+
+/** The provider cannot repair the rejected credential; application intervention is required. */
+class TokenRejectedException(
+  cause: Throwable? = null,
+) : RuntimeException("The access token was rejected", cause),
+  RequestCancellationException

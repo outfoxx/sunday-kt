@@ -17,12 +17,16 @@
 package io.outfoxx.sunday.http
 
 import io.outfoxx.sunday.MediaType
+import io.outfoxx.sunday.http.ResponseEvent
 import kotlinx.io.Source
 
 /**
- * HTTP response.
+ * HTTP response wrapping the native response type [TRes].
  */
-interface Response {
+interface Response<out TRes> {
+
+  /** Native response underlying this wrapper; adapted properties are exposed by this interface. */
+  val transport: TRes
 
   /**
    * HTTP status code of the response.
@@ -48,7 +52,7 @@ interface Response {
    *
    * [Response.body] will be null if the body data is not yet
    * available; as when the [response][Response] is provided by
-   * a [Request.Event.Start] event.
+   * a [ResponseEvent.Start] event.
    */
   val body: Source?
 
@@ -58,14 +62,20 @@ interface Response {
    * [Response.trailers] will be null if the trailers are not yet
    * available. Trailers won't be available until the [Response.body]
    * has been consumed and closed or when the [response][Response] is provided by
-   * a [Request.Event.Start] event.
+   * a [ResponseEvent.Start] event.
    */
   val trailers: Headers?
 
   /**
    * HTTP request after API rewrites and/or HTTP redirects.
    */
-  val request: Request
+  val request: Request<*>
+
+  /**
+   * Cancels native I/O without accessing the buffered [body]. Safe to invoke from another thread.
+   * The body must still be closed by its reader after cancellation. In-memory responses need no action.
+   */
+  fun cancel() = Unit
 
 }
 
@@ -73,19 +83,19 @@ interface Response {
  * Convenience for checking if the [Response.statusCode]
  * represents a successful response.
  */
-val Response.isSuccessful: Boolean
+val Response<*>.isSuccessful: Boolean
   get() = statusCode in 200..299
 
 
 /**
  * Convenience accessor for HTTP Content-Length header.
  */
-val Response.contentLength: Long?
+val Response<*>.contentLength: Long?
   get() = headers.getFirstOrNull(HeaderNames.CONTENT_LENGTH)?.toLong()
 
 
 /**
  * Convenience accessor for HTTP Content-Type header.
  */
-val Response.contentType: MediaType?
+val Response<*>.contentType: MediaType?
   get() = headers.getFirstOrNull(HeaderNames.CONTENT_TYPE)?.let(MediaType::from)

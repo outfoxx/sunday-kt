@@ -18,55 +18,45 @@ package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.http.Headers
 import io.outfoxx.sunday.http.Response
-import io.outfoxx.sunday.security.RequestSecurity
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.okio.asKotlinxIoRawSource
-import okhttp3.OkHttpClient
 
 /**
  * Okhttp implementation of [Response].
  */
 class OkHttpResponse(
-  private val response: okhttp3.Response,
-  private val httpClient: OkHttpClient,
-) : Response {
+  val nativeResponse: okhttp3.Response,
+  private val cancelCall: () -> Unit = {},
+) : Response<okhttp3.Response> {
+
+  override val transport: okhttp3.Response get() = nativeResponse
+
+  override fun cancel() = cancelCall()
 
   override val statusCode: Int
-    get() = response.code
+    get() = nativeResponse.code
 
   override val reasonPhrase: String
-    get() = response.message
+    get() = nativeResponse.message
 
   override val headers: Headers
-    get() = response.headers
+    get() = nativeResponse.headers
 
-  override val body: Source?
-    get() =
-      response.body
-        ?.source()
-        ?.asKotlinxIoRawSource()
-        ?.buffered()
-
-  override val trailers: Headers?
-    get() =
-      try {
-        response.trailers()
-      } catch (_: IllegalStateException) {
-        null
-      }
-
-  override val request: OkHttpRequest by lazy {
-    OkHttpRequest(response.request, httpClient)
+  override val body: Source? by lazy {
+    nativeResponse.body
+      .source()
+      .asKotlinxIoRawSource()
+      .buffered()
   }
 
-  /** Retains the native body while removing managed credentials from response request diagnostics. */
-  internal fun redacted(security: RequestSecurity): OkHttpResponse {
-    val credentials = security.redact(response.request.url.toUri(), response.request.headers)
-    return OkHttpResponse(
-      response.newBuilder().request(response.request.withCredentials(credentials)).build(),
-      httpClient,
-    )
+  override val trailers: Headers?
+    get() = nativeResponse.peekTrailers()
+
+  override val request: OkHttpRequest by lazy {
+    // The outer response describes the application request; network metadata includes later
+    // interceptor rewrites and the final transmission when native recovery retried the call.
+    OkHttpRequest(nativeResponse.networkResponse?.request ?: nativeResponse.request)
   }
 
 }

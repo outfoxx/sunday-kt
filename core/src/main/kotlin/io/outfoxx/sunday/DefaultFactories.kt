@@ -4,11 +4,10 @@ import io.outfoxx.sunday.SundayError.Reason.MultipleProblemFactoryProviders
 import io.outfoxx.sunday.SundayError.Reason.MultipleTransportProviders
 import io.outfoxx.sunday.SundayError.Reason.NoProblemFactoryProvider
 import io.outfoxx.sunday.SundayError.Reason.NoTransportProvider
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.TokenManager
+import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
 import io.outfoxx.sunday.spi.TransportProvider
 import java.util.ServiceLoader
@@ -35,8 +34,10 @@ object DefaultFactories {
     mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-    tokenManager: TokenManager? = null,
-  ): Transport<Request> {
+    tokenProviders: Map<String, TokenProvider> = emptyMap(),
+    requestAdapter: RequestAdapter? = null,
+    responseAdapter: ResponseAdapter? = null,
+  ): Transport<*, *> {
     val provider =
       selectTransportProvider(
         availableTransports(),
@@ -50,7 +51,9 @@ object DefaultFactories {
         mediaTypeEncoders = mediaTypeEncoders,
         mediaTypeDecoders = mediaTypeDecoders,
         pathEncoders = pathEncoders,
-        tokenManager = tokenManager,
+        tokenProviders = tokenProviders,
+        requestAdapter = requestAdapter,
+        responseAdapter = responseAdapter,
       )
 
     return provider.create(config)

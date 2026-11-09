@@ -17,11 +17,9 @@
 package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.http.Headers
-import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.Status
 import kotlinx.io.Source
-import java.net.http.HttpClient
 import java.net.http.HttpResponse
 
 /**
@@ -29,8 +27,12 @@ import java.net.http.HttpResponse
  */
 class JdkResponse(
   private val response: HttpResponse<Source>,
-  private val httpClient: HttpClient,
-) : Response {
+  private val cancelBody: () -> Unit = {},
+) : Response<HttpResponse<Source>> {
+
+  override val transport: HttpResponse<Source> get() = response
+
+  override fun cancel() = cancelBody()
 
   override val statusCode: Int
     get() = response.statusCode()
@@ -49,7 +51,7 @@ class JdkResponse(
   override val trailers: Headers?
     get() = null
 
-  override val request: Request
-    get() = JdkRequest(response.request(), httpClient)
+  override val request: JdkRequest
+    get() = JdkRequest(response.request())
 
 }

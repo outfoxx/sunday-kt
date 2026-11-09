@@ -87,13 +87,13 @@ class ClientSettingsTest {
           .single()
           .scopes,
       )
-      val manager = settings.tokenManager!!
+      val manager = settings.tokenProviders.getValue("identity")
       assertEquals("private-token", manager.credentials(binding).tokens.accessToken)
       assertFalse(settings.toString().contains("private-token"))
     }
 
   @Test
-  fun `configurations isolate token managers for the same scheme`() =
+  fun `configurations isolate static providers for the same scheme`() =
     runTest {
       val first =
         ClientSettings(
@@ -109,13 +109,15 @@ class ClientSettingsTest {
         )
       assertEquals(
         "one",
-        first.tokenManager!!
+        first.tokenProviders
+          .getValue("identity")
           .credentials(binding)
           .tokens.accessToken,
       )
       assertEquals(
         "two",
-        second.tokenManager!!
+        second.tokenProviders
+          .getValue("identity")
           .credentials(binding)
           .tokens.accessToken,
       )
@@ -166,7 +168,7 @@ class ClientSettingsTest {
             },
         ),
       )
-    assertNotNull(settings.tokenManager)
+    assertNotNull(settings.tokenProviders["identity"])
     assertEquals(1, calls)
   }
 
@@ -249,13 +251,14 @@ class ClientSettingsTest {
           )
         assertEquals(
           expected,
-          settings.tokenManager!!
+          settings.tokenProviders
+            .getValue("identity")
             .credentials(selected)
             .tokens.accessToken,
         )
         assertFalse(credential.toString().contains("secret"))
       }
-      assertEquals(null, ClientSettings(URI("https://api.example")).tokenManager)
+      assertEquals(null, ClientSettings(URI("https://api.example")).tokenProviders["identity"])
     }
 
   @Test
@@ -284,7 +287,8 @@ class ClientSettingsTest {
         assertFalse(credentials.toString().contains("custom-token"))
         assertEquals(
           "custom-token",
-          settings.tokenManager!!
+          settings.tokenProviders
+            .getValue("identity")
             .credentials(binding)
             .tokens.accessToken,
         )
@@ -337,7 +341,7 @@ class ClientSettingsTest {
         mapOf("list" to listOf(listOf(codeBinding))),
         mapOf("identity" to credential),
       )
-    assertNotNull(settings.tokenManager)
+    assertNotNull(settings.tokenProviders["identity"])
     assertEquals(1, calls)
     assertFalse(credential.toString().contains("session"))
     for (invalid in listOf(

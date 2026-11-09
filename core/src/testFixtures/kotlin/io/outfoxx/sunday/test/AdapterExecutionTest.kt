@@ -378,6 +378,56 @@ abstract class AdapterExecutionTest<TReq, TRes> {
     }
 
   @Test
+  fun `query-only redirects preserve the path during buffered execution`() = checkQueryOnlyRedirects(false)
+
+  @Test
+  fun `query-only redirects preserve the path during streaming execution`() = checkQueryOnlyRedirects(true)
+
+  private fun checkQueryOnlyRedirects(streaming: Boolean) =
+    runTest {
+      val cases =
+        listOf(
+          Triple("/items/list?page=1", "?page=2", "/items/list?page=2"),
+          Triple("/items/list", "?page=2", "/items/list?page=2"),
+          Triple("/items/list?page=1", "?", "/items/list?"),
+          Triple("/items/list?page=1", "?page=2#section", "/items/list?page=2"),
+          Triple(
+            "/items/a%2Fb%3Fc%23d%25?page=1",
+            "?page=%2F%3F%23%25",
+            "/items/a%2Fb%3Fc%23d%25?page=%2F%3F%23%25",
+          ),
+          Triple("/items/list?page=1", "next?page=2", "/items/next?page=2"),
+        )
+      for ((path, location, expected) in cases) {
+        MockWebServer().use { server ->
+          server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", location))
+          server.enqueue(MockResponse().setBody("final"))
+          val requests = AtomicInteger()
+          transport(
+            URITemplate(server.url("/").toString()),
+            requestAdapter =
+              object : RequestAdapter {
+                override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> =
+                  if (requests.getAndIncrement() == 0) {
+                    request.copy(uri = server.url(path).toUri())
+                  } else {
+                    request
+                  }
+              },
+          ).use { transport ->
+            val result = perform(transport, streaming)
+            assertEquals(200, result.statusCode)
+            result.body!!.use { assertEquals("final", it.readString()) }
+            assertEquals(2, server.requestCount)
+            assertEquals(path, server.takeRequest().path)
+            // The JDK client omits a bare query delimiter on the wire.
+            assertEquals(expected.removeSuffix("?"), server.takeRequest().path?.removeSuffix("?"), "$path -> $location")
+          }
+        }
+      }
+    }
+
+  @Test
   fun `adapted redirects run hooks for every attempt and apply see-other semantics`() =
     runTest {
       for (streaming in listOf(false, true)) {

@@ -16,6 +16,8 @@
 
 package io.outfoxx.sunday.http
 
+import java.net.URI
+
 /** True when ambient client credentials and automatic redirects must not bypass credential ownership. */
 val Request<*>.isCredentialed: Boolean
   get() =
@@ -31,7 +33,21 @@ fun <TReq> Request<TReq>.redirectedRequest(
 ): Request<TReq>? {
   if (sent.isCredentialed || response.statusCode !in setOf(301, 302, 303, 307, 308)) return null
   val location = response.headers.firstOrNull { it.first.equals("Location", true) }?.second ?: return null
-  val target = runCatching { sent.uri.resolve(location) }.getOrNull() ?: return null
+  val target =
+    runCatching {
+      if (location.startsWith("?")) {
+        // URI.resolve drops the last path segment for query-only references, contrary to RFC 3986 section 5.2.2.
+        // Retain the raw path so escaped separators are neither decoded nor encoded again.
+        URI(
+          sent.uri
+            .toString()
+            .substringBefore('#')
+            .substringBefore('?') + location,
+        )
+      } else {
+        sent.uri.resolve(location)
+      }
+    }.getOrNull() ?: return null
   if (target.scheme !in setOf("http", "https")) return null
   val get =
     (response.statusCode == 303 && sent.method != Method.Head) ||

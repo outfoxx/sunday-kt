@@ -18,6 +18,7 @@ package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.test.ManagedSecurityTest
 
@@ -32,10 +33,13 @@ class OkHttpManagedSecurityTest : ManagedSecurityTest<okhttp3.Request, okhttp3.R
   override fun transport(
     base: URITemplate,
     manager: TokenProvider?,
-  ) = OkHttpTransport(
-    base,
-    SundayHttpProblem.Factory,
-    tokenProviders =
-      manager?.let { mapOf("identity" to it) } ?: emptyMap(),
-  )
+  ): OkHttpTransport {
+    val authentication = AuthenticationAdapter(manager?.let { mapOf("identity" to it) } ?: emptyMap())
+    return OkHttpTransport(
+      base,
+      SundayHttpProblem.Factory,
+      requestAdapter = authentication,
+      responseAdapter = authentication,
+    )
+  }
 }

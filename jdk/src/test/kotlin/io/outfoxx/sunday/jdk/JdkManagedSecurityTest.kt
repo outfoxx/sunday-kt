@@ -18,6 +18,7 @@ package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.test.ManagedSecurityTest
 
@@ -36,10 +37,13 @@ class JdkManagedSecurityTest :
   override fun transport(
     base: URITemplate,
     manager: TokenProvider?,
-  ) = JdkTransport(
-    base,
-    SundayHttpProblem.Factory,
-    tokenProviders =
-      manager?.let { mapOf("identity" to it) } ?: emptyMap(),
-  )
+  ): JdkTransport {
+    val authentication = AuthenticationAdapter(manager?.let { mapOf("identity" to it) } ?: emptyMap())
+    return JdkTransport(
+      base,
+      SundayHttpProblem.Factory,
+      requestAdapter = authentication,
+      responseAdapter = authentication,
+    )
+  }
 }

@@ -17,9 +17,12 @@
 package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestAdapters
 import io.outfoxx.sunday.ResponseAdapter
+import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.ClientSettings
 import java.net.http.HttpClient
 
@@ -32,13 +35,14 @@ fun ClientSettings.jdkTransport(
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
   redirectPolicy: HttpClient.Redirect = httpClient?.followRedirects() ?: HttpClient.Redirect.NORMAL,
-): JdkTransport =
-  JdkTransport(
+): JdkTransport {
+  val authentication = AuthenticationAdapter(tokenProviders)
+  return JdkTransport(
     URITemplate(baseURL.toString()),
     problemFactory,
     httpClient = httpClient,
-    tokenProviders = tokenProviders,
-    requestAdapter = requestAdapter,
-    responseAdapter = responseAdapter,
+    requestAdapter = RequestAdapters(listOfNotNull(authentication, requestAdapter)),
+    responseAdapter = ResponseAdapters(listOfNotNull(authentication, responseAdapter)),
     redirectPolicy = redirectPolicy,
   )
+}

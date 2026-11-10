@@ -22,7 +22,7 @@ import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.problems.SundayHttpProblem
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
 import io.outfoxx.sunday.security.TokenProvider
@@ -66,7 +66,7 @@ class JdkNativeRequestTypesTest :
   }
 
   @Test
-  fun `native adapter follows authentication and precedes portable adaptation in every execution mode`() =
+  fun `native adapter precedes portable authentication and adaptation in every execution mode`() =
     runTest {
       for (mode in listOf("export", "buffered", "streaming")) {
         val calls = mutableListOf<String>()
@@ -94,12 +94,13 @@ class JdkNativeRequestTypesTest :
           )
         MockWebServer().use { server ->
           server.enqueue(MockResponse().setBody("body"))
+          val authentication = AuthenticationAdapter(mapOf("external" to provider))
           JdkTransport(
             URITemplate(server.url("/").toString()),
             SundayHttpProblem.Factory,
-            tokenProviders = mapOf("external" to provider),
+            responseAdapter = authentication,
             adapter = { request ->
-              assertEquals("Bearer token", request.headers().firstValue("Authorization").orElse(null))
+              assertEquals(null, request.headers().firstValue("Authorization").orElse(null))
               calls += "native"
               java.net.http.HttpRequest
                 .newBuilder(request) { _, _ -> true }
@@ -107,13 +108,15 @@ class JdkNativeRequestTypesTest :
                 .build()
             },
             requestAdapter =
-              object : RequestAdapter {
-                override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> {
-                  assertEquals("yes", request.headers.first { it.first.equals("X-Native", true) }.second)
-                  calls += "portable"
-                  return request
-                }
-              },
+              authentication.chainTo(
+                object : RequestAdapter {
+                  override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> {
+                    assertEquals("yes", request.headers.first { it.first.equals("X-Native", true) }.second)
+                    calls += "portable"
+                    return request
+                  }
+                },
+              ),
           ).withSecurity(listOf(binding)).use { transport ->
             val request =
               transport.transportRequest<Unit>(
@@ -138,9 +141,9 @@ class JdkNativeRequestTypesTest :
                     .orElse(null),
                 )
               "buffered" -> transport.transportResponse(request).body?.close()
-              "streaming" -> transport.start(request, AuthenticationRecoveryBudget()).toList()
+              "streaming" -> transport.start(request).toList()
             }
-            assertEquals(listOf("acquire", "native", "portable"), calls, mode)
+            assertEquals(listOf("native", "acquire", "portable"), calls, mode)
             assertEquals(if (mode == "export") 0 else 1, server.requestCount, mode)
           }
         }

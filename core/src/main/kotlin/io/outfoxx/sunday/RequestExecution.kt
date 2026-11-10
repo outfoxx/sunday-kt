@@ -21,9 +21,6 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.copy
-import io.outfoxx.sunday.security.AuthenticationAdapter
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
-import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.security.withSecurityContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -43,34 +40,23 @@ import java.net.ProtocolException
 
 /** Transport-owned adapter configuration. Invocation state is local to each execution. */
 class RequestExecution<TReq, TRes>(
-  providers: Map<String, TokenProvider> = emptyMap(),
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
   private val nativeRequestAdapter: (suspend (Request<TReq>) -> Request<TReq>)? = null,
 ) {
-  private val authentication = providers.takeIf { it.isNotEmpty() }?.let(::AuthenticationAdapter)
   private val requestAdapter = RequestAdapters(listOfNotNull(requestAdapter))
-  private val responseAdapter = ResponseAdapters(listOfNotNull(authentication, responseAdapter))
+  private val responseAdapter = ResponseAdapters(listOfNotNull(responseAdapter))
 
   /** Adapts once for request export; the consumer owns subsequent execution. */
   suspend fun export(request: Request<TReq>): Request<TReq> = adapt(request).let { it.withSecurityContext(null) }
 
   private suspend fun adapt(request: Request<TReq>): Request<TReq> {
-    if (request.securityContext != null && authentication == null) {
-      // A custom request adapter may supply all credentials without Sunday's provider machinery.
-      if (requestAdapter.adapters.isEmpty() && nativeRequestAdapter == null) {
-        throw io.outfoxx.sunday.security
-          .TokenProviderException()
-      }
-    }
-    val authorized = authentication?.let { request.adaptedBy(it::adapt) } ?: request
-    val nativeAdapted = nativeRequestAdapter?.let { authorized.adaptedBy(it) } ?: authorized
+    val nativeAdapted = nativeRequestAdapter?.let { request.adaptedBy(it) } ?: request
     return requestAdapter.adapt(nativeAdapted)
   }
 
   private suspend fun <T> execute(
     request: Request<TReq>,
-    budget: AuthenticationRecoveryBudget,
     consume: suspend (Response<TRes>) -> T,
     send: suspend (Request<TReq>) -> Response<TRes>,
     redirect: (Request<TReq>, Response<TRes>, Request<*>) -> Request<TReq>?,
@@ -97,16 +83,12 @@ class RequestExecution<TReq, TRes>(
         val result =
           response.cancellable {
             currentCoroutineContext().ensureActive()
-            if (budget.shouldRetry(effective, response)) {
-              Attempt.Retry(prepared)
+            val next = redirect(prepared, response, effective)
+            if (next != null) {
+              if (++redirects > 20) throw ProtocolException("Too many redirects")
+              Attempt.Retry(next)
             } else {
-              val next = redirect(prepared, response, effective)
-              if (next != null) {
-                if (++redirects > 20) throw ProtocolException("Too many redirects")
-                Attempt.Retry(next)
-              } else {
-                Attempt.Complete(consume(response))
-              }
+              Attempt.Complete(consume(response))
             }
           }
         when (result) {
@@ -123,7 +105,7 @@ class RequestExecution<TReq, TRes>(
     send: suspend (Request<TReq>) -> Response<TRes>,
     redirect: (Request<TReq>, Response<TRes>, Request<*>) -> Request<TReq>? = { _, _, _ -> null },
   ): Response<TRes> =
-    execute(request, AuthenticationRecoveryBudget(), { response ->
+    execute(request, { response ->
       withContext(Dispatchers.IO) {
         val buffer = response.body?.let { Buffer().also { target -> it.transferTo(target) } }
         response.copy(body = buffer)
@@ -133,12 +115,11 @@ class RequestExecution<TReq, TRes>(
   /** Adapts each event connection before exposing its start event or reading its body. */
   fun start(
     request: Request<TReq>,
-    budget: AuthenticationRecoveryBudget,
     send: suspend (Request<TReq>) -> Response<TRes>,
     redirect: (Request<TReq>, Response<TRes>, Request<*>) -> Request<TReq>? = { _, _, _ -> null },
   ): Flow<ResponseEvent<TRes>> =
     flow {
-      execute(request, budget, { emitResponse(it) }, send, redirect)
+      execute(request, { emitResponse(it) }, send, redirect)
     }.flowOn(Dispatchers.IO)
 
   private sealed interface Attempt<out TReq, out T> {

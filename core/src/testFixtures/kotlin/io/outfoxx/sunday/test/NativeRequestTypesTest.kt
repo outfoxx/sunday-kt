@@ -31,7 +31,6 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.nullableOperation
 import io.outfoxx.sunday.operation
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.withSecurity
 import kotlinx.coroutines.flow.Flow
@@ -96,7 +95,7 @@ abstract class NativeRequestTypesTest<TReq, TRes> {
           assertNativeResponse(nullable.transport)
           assertEquals("body", nullable.result)
           val request = secured.transportRequest<Unit>(Method.Get, "value", purpose = Transport.RequestPurpose.Events)
-          val events: Flow<ResponseEvent<TRes>> = secured.start(request, AuthenticationRecoveryBudget())
+          val events: Flow<ResponseEvent<TRes>> = secured.start(request)
           var starts = 0
           events.collect { event ->
             when (event) {
@@ -188,7 +187,7 @@ abstract class NativeRequestTypesTest<TReq, TRes> {
               purpose = Transport.RequestPurpose.Normal,
             )
           if (streaming) {
-            val events = transport.start(request, AuthenticationRecoveryBudget()).toList()
+            val events = transport.start(request).toList()
             assertEquals(
               200,
               events

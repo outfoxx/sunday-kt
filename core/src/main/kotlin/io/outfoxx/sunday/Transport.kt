@@ -176,10 +176,7 @@ abstract class Transport<Req, TRes> : Closeable {
   abstract suspend fun transportResponse(request: Request<Req>): Response<TRes>
 
   /** Starts a transport-managed connection using a subscription-wide retry budget. */
-  abstract fun start(
-    request: Request<Req>,
-    budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
-  ): Flow<ResponseEvent<TRes>>
+  abstract fun start(request: Request<Req>): Flow<ResponseEvent<TRes>>
 
   /**
    * Create and execute a [request][Request] created from the given request

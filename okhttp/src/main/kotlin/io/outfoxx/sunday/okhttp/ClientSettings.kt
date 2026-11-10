@@ -17,9 +17,12 @@
 package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestAdapters
 import io.outfoxx.sunday.ResponseAdapter
+import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.ClientSettings
 import okhttp3.OkHttpClient
 
@@ -31,12 +34,13 @@ fun ClientSettings.okhttpTransport(
   httpClient: OkHttpClient = OkHttpClient(),
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
-): OkHttpTransport =
-  OkHttpTransport(
+): OkHttpTransport {
+  val authentication = AuthenticationAdapter(tokenProviders)
+  return OkHttpTransport(
     URITemplate(baseURL.toString()),
     problemFactory,
     httpClient = httpClient,
-    tokenProviders = tokenProviders,
-    requestAdapter = requestAdapter,
-    responseAdapter = responseAdapter,
+    requestAdapter = RequestAdapters(listOfNotNull(authentication, requestAdapter)),
+    responseAdapter = ResponseAdapters(listOfNotNull(authentication, responseAdapter)),
   )
+}

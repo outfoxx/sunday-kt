@@ -7,7 +7,6 @@ import io.outfoxx.sunday.SundayError.Reason.NoTransportProvider
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeDecoders
 import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.spi.ProblemFactoryProvider
 import io.outfoxx.sunday.spi.TransportProvider
 import java.util.ServiceLoader
@@ -34,7 +33,6 @@ object DefaultFactories {
     mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
     mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
     pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-    tokenProviders: Map<String, TokenProvider> = emptyMap(),
     requestAdapter: RequestAdapter? = null,
     responseAdapter: ResponseAdapter? = null,
   ): Transport<*, *> {
@@ -51,7 +49,6 @@ object DefaultFactories {
         mediaTypeEncoders = mediaTypeEncoders,
         mediaTypeDecoders = mediaTypeDecoders,
         pathEncoders = pathEncoders,
-        tokenProviders = tokenProviders,
         requestAdapter = requestAdapter,
         responseAdapter = responseAdapter,
       )

@@ -27,9 +27,20 @@ class AuthenticationAdapter(
   private val providers: Map<String, TokenProvider>,
 ) : RequestAdapter,
   ResponseAdapter {
+  internal class TerminalProviderFailure(
+    cause: TokenProviderException,
+  ) : RuntimeException(cause.message, cause),
+    io.outfoxx.sunday.RequestCancellationException
+
   override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> {
     val context = request.securityContext ?: return request
-    val credentials = RequestSecurity(context.bindings, providers).authorize(request.uri, request.headers)
+    val credentials =
+      try {
+        RequestSecurity(context.bindings, providers).authorize(request.uri, request.headers)
+      } catch (error: TokenProviderException) {
+        if (error.reason == TokenProviderException.Reason.Temporary) throw error
+        throw TerminalProviderFailure(error)
+      }
     return request
       .copy(
         uri = credentials.uri,
@@ -43,7 +54,12 @@ class AuthenticationAdapter(
   ): Response<TRes> {
     val context = request.securityContext ?: return response
     val security = RequestSecurity(context.bindings, providers)
-    security.reject(RequestSecurity.Credentials(request.uri, request.headers, context.leases), response)
+    try {
+      security.reject(RequestSecurity.Credentials(request.uri, request.headers, context.leases), response)
+    } catch (error: TokenProviderException) {
+      if (error.reason == TokenProviderException.Reason.Temporary) throw error
+      throw TerminalProviderFailure(error)
+    }
     val redacted = security.redact(request.uri, request.headers)
     return response.copy(
       request = request.copy(uri = redacted.uri, headers = redacted.headers).withSecurityContext(null),

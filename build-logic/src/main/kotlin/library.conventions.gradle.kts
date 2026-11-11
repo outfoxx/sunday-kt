@@ -64,6 +64,25 @@ tasks {
 
 }
 
+private val publicationChannel = PublicationChannel.forVersion(releaseVersion)
+
+publishing {
+  repositories {
+    maven {
+      name = "GitHubPackages"
+      url = uri("https://maven.pkg.github.com/outfoxx/sunday-kt")
+      credentials(PasswordCredentials::class)
+    }
+  }
+}
+
+// The CLI task selects the destination for every library without changing its coordinates.
+tasks.register("publishRelease") {
+  group = "publishing"
+  description = "Publishes this version to its release channel."
+  dependsOn(publicationChannel.taskName)
+}
+
 mavenPublishing {
   pom {
     name.set(project.name)

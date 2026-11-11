@@ -13,7 +13,7 @@ env:
 jobs:
 
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # The live OAuth browser dependency supports this runner image.
 
     steps:
     - uses: actions/checkout@v6.0.2
@@ -27,6 +27,9 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5.0.0
+
+    - name: Test Build Logic
+      run: ./gradlew -p build-logic test
 
     - name: Build & Test
       run: ./gradlew check sonar

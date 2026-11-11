@@ -15,8 +15,55 @@ Kotlin framework for generated REST clients.
 Maven
 -----
 
-Sunday is delivered as a set of Maven artifacts and releases are available from Maven Central.
+Sunday is delivered as a set of Maven artifacts. Stable releases are available from Maven Central;
+new prereleases and snapshots are published to GitHub Packages with the same `io.outfoxx.sunday` coordinates.
 Since 1.0.0-beta.24, the previous monolithic `sunday` artifact has been split into modules.
+
+For prereleases, add the repository below. GitHub requires authentication even for public Maven
+packages: use a classic personal access token with `read:packages`, or an authorized Actions
+`GITHUB_TOKEN`. Keep credentials in your user Gradle properties or environment, never in source.
+
+```kotlin
+maven {
+  name = "SundayPackages"
+  url = uri("https://maven.pkg.github.com/outfoxx/sunday-kt")
+  credentials(PasswordCredentials::class)
+  content { includeGroup("io.outfoxx.sunday") }
+}
+```
+
+Supply `SundayPackagesUsername` and `SundayPackagesPassword` Gradle properties (or their
+`ORG_GRADLE_PROJECT_` environment equivalents). Existing Maven Central versions remain available.
+The release workflows select the destination from the version: `2.0.0` uses Maven Central;
+`2.0.0-beta.22` and `2.0.0-SNAPSHOT` use GitHub Packages. Both publication channels retain artifact signing.
+
+For Maven, add this repository to your project's `pom.xml`:
+
+```xml
+<repositories>
+  <repository>
+    <id>sunday-packages</id>
+    <url>https://maven.pkg.github.com/outfoxx/sunday-kt</url>
+    <releases><enabled>true</enabled></releases>
+    <snapshots><enabled>true</enabled></snapshots>
+  </repository>
+</repositories>
+```
+
+Add the matching server to `~/.m2/settings.xml`. Supply a GitHub username and a classic
+PAT with `read:packages` through the environment; do not commit the token or settings file.
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>sunday-packages</id>
+      <username>${env.GITHUB_ACTOR}</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+</settings>
+```
 
 Artifacts
 ---------

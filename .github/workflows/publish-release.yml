@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 concurrency:
   group: publish-release-${{github.ref_name}}
@@ -40,11 +41,13 @@ jobs:
       run: >-
         ./gradlew
         -PreleaseVersion=${{ github.ref_name }}
-        publishToMavenCentral
+        publishRelease
         -x test
         --rerun-tasks
         --no-build-cache
       env:
+        ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
+        ORG_GRADLE_PROJECT_GitHubPackagesPassword: ${{ github.token }}
         ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
         ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
         ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.OSSRH_GPG_SECRET_KEY_ID }}

@@ -18,7 +18,7 @@ package io.outfoxx.sunday.security
 
 import io.outfoxx.sunday.RequestCancellationException
 
-/** The provider cannot repair the rejected credential; application intervention is required. */
+/** Stops a rejected-credential exchange; the credential owner determines subsequent recovery. */
 class TokenRejectedException(
   cause: Throwable? = null,
 ) : RuntimeException("The access token was rejected", cause),

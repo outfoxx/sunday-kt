@@ -130,6 +130,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
           assertEquals(401, executeExport(exported))
           assertEquals(3, acquisitions)
           assertEquals(0, rejections)
+          assertEquals(401, secured.transportResponse(Method.Get, "value").statusCode)
           secured.transportResponse(Method.Get, "value")
           assertEquals(5, acquisitions)
           assertEquals(1, rejections)
@@ -149,7 +150,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
     }
 
   @Test
-  fun `native execution recovers once and rechecks credentials on reuse`() =
+  fun `native execution renews on a subsequent explicit call`() =
     runTest {
       val provider = Provider()
       MockWebServer().use { server ->
@@ -158,6 +159,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
         TokenManager(mapOf("identity" to provider), scope = this).use { manager ->
           transport(URITemplate(server.url("/").toString()), manager).use { transport ->
             val secured = transport.withSecurity(listOf(binding))
+            assertEquals(401, secured.transportResponse(Method.Get, "value").statusCode)
             val response = secured.transportResponse(Method.Get, "value")
             assertEquals(204, response.statusCode)
             assertFalse(
@@ -183,7 +185,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
       for ((method, status, count) in listOf(
         Triple(Method.Post, 401, 1),
         Triple(Method.Get, 403, 1),
-        Triple(Method.Get, 401, 2),
+        Triple(Method.Get, 401, 1),
       )) {
         val provider = Provider()
         MockWebServer().use { server ->
@@ -311,7 +313,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
     }
 
   @Test
-  fun `event connections recover before emitting the successful response`() =
+  fun `event connections emit rejection without an authentication retry`() =
     runTest {
       val provider = Provider()
       MockWebServer().use { server ->
@@ -328,21 +330,19 @@ abstract class ManagedSecurityTest<TReq, TRes> {
               transport
                 .start(
                   request,
-                  io.outfoxx.sunday.security
-                    .AuthenticationRecoveryBudget(),
                 ).toList()
-            assertEquals(listOf(200), events.filterIsInstance<ResponseEvent.Start<*>>().map { it.value.statusCode })
-            assertTrue(events.any { it is ResponseEvent.Data })
+            assertEquals(listOf(401), events.filterIsInstance<ResponseEvent.Start<*>>().map { it.value.statusCode })
+            assertFalse(events.any { it is ResponseEvent.Data })
             assertTrue(events.any { it is ResponseEvent.End })
-            assertEquals(2, server.requestCount)
-            assertEquals(1, provider.refreshed)
+            assertEquals(1, server.requestCount)
+            assertEquals(0, provider.refreshed)
           }
         }
       }
     }
 
   @Test
-  fun `event subscriptions share one recovery across reconnects`() =
+  fun `event subscriptions stop at a rejected connection`() =
     runTest {
       val provider = Provider()
       MockWebServer().use { server ->
@@ -357,10 +357,9 @@ abstract class ManagedSecurityTest<TReq, TRes> {
               source.onError = { error -> if (error != null) failed.complete(Unit) }
               source.connect()
               failed.await()
-              assertEquals(3, server.requestCount)
-              assertEquals(1, provider.refreshed)
+              assertEquals(1, server.requestCount)
+              assertEquals(0, provider.refreshed)
               assertEquals("Bearer first-1", server.takeRequest().getHeader("Authorization"))
-              repeat(2) { assertEquals("Bearer renewed-1", server.takeRequest().getHeader("Authorization")) }
             }
           }
         }
@@ -412,7 +411,7 @@ abstract class ManagedSecurityTest<TReq, TRes> {
             val failed = CompletableDeferred<Throwable?>()
             source.onError = { failed.complete(it) }
             source.connect()
-            assertTrue(failed.await() is TokenProviderException)
+            assertTrue(failed.await()?.cause is TokenProviderException)
             assertEquals(EventSource.ReadyState.Closed, source.readyState)
             assertEquals(0, server.requestCount)
           }
@@ -429,10 +428,9 @@ abstract class ManagedSecurityTest<TReq, TRes> {
           DefaultFactories
             .transport(
               URITemplate(server.url("/").toString()),
-              tokenProviders =
-                mapOf(
-                  "identity" to manager,
-                ),
+              requestAdapter =
+                io.outfoxx.sunday.security
+                  .AuthenticationAdapter(mapOf("identity" to manager)),
             ).use { transport ->
               val request = transport.withSecurity(listOf(binding)).transportRequest(Method.Get, "value")
               assertEquals("Bearer first-1", request.headers.first { it.first.equals("Authorization", true) }.second)
@@ -512,8 +510,9 @@ abstract class ManagedSecurityTest<TReq, TRes> {
   private suspend fun expectFailure(action: suspend () -> Unit) {
     try {
       action()
-    } catch (_: TokenProviderException) {
-      return
+    } catch (error: RuntimeException) {
+      if (error is TokenProviderException || error.cause is TokenProviderException) return
+      throw error
     }
     throw AssertionError("Expected credential failure")
   }

@@ -81,10 +81,7 @@ private class AuthenticatedTransport<Req, TRes>(
 
   override suspend fun transportResponse(request: Request<Req>) = transport.transportResponse(request)
 
-  override fun start(
-    request: Request<Req>,
-    budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
-  ) = transport.start(request, budget)
+  override fun start(request: Request<Req>) = transport.start(request)
 
   override fun close() = transport.close()
 

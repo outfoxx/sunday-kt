@@ -47,10 +47,8 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.SecurityContext
-import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.security.withSecurityContext
 import kotlinx.io.readByteString
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -69,14 +67,13 @@ class OkHttpTransport(
   override val mediaTypeEncoders: MediaTypeEncoders = MediaTypeEncoders.default,
   override val mediaTypeDecoders: MediaTypeDecoders = MediaTypeDecoders.default,
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
-  tokenProviders: Map<String, TokenProvider> = emptyMap(),
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
 ) : Transport<okhttp3.Request, okhttp3.Response>(),
   Closeable {
 
   private val execution =
-    RequestExecution<okhttp3.Request, okhttp3.Response>(tokenProviders, requestAdapter, responseAdapter)
+    RequestExecution<okhttp3.Request, okhttp3.Response>(requestAdapter, responseAdapter)
   private val attemptClients = OkHttpAttemptClients(httpClient)
   private val eventAttemptClients = OkHttpAttemptClients(eventHttpClient)
 
@@ -215,12 +212,10 @@ class OkHttpTransport(
     })
   }
 
-  override fun start(
-    request: Request<okhttp3.Request>,
-    budget: AuthenticationRecoveryBudget,
-  ) = execution.start(request, budget, { send(it, eventAttemptClients) }, { prepared, response, sent ->
-    redirect(prepared, response, sent, eventHttpClient)
-  })
+  override fun start(request: Request<okhttp3.Request>) =
+    execution.start(request, { send(it, eventAttemptClients) }, { prepared, response, sent ->
+      redirect(prepared, response, sent, eventHttpClient)
+    })
 
   private suspend fun send(
     request: Request<okhttp3.Request>,

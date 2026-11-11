@@ -47,10 +47,8 @@ import io.outfoxx.sunday.mediatypes.codecs.MediaTypeEncoders
 import io.outfoxx.sunday.mediatypes.codecs.URLQueryParamsEncoder
 import io.outfoxx.sunday.problems.Problem
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.SecurityContext
-import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.security.withSecurityContext
 import kotlinx.io.readByteArray
 import org.slf4j.LoggerFactory
@@ -79,7 +77,6 @@ class JdkTransport(
   override val pathEncoders: Map<KClass<*>, PathEncoder> = PathEncoders.default,
   private val requestTimeout: Duration = requestTimeoutDefault,
   private val eventRequestTimeout: Duration? = null,
-  tokenProviders: Map<String, TokenProvider> = emptyMap(),
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
   private val redirectPolicy: HttpClient.Redirect = httpClient?.followRedirects() ?: HttpClient.Redirect.NORMAL,
@@ -89,7 +86,6 @@ class JdkTransport(
   private val httpClient = httpClient ?: defaultHttpClient(allowRedirects = false)
   private val execution =
     RequestExecution<HttpRequest, java.net.http.HttpResponse<kotlinx.io.Source>>(
-      tokenProviders,
       requestAdapter,
       responseAdapter,
       adapter?.let { native -> { request -> request.copy(transport = native(request.transport)) } },
@@ -269,10 +265,7 @@ class JdkTransport(
     return execution.execute(request, ::send, ::redirect)
   }
 
-  override fun start(
-    request: Request<HttpRequest>,
-    budget: AuthenticationRecoveryBudget,
-  ) = execution.start(request, budget, ::send, ::redirect)
+  override fun start(request: Request<HttpRequest>) = execution.start(request, ::send, ::redirect)
 
   private suspend fun send(request: Request<HttpRequest>): JdkResponse {
     require(httpClient.followRedirects() == HttpClient.Redirect.NEVER) {

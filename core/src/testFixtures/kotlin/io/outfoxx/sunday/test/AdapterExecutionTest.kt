@@ -30,7 +30,6 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.copy
 import io.outfoxx.sunday.isRequestCancelled
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
 import io.outfoxx.sunday.security.AuthorizationRequiredException
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
@@ -174,7 +173,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
   ): Response<*> {
     val request = transport.transportRequest<Unit>(method, "value", purpose = Transport.RequestPurpose.Normal)
     if (!streaming) return transport.transportResponse(request)
-    val events = transport.start(request, AuthenticationRecoveryBudget()).toList()
+    val events = transport.start(request).toList()
     val body = Buffer()
     events.filterIsInstance<ResponseEvent.Data>().forEach { body.write(it.value.readByteArray()) }
     return events
@@ -526,7 +525,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
               )
               server.enqueue(MockResponse().setBody("next"))
               transport(URITemplate(server.url("/").toString()), request, response).use { transport ->
-                val followUp = repeatable || status == 303
+                val followUp = status != 401 && (repeatable || status == 303)
                 val attempts = if (followUp) 2 else 1
                 val result = perform(transport, streaming, if (status == 401) Method.Options else Method.Post)
                 result.body!!.use { assertEquals(if (followUp) "next" else "first", it.readString()) }
@@ -1021,7 +1020,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
     }
 
   @Test
-  fun `token feedback runs for unsafe requests and exhausted retry budgets`() =
+  fun `token feedback runs once without requesting a transport retry`() =
     runTest {
       for (method in listOf(Method.Get, Method.Post)) {
         val rejected = AtomicInteger()
@@ -1069,7 +1068,7 @@ abstract class AdapterExecutionTest<TReq, TRes> {
               .transportResponse(method, "value")
               .body
               ?.close()
-            val attempts = if (method == Method.Get) 2 else 1
+            val attempts = 1
             assertEquals(attempts, acquired.get())
             assertEquals(attempts, rejected.get())
             assertEquals(attempts, server.requestCount)

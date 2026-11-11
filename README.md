@@ -141,8 +141,10 @@ val provider = JdkOAuthTokenProvider(
   ),
 )
 val tokens = TokenManager(mapOf("external" to provider))
+val authentication = AuthenticationAdapter(mapOf("external" to tokens))
 val transport = DefaultFactories.transport(
-  URITemplate("https://api.example.com"), providerId = "jdk", tokenProviders = mapOf("external" to tokens),
+  URITemplate("https://api.example.com"), providerId = "jdk",
+  requestAdapter = authentication, responseAdapter = authentication,
 )
 ```
 
@@ -165,10 +167,9 @@ issuer on acquisition and renewal. Public authorization-code/PKCE sessions confi
 absent authentication-method list. Any supplied list must still contain only strings.
 Confidential clients require their configured method to be advertised; an absent list
 defaults to `client_secret_basic`. Endpoint overrides never bypass issuer validation.
-Managed requests disable native redirects and ambient authentication. An explicit
-Bearer `invalid_token` challenge can recover once for a bodyless GET, HEAD, or OPTIONS.
-403 responses and unsafe/body-carrying requests do not replay. An event subscription shares
-that single recovery across reconnects; closing it cancels pending acquisition.
+Credential-bearing requests disable native redirects and ambient authentication. Transports do not
+classify bearer challenges or retry authentication. An explicitly installed authentication adapter reports
+rejections to their owners; a subsequent application request may use renewed credentials.
 
 Native model validation
 -----------------------
@@ -311,11 +312,10 @@ executes its typed `request.transport` through their own native client and owns 
 For example, an OkHttp consumer can call `client.newCall(request.transport).execute().use { ... }`.
 Passing an export back through managed execution invokes adapters again; it is not the export path.
 
-Supplying `tokenProviders` composes an `AuthenticationAdapter` explicitly into both slots before custom
-adapters. Providers own acquisition, invalidation and renewal; provide a `TokenManager` only when Sunday
-should cache. An invalid-token response invalidates the matching credential before deciding whether
-replay is safe, including POST requests and exhausted budgets. Automatic authentication recovery remains
-limited to one bodyless GET, HEAD or OPTIONS per invocation (one for the entire SSE subscription).
+Install `AuthenticationAdapter` explicitly in both slots to use providers. Settings convenience factories
+compose this adapter outside transport execution. Providers own acquisition, invalidation and renewal;
+provide a `TokenManager` only when Sunday should cache. Rejection feedback runs once without causing
+a transport retry, including for POST. A subsequent explicit request can acquire replacement credentials.
 
 `Request.copy` preserves native settings and body ownership. `withBody(StreamingBody.source { ... })`
 installs a replacement replayable source factory. For native changes at a transport-specific boundary, use the typed `request.transport`
@@ -384,12 +384,67 @@ For an undefined `id`, `/items{/id}` becomes `/items`, while `/items/{id}` becom
 stored on the template; omitting the override keeps the stored value. This applies
 to template expressions in both the base URI and the operation path.
 
+## Explicit standard authentication
+
+Choose standard authentication once in the transport factory supplied to generated clients.
+`StandardAuthenticationAdapter` composes credential attachment, missing-provider checks, rejection
+feedback, and terminal bearer-rejection cancellation. It delegates to the existing adapters, including
+their body ownership rules, and ignores public/detached operation responses. Feedback runs before
+cancellation. There is no hidden replay; a later explicit request can obtain renewed credentials.
+
+The standard settings helper selects this policy on both sides. Lower-level `AuthenticationAdapter`
+remains available when an application wants feedback without the standard stop policy. Ordinary
+transport constructors perform no authentication and do not install this composition.
+
+```kotlin
+// Pass this factory to the generated configuration-based client factory.
+val standardFactory: (ClientSettings) -> JdkTransport = { settings ->
+  settings.jdkTransport(SundayHttpProblem.Factory)
+}
+// OkHttp applications can use settings.okhttpTransport(...) instead.
+
+// Or construct the generated service with this caller-owned transport.
+val customTransport = JdkTransport(
+  baseURL, SundayHttpProblem.Factory,
+  requestAdapter = auth0Link, responseAdapter = auth0Link,
+)
+```
+
+Caching is a separate explicit choice: construct `TokenManager` around a Sunday OAuth provider and
+supply that manager through provider credentials to the generated factory. This retains expiry renewal,
+refresh rotation, and application-selected storage. A provider returned by an OAuth credential factory
+can likewise be an explicitly constructed manager. Supplied external providers are used unchanged;
+standard composition never wraps them, creates a second cache, closes them, or clears their storage.
+Keep managers at application/session scope, share them across clients using the same credential lifecycle,
+and settle outstanding requests before closing managers or clearing credentials.
+
+Static bearer, basic, and API-key credentials use their declared placement without an OAuth cache.
+Only an explicit Bearer `invalid_token` challenge for a sent bearer credential invokes the bearer stop
+policy; 403s and unrelated challenges retain ordinary response handling. Authentication selection and
+credential validation in generated settings remain active for the standard path. The direct-transport
+path lets a custom adapter own those choices using operation metadata.
+
 ## Application-owned token lifecycle
 
-Transports accept named `TokenProvider` instances directly. Settings preserve supplied providers and
-never add a token cache. Every managed network attempt asks its provider for current credentials.
+Transport constructors perform no authentication or authorization by default. They accept request and response
+adapters, with no token-provider option or authentication retry loop. External authentication frameworks can
+implement these adapters directly, without using Sunday's token or security classes.
+
+The optional `AuthenticationAdapter` acquires credentials for declared bindings, reports missing providers,
+and sends matching rejection feedback to the credential owner. Install it explicitly in each desired slot;
+installing a request adapter alone does not install response behavior. It adds no cache.
+
+`BearerTokenRejectionAdapter` is a separate, opt-in response policy. It throws the cancellation marker when
+an initiating request sent a bearer credential and its response is 401 with an explicit Bearer `invalid_token`
+challenge. It leaves all other responses and all bodies untouched. Compose it after `AuthenticationAdapter`
+when provider feedback should run before cancellation. It has no counter, renewal, or replay behavior.
+The removed `AuthenticationRecoveryBudget` has no implicit replacement: applications choose their own
+recovery policy, and a cancellation-marked error always stops the exchange, retries, and SSE reconnections.
 An external framework (for example Auth0) remains responsible for storage, renewal and logout.
 Return only its access token and optional expiry; keep its refresh token inside that framework.
+
+The provider-settings convenience `settings.jdkTransport(...)` and `settings.okhttpTransport(...)` explicitly installs the standard authentication composition.
+Use the ordinary transport constructor with your own adapters when you want to own the exchange entirely.
 
 For Sunday's caching and refresh lifecycle, explicitly supply a `TokenManager` as the provider:
 
@@ -418,14 +473,14 @@ manager on rejection, serializing concurrent rejection handling without maintain
 
 Request export materializes an optionally authorized native request once and hands its lifecycle to
 the consumer. Exported requests retain no Sunday-managed recovery state. Executing an operation through
-Sunday acquires once per managed attempt and retains the bounded safe-request recovery and SSE reconnect budget.
+Sunday invokes the request adapter once per managed attempt. Authentication responses do not trigger an implicit retry;
+an application may make another request after its credential owner handles the rejection.
 
-Migration: replace transport `tokenManager`/`token_manager` arguments with named
-`tokenProviders`/`token_providers` maps. Replace `TokenManagerFactory` hooks with explicitly constructed
+Migration: replace transport `tokenManager`/`token_manager` and `tokenProviders`/`token_providers` arguments
+with explicit request/response adapters. Replace `TokenManagerFactory` hooks with explicitly constructed
 managers supplied through provider credentials. Direct built-in OAuth providers are not implicitly cached;
 wrap them explicitly when Sunday should retain and refresh their tokens. For logout, stop outstanding
 requests and settle refresh commits before clearing the owning framework's or application's storage.
 
-Custom transports must handle `RequestPurpose.Export` and the `managed` argument to `authorize`.
-Export is the default for `transportRequest`: materialize credentials without retaining recovery
-state. Normal operation execution and event requests defer acquisition until each Sunday-managed attempt.
+Custom transports must honor `RequestPurpose.Export`: adapt once and detach managed execution state.
+Normal operation execution and event requests adapt immediately before each Sunday-managed attempt.

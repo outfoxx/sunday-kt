@@ -30,8 +30,6 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.isSuccessful
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
-import io.outfoxx.sunday.security.TokenProviderException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -75,7 +73,6 @@ class EventSource<TReq, TRes>(
   private val logger: Logger = LoggerFactory.getLogger(EventSource::class.java),
   private val requestStarter: (
     Request<TReq>,
-    AuthenticationRecoveryBudget,
   ) -> kotlinx.coroutines.flow.Flow<ResponseEvent<TRes>>,
 ) : Closeable {
 
@@ -212,7 +209,6 @@ class EventSource<TReq, TRes>(
     Closed,
   }
 
-  private val recoveryBudget = AuthenticationRecoveryBudget()
   private val stateLock = ReentrantReadWriteLock()
 
   /**
@@ -379,18 +375,11 @@ class EventSource<TReq, TRes>(
         createRequestEventScope()
           .launch(start = CoroutineStart.LAZY) {
             try {
-              requestStarter(requestSupplier(headers), recoveryBudget).collect(::dispatchEvent)
+              requestStarter(requestSupplier(headers)).collect(::dispatchEvent)
             } catch (error: Throwable) {
               when {
                 error is CancellationException -> if (currentCoroutineContext().isActive) receivedFatalError(error)
                 error.isRequestCancelled -> receivedFatalError(error)
-                error is TokenProviderException -> {
-                  if (error.reason == TokenProviderException.Reason.Temporary) {
-                    receivedError(error)
-                  } else {
-                    receivedFatalError(error)
-                  }
-                }
                 error is ParameterValidator.Failure -> receivedFatalError(error)
                 else -> receivedError(error)
               }

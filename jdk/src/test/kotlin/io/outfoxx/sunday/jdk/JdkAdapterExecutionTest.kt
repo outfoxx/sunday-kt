@@ -17,7 +17,9 @@
 package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestAdapters
 import io.outfoxx.sunday.ResponseAdapter
+import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
@@ -25,6 +27,7 @@ import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.isRequestCancelled
 import io.outfoxx.sunday.problems.SundayHttpProblem
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.TokenProvider
 import io.outfoxx.sunday.test.AdapterExecutionTest
 import kotlinx.coroutines.test.runTest
@@ -55,13 +58,15 @@ class JdkAdapterExecutionTest :
     requestAdapter: RequestAdapter?,
     responseAdapter: ResponseAdapter?,
     providers: Map<String, TokenProvider>,
-  ) = JdkTransport(
-    base,
-    SundayHttpProblem.Factory,
-    requestAdapter = requestAdapter,
-    responseAdapter = responseAdapter,
-    tokenProviders = providers,
-  )
+  ): JdkTransport {
+    val authentication = AuthenticationAdapter(providers)
+    return JdkTransport(
+      base,
+      SundayHttpProblem.Factory,
+      requestAdapter = RequestAdapters(listOfNotNull(authentication, requestAdapter)),
+      responseAdapter = ResponseAdapters(listOfNotNull(authentication, responseAdapter)),
+    )
+  }
 
   @Test
   fun `native authentication honors non-repeatable bodies during buffered execution`() =

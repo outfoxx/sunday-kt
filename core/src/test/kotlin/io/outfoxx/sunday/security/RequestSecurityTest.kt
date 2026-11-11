@@ -23,6 +23,7 @@ import io.outfoxx.sunday.http.Response
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -113,7 +114,7 @@ class RequestSecurityTest {
     }
 
   @Test
-  fun `recovery expires only bearer credentials and preserves API key conjuncts`() =
+  fun `rejection expires only bearer credentials and preserves API key conjuncts`() =
     runTest {
       val provider = Provider()
       val key =
@@ -126,7 +127,7 @@ class RequestSecurityTest {
         val security = RequestSecurity(listOf(binding, key), mapOf("identity" to manager))
         val uri = URI("https://api.example/value")
         val credentials = security.authorize(uri, emptyList())
-        assertTrue(security.recover(Method.Get, false, credentials, response(401, "Bearer error=invalid_token")))
+        assertTrue(security.rejectAndStop(Method.Get, false, credentials, response(401, "Bearer error=invalid_token")))
         val refreshed = security.authorize(uri, emptyList())
         assertTrue(refreshed.headers.contains("Authorization" to "Bearer token-3"))
         assertEquals(credentials.uri, refreshed.uri)
@@ -135,14 +136,14 @@ class RequestSecurityTest {
     }
 
   @Test
-  fun `forbidden unsafe and malformed challenge responses never recover`() =
+  fun `rejection policy stops unsafe requests but leaves unrelated challenges unchanged`() =
     runTest {
       TokenManager(mapOf("identity" to Provider()), scope = this).use { manager ->
         val security = RequestSecurity(listOf(binding), mapOf("identity" to manager))
         val credentials = security.authorize(URI("https://api.example/value"), emptyList())
-        assertFalse(security.recover(Method.Post, false, credentials, response(401, "Bearer error=invalid_token")))
-        assertFalse(security.recover(Method.Get, true, credentials, response(401, "Bearer error=invalid_token")))
-        assertFalse(security.recover(Method.Get, false, credentials, response(403, "Bearer error=invalid_token")))
+        assertTrue(security.rejectAndStop(Method.Post, false, credentials, response(401, "Bearer error=invalid_token")))
+        assertTrue(security.rejectAndStop(Method.Get, true, credentials, response(401, "Bearer error=invalid_token")))
+        assertFalse(security.rejectAndStop(Method.Get, false, credentials, response(403, "Bearer error=invalid_token")))
         listOf(
           "Basic realm=api, error=invalid_token",
           "Bearer error=insufficient_scope",
@@ -150,7 +151,7 @@ class RequestSecurityTest {
           "Bearer realm=api, Basic, error=invalid_token",
           "Bearer realm=\"unterminated, error=invalid_token",
         ).forEach { challenge ->
-          assertFalse(security.recover(Method.Get, false, credentials, response(401, challenge)))
+          assertFalse(security.rejectAndStop(Method.Get, false, credentials, response(401, challenge)))
         }
         val challenges =
           listOf(
@@ -158,35 +159,12 @@ class RequestSecurityTest {
             "Basic realm=api, Bearer error=invalid_token",
           )
         challenges.forEach { challenge ->
-          assertTrue(security.recover(Method.Get, false, credentials, response(401, challenge)))
+          assertTrue(security.rejectAndStop(Method.Get, false, credentials, response(401, challenge)))
         }
       }
     }
 
-  @Test
-  fun `empty content requires explicit repeatability before authentication recovery`() {
-    val request =
-      object : Request<Unit> {
-        override val transport = Unit
-        override val method = Method.Options
-        override val hasBody = false
-        override val uri = URI("https://api.example/value")
-        override val headers: Headers = listOf("Authorization" to "Bearer token")
-
-        override suspend fun body() = null
-      }
-    val response = response(401, "Bearer error=invalid_token")
-    val budget = AuthenticationRecoveryBudget()
-    assertFalse(budget.shouldRetry(request, response))
-    val repeatable =
-      object : Request<Unit> by request {
-        override val isBodyRepeatable = true
-      }
-    assertTrue(budget.shouldRetry(repeatable, response))
-    assertFalse(budget.shouldRetry(repeatable, response))
-  }
-
-  private suspend fun RequestSecurity.recover(
+  private suspend fun RequestSecurity.rejectAndStop(
     method: Method,
     hasBody: Boolean,
     credentials: RequestSecurity.Credentials,
@@ -202,9 +180,14 @@ class RequestSecurityTest {
         override val uri = credentials.uri
         override val headers = credentials.headers
 
-        override suspend fun body() = null
+        override suspend fun body(): kotlinx.io.Source? = error("The stop policy must not read the body")
       }
-    return AuthenticationRecoveryBudget().shouldRetry(request, response)
+    return try {
+      assertSame(response, BearerTokenRejectionAdapter().adapt(response, request))
+      false
+    } catch (_: TokenRejectedException) {
+      true
+    }
   }
 
   private fun response(

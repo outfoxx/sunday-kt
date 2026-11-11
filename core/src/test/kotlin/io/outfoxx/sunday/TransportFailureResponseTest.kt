@@ -85,10 +85,8 @@ class TransportFailureResponseTest {
 
     override fun eventSource(requestSupplier: suspend (Headers) -> Request<Unit>) = error("unused")
 
-    override fun start(
-      request: Request<Unit>,
-      budget: io.outfoxx.sunday.security.AuthenticationRecoveryBudget,
-    ): kotlinx.coroutines.flow.Flow<ResponseEvent<Unit>> = kotlinx.coroutines.flow.emptyFlow()
+    override fun start(request: Request<Unit>): kotlinx.coroutines.flow.Flow<ResponseEvent<Unit>> =
+      kotlinx.coroutines.flow.emptyFlow()
 
     override fun close(cancelOutstandingRequests: Boolean) = Unit
 

@@ -17,8 +17,10 @@
 package io.outfoxx.sunday.okhttp
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestAdapters
 import io.outfoxx.sunday.RequestCancellationException
 import io.outfoxx.sunday.ResponseAdapter
+import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.StreamingBody
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.http.Method
@@ -27,7 +29,7 @@ import io.outfoxx.sunday.http.Response
 import io.outfoxx.sunday.http.ResponseEvent
 import io.outfoxx.sunday.http.copy
 import io.outfoxx.sunday.problems.SundayHttpProblem
-import io.outfoxx.sunday.security.AuthenticationRecoveryBudget
+import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.SecurityBinding
 import io.outfoxx.sunday.security.TokenConfiguration
 import io.outfoxx.sunday.security.TokenProvider
@@ -75,13 +77,15 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
     requestAdapter: RequestAdapter?,
     responseAdapter: ResponseAdapter?,
     providers: Map<String, TokenProvider>,
-  ) = OkHttpTransport(
-    base,
-    SundayHttpProblem.Factory,
-    requestAdapter = requestAdapter,
-    responseAdapter = responseAdapter,
-    tokenProviders = providers,
-  )
+  ): OkHttpTransport {
+    val authentication = AuthenticationAdapter(providers)
+    return OkHttpTransport(
+      base,
+      SundayHttpProblem.Factory,
+      requestAdapter = RequestAdapters(listOfNotNull(authentication, requestAdapter)),
+      responseAdapter = ResponseAdapters(listOfNotNull(authentication, responseAdapter)),
+    )
+  }
 
   @Test
   fun `response copies retain trailers after body consumption`() =
@@ -214,7 +218,7 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
     }
 
   @Test
-  fun `authentication recovery never repeats a zero-length one-shot or duplex body`() =
+  fun `authentication responses never repeat any native body`() =
     runTest {
       for (streaming in listOf(false, true)) {
         for ((oneShot, duplex) in listOf(false to false, true to false, false to true)) {
@@ -244,11 +248,10 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
             OkHttpTransport(URITemplate(server.url("/").toString()), SundayHttpProblem.Factory, httpClient = client)
               .use { transport ->
                 val response = performNative(transport, request, streaming)
-                val repeatable = !oneShot && !duplex
-                assertEquals(if (repeatable) 200 else 401, response.statusCode)
+                assertEquals(401, response.statusCode)
                 response.body?.close()
-                assertEquals(if (repeatable) 2 else 1, server.requestCount)
-                assertEquals(if (repeatable) 2 else 1, writes.get())
+                assertEquals(1, server.requestCount)
+                assertEquals(1, writes.get())
               }
           }
           client.dispatcher.executorService.shutdown()
@@ -286,7 +289,7 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
   ): Response<*> =
     if (streaming) {
       transport
-        .start(request, AuthenticationRecoveryBudget())
+        .start(request)
         .toList()
         .filterIsInstance<ResponseEvent.Start<*>>()
         .single()
@@ -655,26 +658,29 @@ class OkHttpAdapterExecutionTest : AdapterExecutionTest<okhttp3.Request, okhttp3
                       "Bearer",
                     ),
                 )
+              val authentication = AuthenticationAdapter(mapOf("identity" to provider))
               OkHttpTransport(
                 URITemplate(server.url("/").toString()),
                 SundayHttpProblem.Factory,
                 httpClient = client,
-                tokenProviders = mapOf("identity" to provider),
+                requestAdapter = authentication,
                 responseAdapter =
-                  object : ResponseAdapter {
-                    override suspend fun <TRes> adapt(
-                      response: Response<TRes>,
-                      request: Request<*>,
-                    ): Response<TRes> {
-                      assertTrue(
-                        request.headers.any {
-                          it.first.equals("Authorization", true) &&
-                            it.second == "Bearer $token"
-                        },
-                      )
-                      return response
-                    }
-                  },
+                  authentication.chainTo(
+                    object : ResponseAdapter {
+                      override suspend fun <TRes> adapt(
+                        response: Response<TRes>,
+                        request: Request<*>,
+                      ): Response<TRes> {
+                        assertTrue(
+                          request.headers.any {
+                            it.first.equals("Authorization", true) &&
+                              it.second == "Bearer $token"
+                          },
+                        )
+                        return response
+                      }
+                    },
+                  ),
               ).use { transport ->
                 val response = perform(transport.withSecurity(listOf(binding)), streaming, Method.Post)
                 assertEquals(401, response.statusCode)

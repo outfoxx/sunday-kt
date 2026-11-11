@@ -22,11 +22,13 @@ import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.ClientSettings
+import io.outfoxx.sunday.security.StandardAuthenticationAdapter
 import okhttp3.OkHttpClient
 
 /** Constructs an application-selected OkHttp transport from prepared settings without acquiring tokens.
+ * Selects standard attachment, rejection feedback, and cancellation without replay.
+ * Providers are used unchanged; supply TokenManager explicitly for caching and refresh.
  * The application owns the returned transport and its lifecycle.
  */
 fun ClientSettings.okhttpTransport(
@@ -35,7 +37,7 @@ fun ClientSettings.okhttpTransport(
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
 ): OkHttpTransport {
-  val authentication = AuthenticationAdapter(tokenProviders)
+  val authentication = StandardAuthenticationAdapter(tokenProviders)
   return OkHttpTransport(
     URITemplate(baseURL.toString()),
     problemFactory,

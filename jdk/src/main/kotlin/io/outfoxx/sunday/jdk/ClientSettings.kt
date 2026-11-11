@@ -22,11 +22,13 @@ import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.URITemplate
 import io.outfoxx.sunday.problems.ProblemFactory
-import io.outfoxx.sunday.security.AuthenticationAdapter
 import io.outfoxx.sunday.security.ClientSettings
+import io.outfoxx.sunday.security.StandardAuthenticationAdapter
 import java.net.http.HttpClient
 
 /** Constructs an application-selected Jdk transport from prepared settings without acquiring tokens.
+ * Selects standard attachment, rejection feedback, and cancellation without replay.
+ * Providers are used unchanged; supply TokenManager explicitly for caching and refresh.
  * The application owns the returned transport and its lifecycle.
  */
 fun ClientSettings.jdkTransport(
@@ -36,7 +38,7 @@ fun ClientSettings.jdkTransport(
   responseAdapter: ResponseAdapter? = null,
   redirectPolicy: HttpClient.Redirect = httpClient?.followRedirects() ?: HttpClient.Redirect.NORMAL,
 ): JdkTransport {
-  val authentication = AuthenticationAdapter(tokenProviders)
+  val authentication = StandardAuthenticationAdapter(tokenProviders)
   return JdkTransport(
     URITemplate(baseURL.toString()),
     problemFactory,

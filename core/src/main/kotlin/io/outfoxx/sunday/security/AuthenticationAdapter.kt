@@ -17,6 +17,7 @@
 package io.outfoxx.sunday.security
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestCancellationException
 import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
@@ -30,7 +31,7 @@ class AuthenticationAdapter(
   internal class TerminalProviderFailure(
     cause: TokenProviderException,
   ) : RuntimeException(cause.message, cause),
-    io.outfoxx.sunday.RequestCancellationException
+    RequestCancellationException
 
   override suspend fun <TReq> adapt(request: Request<TReq>): Request<TReq> {
     val context = request.securityContext ?: return request

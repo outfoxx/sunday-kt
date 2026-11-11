@@ -21,6 +21,7 @@ import io.outfoxx.sunday.ResponseAdapter
 import io.outfoxx.sunday.ResponseAdapters
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.Response
+import io.outfoxx.sunday.isRequestCancelled
 
 /** Opt-in credential attachment, rejection feedback, and terminal rejection cancellation.
  * Supply TokenManager explicitly for caching; supplied providers retain their lifecycle ownership.
@@ -41,6 +42,13 @@ class StandardAuthenticationAdapter(
     request: Request<*>,
   ): Response<TRes> {
     if (request.securityContext?.bindings.isNullOrEmpty()) return response
-    return responses.adapt(response, request)
+    return try {
+      responses.adapt(response, request)
+    } catch (error: Exception) {
+      if (error.isRequestCancelled) throw error
+      // Feedback failure must not bypass the explicitly selected stop policy.
+      BearerTokenRejectionAdapter().adapt(response, request)
+      throw error
+    }
   }
 }

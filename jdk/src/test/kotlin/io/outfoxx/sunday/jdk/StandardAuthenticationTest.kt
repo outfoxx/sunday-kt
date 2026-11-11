@@ -17,7 +17,9 @@
 package io.outfoxx.sunday.jdk
 
 import io.outfoxx.sunday.RequestAdapter
+import io.outfoxx.sunday.RequestCancellationException
 import io.outfoxx.sunday.URITemplate
+import io.outfoxx.sunday.causes
 import io.outfoxx.sunday.http.Method
 import io.outfoxx.sunday.http.Request
 import io.outfoxx.sunday.http.copy
@@ -30,10 +32,12 @@ import io.outfoxx.sunday.security.StandardAuthenticationAdapter
 import io.outfoxx.sunday.security.TokenConfiguration
 import io.outfoxx.sunday.security.TokenManager
 import io.outfoxx.sunday.security.TokenProvider
+import io.outfoxx.sunday.security.TokenProviderException
 import io.outfoxx.sunday.security.TokenRejectedException
 import io.outfoxx.sunday.security.TokenRequest
 import io.outfoxx.sunday.security.TokenSet
 import io.outfoxx.sunday.withSecurity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -177,4 +181,78 @@ class StandardAuthenticationTest {
         assertEquals(null, server.takeRequest().getHeader("Authorization"))
       }
     }
+
+  private class Stop :
+    RuntimeException(),
+    RequestCancellationException
+
+  @Test
+  fun `failed feedback cannot bypass split bearer rejection`() =
+    runTest {
+      for (failure in listOf(
+        TokenProviderException(TokenProviderException.Reason.Temporary),
+        Stop(),
+        CancellationException(),
+      )) {
+        var rejections = 0
+        var failAcquisition = false
+        val provider =
+          object : TokenProvider {
+            override val identity = "feedback"
+
+            override fun configure(binding: SecurityBinding) = TokenConfiguration("client")
+
+            override suspend fun acquire(request: TokenRequest): TokenSet {
+              if (failAcquisition) throw TokenProviderException(TokenProviderException.Reason.Temporary)
+              return TokenSet("access")
+            }
+
+            override suspend fun reject(
+              request: TokenRequest,
+              rejectedToken: String,
+            ): Boolean {
+              rejections++
+              throw failure
+            }
+          }
+        MockWebServer().use { server ->
+          server.enqueue(
+            MockResponse()
+              .setResponseCode(401)
+              .addHeader("WWW-Authenticate", "Bearer realm=api")
+              .addHeader("WWW-Authenticate", "error=invalid_token"),
+          )
+          server.enqueue(
+            MockResponse().setResponseCode(403).addHeader("WWW-Authenticate", "Bearer error=invalid_token"),
+          )
+          val settings =
+            ClientSettings.resolve(
+              server.url("/").toUri(),
+              mapOf("read" to listOf(listOf(binding))),
+              mapOf("identity" to ProviderCredentials(provider)),
+            )
+          settings.jdkTransport(SundayHttpProblem.Factory).use { transport ->
+            val generated = transport.withSecurity(listOf(binding))
+            val error = assertThrows<RuntimeException> { generated.transportResponse(Method.Get, "value") }
+            when (failure) {
+              is CancellationException ->
+                assertTrue(
+                  error is CancellationException && error.causes().any { it === failure },
+                )
+              is Stop -> assertSame(failure, error)
+              else -> assertTrue(error is TokenRejectedException)
+            }
+            assertEquals(1, rejections)
+            assertEquals(1, server.requestCount)
+            generated.transportResponse(Method.Get, "value").body?.close()
+            assertEquals(1, rejections)
+            failAcquisition = true
+            val acquisition = assertThrows<TokenProviderException> { generated.transportResponse(Method.Get, "value") }
+            assertEquals(TokenProviderException.Reason.Temporary, acquisition.reason)
+            assertEquals(2, server.requestCount)
+          }
+        }
+      }
+    }
+
 }

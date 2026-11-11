@@ -31,7 +31,7 @@ class BearerTokenRejectionAdapter : ResponseAdapter {
   ): Response<TRes> {
     if (response.statusCode == 401 &&
       BearerChallenge.token(request.headers.getFirstOrNull("Authorization")) != null &&
-      response.headers.getAll("WWW-Authenticate").any(BearerChallenge::isInvalidToken)
+      BearerChallenge.isInvalidToken(response.headers.getAll("WWW-Authenticate").joinToString(","))
     ) {
       throw TokenRejectedException()
     }

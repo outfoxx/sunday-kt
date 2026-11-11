@@ -24,6 +24,7 @@ import io.outfoxx.sunday.http.copy
 import io.outfoxx.sunday.security.withSecurityContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -43,6 +44,7 @@ class RequestExecution<TReq, TRes>(
   requestAdapter: RequestAdapter? = null,
   responseAdapter: ResponseAdapter? = null,
   private val nativeRequestAdapter: (suspend (Request<TReq>) -> Request<TReq>)? = null,
+  private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
   private val requestAdapter = RequestAdapters(listOfNotNull(requestAdapter))
   private val responseAdapter = ResponseAdapters(listOfNotNull(responseAdapter))
@@ -69,16 +71,7 @@ class RequestExecution<TReq, TRes>(
       val original = send(sent)
       var response = original
       AutoCloseable { response.body?.close() }.use {
-        // Native interceptors may change credentials after request adaptation. Keep the receipts,
-        // but compare them against the request that actually reached the server.
-        val native = original.request.withSecurityContext(sent.securityContext)
-        val effective =
-          if (sent.isBodyRepeatable || !native.isBodyRepeatable) {
-            native
-          } else {
-            // Native reconstruction cannot relax an adapter's restriction on replaying its body.
-            NonRepeatableRequest(native)
-          }
+        val effective = effectiveRequest(original, sent)
         response = responseAdapter.adapt(original, effective)
         val result =
           response.cancellable {
@@ -99,6 +92,16 @@ class RequestExecution<TReq, TRes>(
     }
   }
 
+  private fun effectiveRequest(
+    original: Response<TRes>,
+    sent: Request<TReq>,
+  ): Request<*> {
+    // Native interceptors may change credentials after adaptation; feedback uses the sent values.
+    val native = original.request.withSecurityContext(sent.securityContext)
+    // Native reconstruction cannot relax an adapter's restriction on replaying its body.
+    return if (sent.isBodyRepeatable || !native.isBodyRepeatable) native else NonRepeatableRequest(native)
+  }
+
   /** Adapts headers before collecting the accepted body in bulk on the I/O dispatcher. */
   suspend fun execute(
     request: Request<TReq>,
@@ -106,7 +109,7 @@ class RequestExecution<TReq, TRes>(
     redirect: (Request<TReq>, Response<TRes>, Request<*>) -> Request<TReq>? = { _, _, _ -> null },
   ): Response<TRes> =
     execute(request, { response ->
-      withContext(Dispatchers.IO) {
+      withContext(ioDispatcher) {
         val buffer = response.body?.let { Buffer().also { target -> it.transferTo(target) } }
         response.copy(body = buffer)
       }
@@ -120,7 +123,7 @@ class RequestExecution<TReq, TRes>(
   ): Flow<ResponseEvent<TRes>> =
     flow {
       execute(request, { emitResponse(it) }, send, redirect)
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
   private sealed interface Attempt<out TReq, out T> {
     data class Retry<TReq>(

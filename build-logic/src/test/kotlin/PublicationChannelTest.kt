@@ -4,15 +4,32 @@ import kotlin.test.assertFailsWith
 
 class PublicationChannelTest {
   @Test
-  fun `stable releases retain Maven Central`() {
-    assertEquals(PublicationChannel.MAVEN_CENTRAL, PublicationChannel.forVersion("2.0.0"))
-    assertEquals(PublicationChannel.MAVEN_CENTRAL, PublicationChannel.forVersion("12.34.56"))
+  fun `stable releases publish to Central and GitHub Packages`() {
+    for (version in listOf("2.0.0", "12.34.56")) {
+      assertEquals(
+        listOf("publishToMavenCentral", "publishAllPublicationsToGitHubPackagesRepository"),
+        PublicationChannel.forVersion(version).taskNames,
+      )
+    }
   }
 
   @Test
-  fun `betas release candidates and snapshots use GitHub Packages`() {
-    for (version in listOf("2.0.0-beta.22", "2.0.0-alpha.1", "2.0.0-rc.1", "2.0.0-SNAPSHOT")) {
-      assertEquals(PublicationChannel.GITHUB_PACKAGES, PublicationChannel.forVersion(version))
+  fun `betas and release candidates publish to Central and GitHub Packages`() {
+    for (version in listOf("2.0.0-beta.23", "2.0.0-alpha.1", "2.0.0-rc.1")) {
+      assertEquals(
+        listOf("publishToMavenCentral", "publishAllPublicationsToGitHubPackagesRepository"),
+        PublicationChannel.forVersion(version).taskNames,
+      )
+    }
+  }
+
+  @Test
+  fun `snapshots remain on GitHub Packages`() {
+    for (version in listOf("2.0.0-SNAPSHOT", "2.0.0-beta.23-SNAPSHOT")) {
+      assertEquals(
+        listOf("publishAllPublicationsToGitHubPackagesRepository"),
+        PublicationChannel.forVersion(version).taskNames,
+      )
     }
   }
 

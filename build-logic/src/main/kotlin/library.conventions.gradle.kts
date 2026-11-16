@@ -76,11 +76,11 @@ publishing {
   }
 }
 
-// The CLI task selects the destination for every library without changing its coordinates.
+// The CLI task selects the destinations for every library without changing its coordinates.
 tasks.register("publishRelease") {
   group = "publishing"
-  description = "Publishes this version to its release channel."
-  dependsOn(publicationChannel.taskName)
+  description = "Publishes this version to its release destinations."
+  dependsOn(publicationChannel.taskNames)
 }
 
 mavenPublishing {

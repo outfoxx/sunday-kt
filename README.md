@@ -15,12 +15,14 @@ Kotlin framework for generated REST clients.
 Maven
 -----
 
-Sunday is delivered as a set of Maven artifacts. Stable releases are available from Maven Central;
-new prereleases and snapshots are published to GitHub Packages with the same `io.outfoxx.sunday` coordinates.
+Sunday is delivered as a set of Maven artifacts. New stable releases and prereleases publish to both
+Maven Central and GitHub Packages with the same `io.outfoxx.sunday` coordinates. Snapshots remain on
+GitHub Packages. Version `2.0.0-beta.22` remains available from GitHub Packages only.
 Since 1.0.0-beta.24, the previous monolithic `sunday` artifact has been split into modules.
 
-For prereleases, add the repository below. GitHub requires authentication even for public Maven
-packages: use a classic personal access token with `read:packages`, or an authorized Actions
+For snapshots, `2.0.0-beta.22`, or GitHub Packages consumption, add the repository below. GitHub
+requires authentication even for public Maven packages: use a classic personal access token with
+`read:packages`, or an authorized Actions
 `GITHUB_TOKEN`. Keep credentials in your user Gradle properties or environment, never in source.
 
 ```kotlin
@@ -34,8 +36,12 @@ maven {
 
 Supply `SundayPackagesUsername` and `SundayPackagesPassword` Gradle properties (or their
 `ORG_GRADLE_PROJECT_` environment equivalents). Existing Maven Central versions remain available.
-The release workflows select the destination from the version: `2.0.0` uses Maven Central;
-`2.0.0-beta.22` and `2.0.0-SNAPSHOT` use GitHub Packages. Both publication channels retain artifact signing.
+`./gradlew -PreleaseVersion=2.0.0-beta.23 publishRelease --continue` publishes a tagged version to both
+registries; `./gradlew publishRelease` publishes the default snapshot to GitHub Packages. Both
+publication channels retain artifact signing. The release workflow attempts each registry separately
+and still creates the GitHub Release and documentation when a registry fails, while reporting the
+publication failure. An individual destination can be retried with `publishToMavenCentral` or
+`publishAllPublicationsToGitHubPackagesRepository` using the same release version.
 
 For Maven, add this repository to your project's `pom.xml`:
 

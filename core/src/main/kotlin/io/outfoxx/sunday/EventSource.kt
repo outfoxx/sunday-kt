@@ -36,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
@@ -389,7 +390,9 @@ class EventSource<TReq, TRes>(
     connection.start()
   }
 
-  private fun dispatchEvent(event: ResponseEvent<*>) {
+  private suspend fun dispatchEvent(event: ResponseEvent<*>) {
+    // Reconnect cancels this attempt; buffered body events must not affect its successor.
+    currentCoroutineContext().ensureActive()
     if (readyStateValue.isClosed) {
       return
     }
@@ -402,7 +405,13 @@ class EventSource<TReq, TRes>(
         }
 
         if (!event.value.isSuccessful) {
-          receivedFatalError(problemFactory.from(event.value).build())
+          val error = problemFactory.from(event.value).build()
+          // A temporary gateway/service response must retain the cursor and reconnect policy.
+          if (event.value.statusCode in setOf(408, 429, 500, 502, 503, 504)) {
+            receivedError(error)
+          } else {
+            receivedFatalError(error)
+          }
           return
         }
 

@@ -585,33 +585,105 @@ abstract class EventSourceTest<TReq, TRes> {
   }
 
   @Test
-  fun `non-success response fails without reconnecting`() {
-    val server = MockWebServer()
-    server.enqueue(
-      MockResponse()
-        .setResponseCode(400)
-        .addHeader(CONTENT_TYPE, Problem),
-    )
-    server.start()
-    server.use {
-      val eventSource =
+  fun `temporary HTTP failures reconnect with the last event id`() {
+    for (status in listOf(408, 429, 500, 502, 503, 504)) {
+      MockWebServer().use { server ->
+        server.enqueue(
+          MockResponse()
+            .setHeader(
+              CONTENT_TYPE,
+              EventStream,
+            ).setBody("retry: 10\nretry-max: 30\nid: checkpoint\ndata: before\n\n"),
+        )
+        server.enqueue(MockResponse().setResponseCode(status).setBody("temporarily unavailable"))
+        server.enqueue(MockResponse().setHeader(CONTENT_TYPE, EventStream).setBody("data: recovered\n\n"))
+        server.start()
+        val source =
+          EventSource(
+            { headers -> createRequest(server.url("/test").toString(), headers) },
+            SundayHttpProblem.Factory,
+            requestStarter = { startRequest(it) },
+          )
+        val recovered = CountDownLatch(1)
+        val errors = CopyOnWriteArrayList<Throwable?>()
+        source.onError = { errors.add(it) }
+        source.onMessage = { event ->
+          if (event.data == "recovered") {
+            source.close()
+            recovered.countDown()
+          }
+        }
+        source.use {
+          source.connect()
+          expectThat(recovered.await(3, SECONDS)).isTrue()
+          expectThat(errors.size).describedAs("reported errors: $errors").isEqualTo(1)
+          expectThat(server.takeRequest(250, MILLISECONDS)?.getHeader(LAST_EVENT_ID)).isNull()
+          repeat(
+            2,
+          ) { expectThat(server.takeRequest(250, MILLISECONDS)?.getHeader(LAST_EVENT_ID)).isEqualTo("checkpoint") }
+          expectThat(server.requestCount).isEqualTo(3)
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `closing after a temporary HTTP failure prevents reconnect`() {
+    MockWebServer().use { server ->
+      server.enqueue(MockResponse().setResponseCode(503))
+      server.start()
+      val source =
         EventSource(
           { headers -> createRequest(server.url("/test").toString(), headers) },
           SundayHttpProblem.Factory,
-          requestStarter = { request -> startRequest(request) },
-          retryTime = Duration.ofMillis(50),
+          requestStarter = { startRequest(it) },
+          retryTime = Duration.ofMillis(10),
         )
-
-      val errored = CountDownLatch(1)
-      eventSource.onError = { errored.countDown() }
-
-      eventSource.use {
-        eventSource.connect()
-
-        expectThat(errored.await(3, SECONDS)).isTrue()
-        expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
+      val closed = CountDownLatch(1)
+      source.onError = {
+        source.close()
+        closed.countDown()
+      }
+      source.use {
+        source.connect()
+        expectThat(closed.await(3, SECONDS)).isTrue()
+        expectThat(source.readyState).isEqualTo(EventSource.ReadyState.Closed)
         expectThat(server.takeRequest(250, MILLISECONDS)).isNotNull()
-        expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
+        expectThat(server.takeRequest(100, MILLISECONDS)).isNull()
+      }
+    }
+  }
+
+  @Test
+  fun `non-success response fails without reconnecting`() {
+    for (status in listOf(400, 401, 403, 404, 501)) {
+      val server = MockWebServer()
+      server.enqueue(
+        MockResponse()
+          .setResponseCode(status)
+          .addHeader(CONTENT_TYPE, Problem),
+      )
+      server.start()
+      server.use {
+        val eventSource =
+          EventSource(
+            { headers -> createRequest(server.url("/test").toString(), headers) },
+            SundayHttpProblem.Factory,
+            requestStarter = { request -> startRequest(request) },
+            retryTime = Duration.ofMillis(50),
+          )
+
+        val errored = CountDownLatch(1)
+        eventSource.onError = { errored.countDown() }
+
+        eventSource.use {
+          eventSource.connect()
+
+          expectThat(errored.await(3, SECONDS)).isTrue()
+          expectThat(eventSource.readyState).isEqualTo(EventSource.ReadyState.Closed)
+          expectThat(server.takeRequest(250, MILLISECONDS)).isNotNull()
+          expectThat(server.takeRequest(250, MILLISECONDS)).isNull()
+        }
       }
     }
   }
